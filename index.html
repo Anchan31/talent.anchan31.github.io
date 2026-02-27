@@ -66,6 +66,11 @@
         }
 
         /* ===================== BASE ===================== */
+        html {
+            font-size: 87%;
+            /* Global reduction for a more compact look */
+        }
+
         * {
             box-sizing: border-box;
         }
@@ -75,6 +80,7 @@
             background-color: var(--bg-primary);
             color: var(--text-primary);
             transition: background-color 0.3s ease, color 0.3s ease;
+            line-height: 1.4;
         }
 
         /* ===================== COMPONENTS ===================== */
@@ -123,6 +129,185 @@
             width: 100%;
             font-size: 0.875rem;
             transition: border-color 0.2s, box-shadow 0.2s, background 0.3s;
+        }
+
+        /* Larger search input variant */
+        .search-input {
+            padding-left: 3.5rem;
+            /* accomodate icon */
+            padding-right: 8rem;
+            /* accomodate clear button and result badge */
+            font-size: 1.125rem;
+            border-radius: 1rem;
+            height: 3.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+
+        /* Fancy select styling for improved dropdown UI */
+        .fancy-select {
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--text-primary);
+            padding: 0.45rem 0.75rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+            transition: box-shadow 0.15s, transform 0.08s;
+        }
+
+        .fancy-select:focus {
+            outline: none;
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.12);
+            transform: translateY(-1px);
+            border-color: var(--input-focus);
+        }
+
+        /* Inline scope select inside search box */
+        .search-scope-inline {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 9rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--input-border);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-weight: 500;
+            -webkit-appearance: none;
+            appearance: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            z-index: 6;
+            cursor: pointer;
+        }
+
+        /* Rounder, minimal filter pills */
+        .filter-select {
+            background: transparent;
+            border: 1px solid transparent;
+            padding: 0.45rem 0.9rem;
+            border-radius: 9999px;
+            /* pill */
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            box-shadow: 0 2px 10px rgba(2, 6, 23, 0.04);
+            transition: background 0.15s, transform 0.08s, box-shadow 0.15s, border-color 0.12s;
+        }
+
+        .filter-select:hover {
+            background: rgba(59, 130, 246, 0.06);
+        }
+
+        .filter-select:focus {
+            outline: none;
+            background: rgba(59, 130, 246, 0.06);
+            border-color: rgba(59, 130, 246, 0.18);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.08);
+            transform: translateY(-1px);
+        }
+
+        /* Compact variant for small filter pills */
+        .filter-select.compact {
+            padding: 0.28rem 0.6rem;
+            font-size: 0.82rem;
+            min-width: 0;
+        }
+
+        /* Apply pill-like styling to all selects (unless opted out with .no-filter-style) */
+        select:not(.no-filter-style) {
+            -webkit-appearance: none;
+            appearance: none;
+            background: var(--input-bg);
+            border: 1px solid transparent;
+            padding: 0.45rem 2.6rem 0.45rem 0.9rem;
+            /* leave room on right for chevron */
+            border-radius: 9999px;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            box-shadow: 0 2px 8px rgba(2, 6, 23, 0.04);
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M6 8l4 4 4-4' stroke='%23343A40' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 0.9rem center;
+            transition: box-shadow 0.12s, transform 0.05s, border-color 0.12s, background 0.12s;
+        }
+
+        select:not(.no-filter-style):hover {
+            background-color: rgba(59, 130, 246, 0.03);
+        }
+
+        select:not(.no-filter-style):focus {
+            outline: none;
+            border-color: rgba(59, 130, 246, 0.18);
+            box-shadow: 0 8px 30px rgba(59, 130, 246, 0.06);
+            transform: translateY(-1px);
+        }
+
+        /* Custom select component styles (used to replace native select popup) */
+        .custom-select-wrapper {
+            position: relative;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .custom-select-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            padding: 0.45rem 0.9rem;
+            border-radius: 9999px;
+            background: var(--input-bg);
+            border: 1px solid transparent;
+            box-shadow: 0 2px 8px rgba(2, 6, 23, 0.04);
+            min-width: 110px;
+        }
+
+        .custom-select-display .label {
+            flex: 1;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        .custom-select-options {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 8px);
+            z-index: 50;
+            min-width: 160px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .custom-select-options .opt {
+            padding: 0.55rem 0.9rem;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        .custom-select-options .opt:hover {
+            background: rgba(59, 130, 246, 0.06);
+        }
+
+        .custom-select-options .opt.active {
+            background: rgba(59, 130, 246, 0.12);
+            color: #062e73;
+            font-weight: 600;
+        }
+
+        /* Small screens: make full width dropdowns sit properly */
+        @media (max-width: 640px) {
+            .custom-select-options {
+                right: 0;
+                left: 0;
+                margin: 0 1rem;
+            }
         }
 
         .theme-input:focus {
@@ -276,6 +461,70 @@
             border-top-color: #005c4b;
         }
 
+        /* Modal form consistent styling */
+        .modal-box .form-row {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .modal-box .form-row .theme-input,
+        .modal-box .form-row select,
+        .modal-box textarea {
+            width: 100%;
+        }
+
+        .modal-box form {
+            padding: 0.75rem;
+        }
+
+        .modal-box label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.35rem;
+        }
+
+        .modal-box .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+            padding: 0.75rem 0.75rem 0 0.75rem;
+        }
+
+        .modal-box .btn-primary {
+            background: var(--accent);
+            color: #fff;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            border: none;
+        }
+
+        .modal-box .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            padding: 0.45rem 0.9rem;
+            border-radius: 0.5rem;
+        }
+
+        .modal-box .form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+
+        @media (min-width: 768px) {
+            .modal-box .form-grid.cols-2 {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        /* Ensure selects in modals use pill filter style unless opted out */
+        .modal-box select:not(.no-filter-style) {
+            padding: 0.5rem 0.9rem;
+            border-radius: 0.75rem;
+        }
+
         /* ===================== SEMANTIC BADGES ===================== */
         .badge {
             display: inline-block;
@@ -369,21 +618,133 @@
 <body class="antialiased">
 
     <!-- Auth Section -->
-    <div id="auth-container" class="fixed inset-0 z-50 flex items-center justify-center"
-        style="background: var(--bg-primary)">
-        <div class="w-full max-w-md p-8 glass-card rounded-2xl shadow-2xl">
-            <div class="text-center mb-8">
-                <h1 class="text-3xl font-bold text-blue-500">Recruitment Suite HR</h1>
-                <p style="color: var(--text-secondary)">Recruitment Management System</p>
+    <div id="auth-container" class="fixed inset-0 z-[100] flex overflow-hidden">
+        <!-- Left Side: Branding/Image -->
+        <div class="hidden lg:flex lg:w-1/2 relative bg-blue-600 items-center justify-center overflow-hidden">
+            <div class="absolute inset-0 z-0">
+                <img src="login_page_bg.png" alt="Recruitment"
+                    class="w-full h-full object-cover mix-blend-overlay opacity-50">
+                <div class="absolute inset-0 bg-gradient-to-br from-blue-900/80 to-indigo-900/80"></div>
+            </div>
+            <div class="relative z-10 p-12 text-white max-w-lg">
+                <div
+                    class="mb-8 p-4 bg-white/10 backdrop-blur-md rounded-2xl w-20 h-20 flex items-center justify-center shadow-2xl border border-white/20">
+                    <i class="fas fa-users-rays text-4xl"></i>
+                </div>
+                <h2 class="text-5xl font-bold mb-6 leading-tight">Empowering Your Recruitment Journey</h2>
+                <p class="text-xl text-blue-100 font-light leading-relaxed">Streamline your hiring process with our
+                    advanced Recruitment Management System. Connect with top talent faster than ever.</p>
+            </div>
+            <!-- Decorative Elements -->
+            <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl"></div>
+            <div class="absolute -top-24 -right-24 w-96 h-96 bg-indigo-400/20 rounded-full blur-3xl"></div>
+        </div>
+
+        <!-- Right Side: Login Form -->
+        <div
+            class="w-full lg:w-1/2 flex items-center justify-center bg-slate-50 dark:bg-[#0f172a] p-8 sm:p-12 relative">
+            <!-- Mobile Branding (visible only on small screens) -->
+            <div class="lg:hidden absolute top-12 left-0 right-0 text-center">
+                <div
+                    class="inline-flex items-center justify-center p-3 bg-blue-600 rounded-xl text-white shadow-lg mb-4">
+                    <i class="fas fa-users-rays text-2xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Recruitment Suite HR</h1>
             </div>
 
-            <div id="auth-form-container">
-                <input type="email" id="auth-email" placeholder="Email" class="theme-input mb-4 rounded-lg">
-                <input type="password" id="auth-password" placeholder="Password" class="theme-input mb-6 rounded-lg">
+            <div class="w-full max-w-md animate-fade-in">
+                <!-- Login View -->
+                <div id="login-view" class="space-y-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Welcome Back</h2>
+                        <p class="text-slate-500 dark:text-slate-400">Please enter your details to sign in to your
+                            account.</p>
+                    </div>
 
-                <button id="btn-login"
-                    class="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-lg font-semibold text-white transition mb-4">Login</button>
-                <p id="auth-error" class="text-red-400 text-sm mt-4 text-center hidden"></p>
+                    <div id="auth-form-container" class="space-y-4">
+                        <div class="space-y-1">
+                            <label for="auth-email" class="text-sm font-medium text-slate-700 dark:text-slate-300">Email
+                                Address</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                    <i class="fas fa-envelope"></i>
+                                </span>
+                                <input type="email" id="auth-email" placeholder="name@company.com"
+                                    class="theme-input pl-10 rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-12">
+                            </div>
+                        </div>
+
+                        <div class="space-y-1">
+                            <div class="flex justify-between items-center">
+                                <label for="auth-password"
+                                    class="text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
+                                <button onclick="toggleAuthView('forgot')"
+                                    class="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">Forgot
+                                    Password?</button>
+                            </div>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+                                <input type="password" id="auth-password" placeholder="••••••••"
+                                    class="theme-input pl-10 rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-12">
+                            </div>
+                        </div>
+
+                        <button id="btn-login"
+                            class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] p-3.5 rounded-xl font-bold text-white shadow-lg shadow-blue-600/20 transition-all duration-200">
+                            Sign In
+                        </button>
+
+                        <p id="auth-error"
+                            class="text-red-500 text-sm mt-4 text-center hidden p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-900/30">
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Forgot Password View -->
+                <div id="forgot-view" class="hidden space-y-8">
+                    <div>
+                        <button onclick="toggleAuthView('login')"
+                            class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors mb-6 flex items-center gap-2">
+                            <i class="fas fa-arrow-left text-sm"></i> Back to Login
+                        </button>
+                        <h2 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Reset Password</h2>
+                        <p class="text-slate-500 dark:text-slate-400">Enter your email and we'll send you a link to
+                            reset your password.</p>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="space-y-1">
+                            <label for="reset-email"
+                                class="text-sm font-medium text-slate-700 dark:text-slate-300">Email Address</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                    <i class="fas fa-envelope"></i>
+                                </span>
+                                <input type="email" id="reset-email" placeholder="name@company.com"
+                                    class="theme-input pl-10 rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-12">
+                            </div>
+                        </div>
+
+                        <button id="btn-reset"
+                            class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] p-3.5 rounded-xl font-bold text-white shadow-lg shadow-blue-600/20 transition-all duration-200">
+                            Send Reset Link
+                        </button>
+
+                        <p id="reset-success"
+                            class="text-green-500 text-sm mt-4 text-center hidden p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-900/30">
+                        </p>
+                        <p id="reset-error"
+                            class="text-red-500 text-sm mt-4 text-center hidden p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-900/30">
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer for Auth Page -->
+            <div class="absolute bottom-8 left-0 right-0 text-center px-6">
+                <p class="text-xs text-slate-400">&copy; 2026 Recruitment Suite HR. All rights reserved.</p>
             </div>
         </div>
     </div>
@@ -455,26 +816,35 @@
 
         <!-- Main Content -->
         <main class="flex-1 flex flex-col overflow-hidden" style="background: var(--bg-primary)">
-            <!-- Header -->
-            <header class="h-16 border-b flex items-center justify-between px-8 sticky top-0 z-30"
-                style="border-color: var(--border-color)">
+            <header class="h-24 border-b grid grid-cols-[250px_1fr_100px] items-center px-8 sticky top-0 z-30 shadow-sm"
+                style="border-color: var(--border-color); background: var(--bg-primary)">
                 <h2 id="section-title" class="text-xl font-semibold">Dashboard</h2>
-                <div class="flex items-center gap-3">
-                    <div class="relative">
-                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2"
-                            style="color: var(--text-muted)"></i>
-                        <input type="text" id="global-search" placeholder="Search..."
-                            class="theme-input pl-9 pr-4 py-1.5 rounded-full text-sm w-52">
+
+                <div class="flex justify-center px-4">
+                    <div class="relative w-full max-w-5xl group flex items-center">
+                        <i class="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
+                        <input type="text" id="global-search" placeholder="Search candidates, jobs, companies..."
+                            class="theme-input search-input w-full bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-blue-500 transition-all">
+
+                        <div class="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-3">
+                            <div id="search-count"
+                                class="hidden px-2 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 text-[10px] uppercase font-bold tracking-widest rounded-lg whitespace-nowrap">
+                                0 results</div>
+                            <button id="clear-search"
+                                class="text-slate-400 hover:text-red-500 hidden transition-colors flex items-center justify-center p-1"
+                                aria-label="Clear search">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
                     </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3">
                     <button id="theme-toggle"
                         class="p-2 rounded-full transition-colors hover:bg-blue-100 dark:hover:bg-slate-700"
                         style="color: var(--text-secondary)">
                         <i class="fas fa-moon dark:hidden"></i>
                         <i class="fas fa-sun hidden dark:inline"></i>
-                    </button>
-                    <button class="p-2 rounded-full transition-colors hover:bg-blue-100 dark:hover:bg-slate-700"
-                        style="color: var(--text-secondary)">
-                        <i class="fas fa-bell"></i>
                     </button>
                 </div>
             </header>
@@ -484,38 +854,169 @@
 
                 <!-- DASHBOARD VIEW -->
                 <div id="section-dashboard" class="space-y-8 animate-fade-in">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div
-                            class="glass-card p-6 rounded-2xl border-l-4 border-l-blue-500 hover:scale-[1.02] transition-transform">
-                            <p class="text-sm font-medium" style="color: var(--text-secondary)">Total Candidates</p>
-                            <h3 class="text-3xl font-bold mt-1" id="stat-total-candidates">0</h3>
-                        </div>
-                        <div
-                            class="glass-card p-6 rounded-2xl border-l-4 border-l-purple-500 hover:scale-[1.02] transition-transform">
-                            <p class="text-sm font-medium" style="color: var(--text-secondary)">Active Jobs</p>
-                            <h3 class="text-3xl font-bold mt-1" id="stat-active-jobs">0</h3>
-                        </div>
-                        <div
-                            class="glass-card p-6 rounded-2xl border-l-4 border-l-orange-500 hover:scale-[1.02] transition-transform">
-                            <p class="text-sm font-medium" style="color: var(--text-secondary)">Today's Interviews
-                            </p>
-                            <h3 class="text-3xl font-bold mt-1" id="stat-today-interviews">0</h3>
-                        </div>
-                        <div
-                            class="glass-card p-6 rounded-2xl border-l-4 border-l-green-500 hover:scale-[1.02] transition-transform">
-                            <p class="text-sm font-medium" style="color: var(--text-secondary)">Budget Adherence</p>
-                            <h3 class="text-3xl font-bold mt-1 text-green-500" id="stat-avg-budget">100%</h3>
+                    <!-- Quick Actions -->
+                    <div
+                        class="flex flex-wrap gap-4 items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+                        <h3 class="text-xl font-bold">Quick Overview</h3>
+                        <div class="flex gap-2">
+                            <button onclick="openModal('modal-candidate')"
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                                <i class="fas fa-plus"></i> Add Candidate
+                            </button>
+                            <button onclick="openModal('modal-job')"
+                                class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                                <i class="fas fa-briefcase"></i> Post Job
+                            </button>
+                            <button onclick="showSection('messaging')"
+                                class="bg-whatsapp hover:bg-opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                                <i class="fab fa-whatsapp"></i> Bulk Message
+                            </button>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div class="glass-card p-6 rounded-xl">
-                            <h4 class="text-lg font-semibold mb-4">Pipeline Distribution</h4>
-                            <canvas id="stageChart" height="200"></canvas>
+                    <!-- Primary Stats -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div
+                            class="glass-card p-6 rounded-2xl border-l-4 border-l-blue-500 hover:scale-[1.02] transition-transform">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Total
+                                        Candidates</p>
+                                    <h3 class="text-3xl font-bold mt-2" id="stat-total-candidates">0</h3>
+                                </div>
+                                <div
+                                    class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400">
+                                    <i class="fas fa-user-friends"></i>
+                                </div>
+                            </div>
                         </div>
-                        <div class="glass-card p-6 rounded-xl">
-                            <h4 class="text-lg font-semibold mb-4">Budget vs Expected Salary</h4>
-                            <canvas id="budgetChart" height="200"></canvas>
+                        <div
+                            class="glass-card p-6 rounded-2xl border-l-4 border-l-purple-500 hover:scale-[1.02] transition-transform">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Active Jobs
+                                    </p>
+                                    <h3 class="text-3xl font-bold mt-2" id="stat-active-jobs">0</h3>
+                                </div>
+                                <div
+                                    class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl text-purple-600 dark:text-purple-400">
+                                    <i class="fas fa-briefcase"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div
+                            class="glass-card p-6 rounded-2xl border-l-4 border-l-orange-500 hover:scale-[1.02] transition-transform">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Today's
+                                        Interviews</p>
+                                    <h3 class="text-3xl font-bold mt-2" id="stat-today-interviews">0</h3>
+                                </div>
+                                <div
+                                    class="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl text-orange-600 dark:text-orange-400">
+                                    <i class="fas fa-calendar-check"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div
+                            class="glass-card p-6 rounded-2xl border-l-4 border-l-green-500 hover:scale-[1.02] transition-transform">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Selection
+                                        Rate</p>
+                                    <h3 class="text-3xl font-bold mt-2" id="stat-selection-rate">0%</h3>
+                                </div>
+                                <div
+                                    class="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl text-green-600 dark:text-green-400">
+                                    <i class="fas fa-chart-pie"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Secondary Insights Row -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div
+                            class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                            <p class="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Budget Adherence
+                            </p>
+                            <p class="text-xl font-bold mt-1" id="stat-avg-budget">100%</p>
+                        </div>
+                        <div
+                            class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                            <p class="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Median Exp. CTC
+                                (LPA)
+                            </p>
+                            <p class="text-xl font-bold mt-1" id="stat-median-ctc">₹0</p>
+                        </div>
+                        <div
+                            class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                            <p class="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Hires (This Month)
+                            </p>
+                            <p class="text-xl font-bold mt-1 text-green-500" id="stat-monthly-hires">0</p>
+                        </div>
+                        <div
+                            class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                            <p class="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Offer Accept Rate
+                            </p>
+                            <p class="text-xl font-bold mt-1 text-indigo-500">92%</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <!-- Charts Column -->
+                        <div class="lg:col-span-2 space-y-8">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div class="glass-card p-6 rounded-2xl">
+                                    <h4 class="text-lg font-bold mb-4 flex items-center gap-2">
+                                        <i class="fas fa-layer-group text-blue-500"></i> Pipeline Distribution
+                                    </h4>
+                                    <div class="h-[250px]">
+                                        <canvas id="stageChart"></canvas>
+                                    </div>
+                                </div>
+                                <div class="glass-card p-6 rounded-2xl">
+                                    <h4 class="text-lg font-bold mb-4 flex items-center gap-2">
+                                        <i class="fas fa-users-viewfinder text-purple-500"></i> Source Distribution
+                                    </h4>
+                                    <div class="h-[250px]">
+                                        <canvas id="sourceChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="glass-card p-6 rounded-2xl">
+                                <h4 class="text-lg font-bold mb-4 flex items-center gap-2">
+                                    <i class="fas fa-chart-line text-green-500"></i> Hiring & Budget Trends
+                                </h4>
+                                <div class="h-[300px]">
+                                    <canvas id="budgetChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sidebar Column: Upcoming Interviews -->
+                        <div class="space-y-6">
+                            <div class="glass-card p-6 rounded-2xl h-full flex flex-col">
+                                <h4 class="text-lg font-bold mb-6 flex items-center justify-between">
+                                    <span class="flex items-center gap-2"><i class="fas fa-clock text-orange-500"></i>
+                                        Upcoming Interviews</span>
+                                    <span
+                                        class="text-[10px] bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full"
+                                        id="upcoming-count">0 Scheduled</span>
+                                </h4>
+                                <div class="space-y-4 flex-1 overflow-y-auto pr-2" id="dashboard-interviews-list"
+                                    style="max-height: 700px;">
+                                    <!-- Upcoming interviews injected here -->
+                                    <div class="text-center py-12 text-slate-400">
+                                        <p class="text-sm">No interviews scheduled soon.</p>
+                                    </div>
+                                </div>
+                                <button onclick="showSection('interviews')"
+                                    class="w-full mt-6 py-3 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                    View Full Calendar
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -537,38 +1038,154 @@
 
                 <!-- JOBS VIEW -->
                 <div id="section-jobs" class="hidden space-y-6">
-                    <div class="flex justify-between items-center">
+                    <div class="flex flex-col xl:flex-row xl:justify-between xl:items-center gap-4">
                         <h3 class="text-2xl font-bold">Job Management</h3>
-                        <button
-                            onclick="document.getElementById('form-job').reset(); document.getElementById('form-job-id').value = ''; openModal('modal-job')"
-                            class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg flex items-center gap-2">
-                            <i class="fas fa-plus"></i> Create Job
-                        </button>
+                        <div class="flex flex-wrap gap-2 items-center">
+                            <select id="filter-job-status" onchange="renderJobs()"
+                                class="filter-select compact text-sm w-full md:w-auto min-w-[130px]">
+                                <option value="all">All Statuses</option>
+                                <option value="Open">Open</option>
+                                <option value="Closed">Closed</option>
+                            </select>
+                            <select id="filter-job-priority" onchange="renderJobs()"
+                                class="filter-select compact text-sm w-full md:w-auto min-w-[120px]">
+                                <option value="all">Priority: All</option>
+                                <option value="Urgent">Priority: Urgent</option>
+                                <option value="Medium">Priority: Medium</option>
+                                <option value="Low">Priority: Low</option>
+                            </select>
+                            <select id="filter-job-department" onchange="renderJobs()"
+                                class="filter-select text-sm w-full md:w-auto min-w-[140px]">
+                                <option value="all">All Departments</option>
+                            </select>
+                            <select id="filter-job-designation" onchange="renderJobs()"
+                                class="filter-select text-sm w-full md:w-auto min-w-[140px]">
+                                <option value="all">All Designations</option>
+                            </select>
+                            <button
+                                onclick="document.getElementById('form-job').reset(); document.getElementById('form-job-id').value = ''; openModal('modal-job')"
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition shadow-sm w-full md:w-auto">
+                                <i class="fas fa-plus"></i> Create Job
+                            </button>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-1 gap-4" id="jobs-list">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" id="jobs-list">
                         <!-- Jobs injected here -->
                     </div>
                 </div>
 
                 <!-- CANDIDATES VIEW -->
                 <div id="section-candidates" class="hidden space-y-6">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-2xl font-bold">Candidate Database</h3>
-                        <div class="flex gap-2">
-                            <select id="filter-budget" onchange="renderCandidates()"
-                                class="theme-input rounded-lg px-3 py-2 text-sm max-w-[150px]">
-                                <option value="all">All Budgets</option>
-                                <option value="within">Within Budget</option>
-                                <option value="over">Over Budget</option>
-                            </select>
-                            <button onclick="openModal('modal-candidate')"
-                                class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg flex items-center gap-2">
-                                <i class="fas fa-plus"></i> Add Candidate
-                            </button>
+                    <div class="space-y-4">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <h3 class="text-2xl font-bold">Candidate Database</h3>
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <button onclick="toggleCandidateView()" id="btn-toggle-candidates-view"
+                                    class="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm transition-colors border border-slate-200 dark:border-slate-700"
+                                    title="Toggle List/Cards">
+                                    <i class="fas fa-table"></i>
+                                </button>
+                                <button onclick="exportCandidatesCSV()"
+                                    class="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg text-sm transition-colors border border-blue-200 dark:border-blue-800"
+                                    title="Export shown candidates to CSV">
+                                    <i class="fas fa-file-csv"></i>
+                                </button>
+                                <button onclick="bulkSelectAndMessage()"
+                                    class="px-4 py-2 bg-whatsapp hover:bg-whatsapp/90 text-white rounded-lg text-sm flex items-center gap-2 shadow-sm transition-transform active:scale-95">
+                                    <i class="fab fa-whatsapp"></i> Bulk Message
+                                </button>
+                                <button onclick="openModal('modal-candidate')"
+                                    class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg flex items-center gap-2 text-white font-medium shadow-md transition-all active:scale-95">
+                                    <i class="fas fa-plus"></i> Add Candidate
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Search Filters -->
+                        <div
+                            class="flex flex-wrap items-center gap-x-5 gap-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="text-[10px] uppercase font-bold text-slate-400 tracking-wider whitespace-nowrap">Budget
+                                    Status</span>
+                                <select id="filter-budget" onchange="renderCandidates()"
+                                    class="filter-select text-xs min-w-[120px]">
+                                    <option value="all">All Budgets</option>
+                                    <option value="within">Within Budget</option>
+                                    <option value="over">Over Budget</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="text-[10px] uppercase font-bold text-slate-400 tracking-wider whitespace-nowrap">Pipeline
+                                    Stage</span>
+                                <select id="filter-candidate-stage" onchange="renderCandidates()"
+                                    class="filter-select text-xs min-w-[120px]">
+                                    <option value="all">All Stages</option>
+                                    <option value="Applied">Applied</option>
+                                    <option value="Screening">Screening</option>
+                                    <option value="Interview">Interview</option>
+                                    <option value="Selected">Selected</option>
+                                    <option value="Hired">Hired</option>
+                                    <option value="Rejected">Rejected</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="text-[10px] uppercase font-bold text-slate-400 tracking-wider whitespace-nowrap">Department</span>
+                                <select id="filter-candidate-dept" onchange="renderCandidates()"
+                                    class="filter-select text-xs min-w-[130px]">
+                                    <option value="all">All Depts</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="text-[10px] uppercase font-bold text-slate-400 tracking-wider whitespace-nowrap">Experience</span>
+                                <select id="filter-candidate-exp" onchange="renderCandidates()"
+                                    class="filter-select text-xs min-w-[120px]">
+                                    <option value="all">Any Exp</option>
+                                    <option value="fresh">Freshers (0-1)</option>
+                                    <option value="junior">Junior (1-3)</option>
+                                    <option value="mid">Mid (3-7)</option>
+                                    <option value="senior">Senior (7+)</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="text-[10px] uppercase font-bold text-slate-400 tracking-wider whitespace-nowrap">Notice
+                                    Period</span>
+                                <select id="filter-candidate-np" onchange="renderCandidates()"
+                                    class="filter-select text-xs min-w-[120px]">
+                                    <option value="all">Any NP</option>
+                                    <option value="immediate">Immediate</option>
+                                    <option value="15">15 Days</option>
+                                    <option value="30">1 Month</option>
+                                    <option value="60">2 Months</option>
+                                    <option value="90">3 Months</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="text-[10px] uppercase font-bold text-slate-400 tracking-wider whitespace-nowrap">Source</span>
+                                <select id="filter-candidate-source" onchange="renderCandidates()"
+                                    class="filter-select text-xs min-w-[140px]">
+                                    <option value="all">All Sources</option>
+                                    <option value="LinkedIn">LinkedIn</option>
+                                    <option value="Naukri.com">Naukri.com</option>
+                                    <option value="Indeed">Indeed</option>
+                                    <option value="WhatsApp Groups">WhatsApp Groups</option>
+                                    <option value="Referral">Referral</option>
+                                    <option value="Job Portal">Job Portal</option>
+                                    <option value="Walk-in">Walk-in</option>
+                                    <option value="Company Career Page">Company Career Page</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
-                    <div class="glass-card overflow-hidden rounded-xl">
-                        <table class="w-full text-left">
+                    <div class="glass-card rounded-xl overflow-visible min-h-[450px]">
+                        <div id="candidates-cards"
+                            class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 hidden"></div>
+                        <table class="w-full text-left" id="candidates-table">
                             <thead class="theme-thead">
                                 <tr>
                                     <th class="px-6 py-4">Candidate</th>
@@ -847,6 +1464,16 @@
                     <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Location / Headquarters</label>
                     <input type="text" name="location" class="theme-input rounded">
                 </div>
+                <div>
+                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Full Address</label>
+                    <textarea name="address" rows="3" class="theme-input rounded resize-none"
+                        placeholder="Enter complete office address for recruitment messages..."></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">About Company</label>
+                    <textarea name="about" rows="3" class="theme-input rounded resize-none"
+                        placeholder="Brief description of the company..."></textarea>
+                </div>
                 <div class="flex justify-end gap-3 mt-6">
                     <button type="button" onclick="closeModal('modal-company')"
                         class="px-6 py-2 text-slate-400 hover:text-white">Cancel</button>
@@ -880,6 +1507,11 @@
                 <div>
                     <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Department</label>
                     <input type="text" name="department" required class="theme-input rounded">
+                </div>
+                <div>
+                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Minimum Qualification</label>
+                    <input type="text" name="qualification" placeholder="e.g. Bachelor's in Computer Science"
+                        class="theme-input rounded">
                 </div>
                 <div>
                     <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Location</label>
@@ -933,68 +1565,210 @@
             <h3 class="text-xl font-bold mb-6" id="modal-candidate-title">New Candidate Profile</h3>
             <form id="form-candidate" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input type="hidden" name="id" id="form-candidate-id">
+
+                <!-- Section: Personal Details -->
+                <div class="col-span-full">
+                    <p class="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-1">Personal Details</p>
+                    <div class="border-t border-slate-200 dark:border-slate-700"></div>
+                </div>
+
                 <div>
-                    <label class="block text-sm text-slate-500 dark:text-slate-400">Full Name</label>
+                    <label class="block text-sm text-slate-500 dark:text-slate-400">Full Name <span
+                            class="text-red-400">*</span></label>
                     <input type="text" name="name" required class="theme-input rounded">
                 </div>
                 <div>
-                    <label class="block text-sm text-slate-500 dark:text-slate-400">Email</label>
+                    <label class="block text-sm text-slate-500 dark:text-slate-400">Email <span
+                            class="text-red-400">*</span></label>
                     <input type="email" name="email" required class="theme-input rounded">
                 </div>
                 <div>
-                    <label class="block text-sm text-slate-500 dark:text-slate-400">Phone (WhatsApp)</label>
+                    <label class="block text-sm text-slate-500 dark:text-slate-400">Phone (WhatsApp) <span
+                            class="text-red-400">*</span></label>
                     <input type="tel" name="phone" required placeholder="e.g. +919876543210"
                         class="theme-input rounded">
                 </div>
                 <div>
-                    <label class="block text-sm text-slate-500 dark:text-slate-400">Apply for Job</label>
-                    <select id="candidate-job-select" name="jobId" required class="theme-input rounded"></select>
+                    <label class="block text-sm text-slate-500 dark:text-slate-400">Qualification <span
+                            class="text-slate-400 text-xs font-normal">(optional)</span></label>
+                    <select name="qualification" class="theme-input rounded">
+                        <option value="">-- Select Qualification --</option>
+                        <optgroup label="─── School Level ───">
+                            <option value="10th Pass">10th Pass (SSC / Matriculation)</option>
+                            <option value="12th Pass (Science)">12th Pass – Science (PCB / PCM)</option>
+                            <option value="12th Pass (Commerce)">12th Pass – Commerce</option>
+                            <option value="12th Pass (Arts)">12th Pass – Arts</option>
+                        </optgroup>
+                        <optgroup label="─── Pharmacy Degrees ───">
+                            <option value="D.Pharm">D.Pharm (Diploma in Pharmacy)</option>
+                            <option value="B.Pharm">B.Pharm (Bachelor of Pharmacy)</option>
+                            <option value="M.Pharm">M.Pharm (Master of Pharmacy)</option>
+                            <option value="Pharm.D">Pharm.D (Doctor of Pharmacy)</option>
+                            <option value="Ph.D (Pharmacy)">Ph.D – Pharmacy</option>
+                        </optgroup>
+                        <optgroup label="─── Life Sciences / Biology ───">
+                            <option value="B.Sc (Life Science)">B.Sc – Life Sciences</option>
+                            <option value="B.Sc (Biotechnology)">B.Sc – Biotechnology</option>
+                            <option value="B.Sc (Biochemistry)">B.Sc – Biochemistry</option>
+                            <option value="B.Sc (Microbiology)">B.Sc – Microbiology</option>
+                            <option value="B.Sc (Chemistry)">B.Sc – Chemistry</option>
+                            <option value="B.Sc (Zoology / Botany)">B.Sc – Zoology / Botany</option>
+                            <option value="M.Sc (Life Science)">M.Sc – Life Sciences</option>
+                            <option value="M.Sc (Biotechnology)">M.Sc – Biotechnology</option>
+                            <option value="M.Sc (Biochemistry)">M.Sc – Biochemistry</option>
+                            <option value="M.Sc (Microbiology)">M.Sc – Microbiology</option>
+                            <option value="M.Sc (Chemistry)">M.Sc – Chemistry</option>
+                            <option value="Ph.D (Life Sciences)">Ph.D – Life Sciences / Chemistry</option>
+                        </optgroup>
+                        <optgroup label="─── Medical Degrees ───">
+                            <option value="MBBS">MBBS</option>
+                            <option value="BDS">BDS (Dental)</option>
+                            <option value="BAMS">BAMS (Ayurveda)</option>
+                            <option value="BHMS">BHMS (Homeopathy)</option>
+                            <option value="MD">MD (Doctor of Medicine)</option>
+                            <option value="MS (Surgery)">MS – Surgery</option>
+                            <option value="DNB">DNB (Diplomate of National Board)</option>
+                        </optgroup>
+                        <optgroup label="─── Nursing & Allied Health ───">
+                            <option value="GNM">GNM (General Nursing & Midwifery)</option>
+                            <option value="ANM">ANM (Auxiliary Nursing & Midwifery)</option>
+                            <option value="B.Sc Nursing">B.Sc – Nursing</option>
+                            <option value="M.Sc Nursing">M.Sc – Nursing</option>
+                            <option value="B.Sc (MLT)">B.Sc – Medical Lab Technology</option>
+                            <option value="DMLT">DMLT (Diploma in MLT)</option>
+                            <option value="B.Sc (Radiology)">B.Sc – Radiology / Imaging</option>
+                            <option value="B.Sc (Physiotherapy)">B.Sc – Physiotherapy</option>
+                        </optgroup>
+                        <optgroup label="─── Regulatory / Quality / Management ───">
+                            <option value="MBA (Pharma)">MBA – Pharma / Healthcare Management</option>
+                            <option value="PG Diploma (Regulatory Affairs)">PG Diploma – Regulatory Affairs</option>
+                            <option value="PG Diploma (Clinical Research)">PG Diploma – Clinical Research</option>
+                            <option value="PG Diploma (Quality Assurance)">PG Diploma – Quality Assurance</option>
+                            <option value="PG Diploma (Drug Regulatory Affairs)">PG Diploma – Drug Regulatory Affairs
+                            </option>
+                            <option value="Certificate (GMP / GLP)">Certificate – GMP / GLP</option>
+                        </optgroup>
+                        <optgroup label="─── Engineering / Technical ───">
+                            <option value="B.Tech (Chemical)">B.Tech / B.E – Chemical Engineering</option>
+                            <option value="B.Tech (Biotech)">B.Tech / B.E – Biotechnology</option>
+                            <option value="B.Tech (Instrumentation)">B.Tech – Instrumentation Engineering</option>
+                            <option value="Diploma (Chemical Engineering)">Diploma – Chemical Engineering</option>
+                            <option value="ITI">ITI (Industrial Training Institute)</option>
+                        </optgroup>
+                        <optgroup label="─── Commerce / Other ───">
+                            <option value="B.Com">B.Com</option>
+                            <option value="M.Com">M.Com</option>
+                            <option value="BBA">BBA</option>
+                            <option value="B.A">B.A</option>
+                            <option value="Other">Other</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="col-span-full">
+                    <label class="block text-sm text-slate-500 dark:text-slate-400">Address <span
+                            class="text-slate-400 text-xs font-normal">(optional)</span></label>
+                    <textarea name="address" rows="2" placeholder="e.g. 12, MG Road, Bengaluru, Karnataka - 560001"
+                        class="theme-input rounded resize-y"></textarea>
+                </div>
+
+                <!-- Section: Professional Details -->
+                <div class="col-span-full mt-2">
+                    <p class="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-1">Professional Details
+                    </p>
+                    <div class="border-t border-slate-200 dark:border-slate-700"></div>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-slate-500 dark:text-slate-400">Current Company <span
+                            class="text-red-400">*</span></label>
+                    <input type="text" name="currentCompany" required placeholder="e.g. Infosys Ltd."
+                        class="theme-input rounded">
                 </div>
                 <div>
-                    <label class="block text-sm text-slate-500 dark:text-slate-400">Years of Experience</label>
+                    <label class="block text-sm text-slate-500 dark:text-slate-400">Designation <span
+                            class="text-slate-400 text-xs font-normal">(optional)</span></label>
+                    <input type="text" name="designation" placeholder="e.g. Senior Software Engineer"
+                        class="theme-input rounded">
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-500 dark:text-slate-400">Years of Experience <span
+                            class="text-red-400">*</span></label>
                     <input type="number" step="0.1" name="experience" required class="theme-input rounded">
                 </div>
                 <div>
                     <label class="block text-sm text-slate-500 dark:text-slate-400">Source</label>
                     <select name="source" class="theme-input rounded">
-                        <option>LinkedIn</option>
-                        <option>Naukri.com</option>
-                        <option>Indeed</option>
-                        <option>WhatsApp Groups</option>
-                        <option>Referral</option>
-                        <option>Job Portal</option>
-                        <option>Walk-in</option>
-                        <option>Company Career Page</option>
+                        <option value="LinkedIn">LinkedIn</option>
+                        <option value="Naukri.com">Naukri.com</option>
+                        <option value="Indeed">Indeed</option>
+                        <option value="WhatsApp Groups">WhatsApp Groups</option>
+                        <option value="Referral">Referral</option>
+                        <option value="Job Portal">Job Portal</option>
+                        <option value="Walk-in">Walk-in</option>
+                        <option value="Company Career Page">Company Career Page</option>
                     </select>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+
+                <!-- Section: Applied Position -->
+                <div class="col-span-full mt-2">
+                    <p class="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-1">Applied Position</p>
+                    <div class="border-t border-slate-200 dark:border-slate-700"></div>
+                </div>
+
+                <div class="col-span-full grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm text-slate-500 dark:text-slate-400">Current CTC</label>
-                        <input type="number" name="currentCTC" required class="theme-input rounded">
+                        <label class="block text-sm text-slate-500 dark:text-slate-400">Department</label>
+                        <select id="candidate-job-dept-select" name="jobDepartment" class="theme-input rounded">
+                            <option value="">-- Select Department --</option>
+                        </select>
                     </div>
                     <div>
-                        <label class="block text-sm text-slate-500 dark:text-slate-400">Expected CTC</label>
-                        <input type="number" name="expectedCTC" required class="theme-input rounded">
+                        <label class="block text-sm text-slate-500 dark:text-slate-400">Position <span
+                                class="text-red-400">*</span></label>
+                        <select id="candidate-job-select" name="jobId" required
+                            class="theme-input rounded searchable-select"></select>
+                    </div>
+                </div>
+
+                <!-- Section: CTC & Financials -->
+                <div class="col-span-full mt-2">
+                    <p class="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-1">CTC & Financials</p>
+                    <div class="border-t border-slate-200 dark:border-slate-700"></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-500 dark:text-slate-400">Current CTC <span
+                                class="text-red-400">*</span> <span
+                                class="text-xs font-semibold text-blue-400">/mo</span></label>
+                        <input type="number" name="currentCTC" required class="theme-input rounded"
+                            placeholder="e.g. 35000">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-500 dark:text-slate-400">Expected CTC <span
+                                class="text-red-400">*</span> <span
+                                class="text-xs font-semibold text-blue-400">/mo</span></label>
+                        <input type="number" name="expectedCTC" required class="theme-input rounded"
+                            placeholder="e.g. 45000">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm text-slate-500 dark:text-slate-400">Final CTC (Done)</label>
+                        <label class="block text-sm text-slate-500 dark:text-slate-400">Final CTC (Done) <span
+                                class="text-xs font-semibold text-blue-400">/mo</span></label>
                         <input type="number" name="offeredCTC" class="theme-input rounded" placeholder="If selected">
                     </div>
                     <div>
-                        <label class="block text-sm text-slate-500 dark:text-slate-400">Notice Period (Days)</label>
+                        <label class="block text-sm text-slate-500 dark:text-slate-400">Notice Period (Days) <span
+                                class="text-red-400">*</span></label>
                         <input type="number" name="noticePeriod" required class="theme-input rounded">
                     </div>
-                </div>
-                <div class="col-span-full">
-                    <label class="block text-sm text-slate-500 dark:text-slate-400">Skills (Comma separated)</label>
-                    <input type="text" name="skills" placeholder="React, Node, SQL, AWS" class="theme-input rounded">
                 </div>
                 <div class="col-span-full">
                     <label class="block text-sm text-slate-500 dark:text-slate-400">Why Change Job?</label>
                     <textarea name="whyChangeJob" rows="2" class="theme-input rounded resize-y"></textarea>
                 </div>
+
                 <div class="col-span-full flex justify-end gap-3 mt-6 pt-4 border-t">
                     <button type="button" onclick="closeModal('modal-candidate')"
                         class="px-6 py-2 text-slate-400 hover:text-white">Cancel</button>
@@ -1095,6 +1869,8 @@
                                 class="bg-slate-800 px-1 rounded text-blue-400 cursor-pointer hover:bg-slate-700"
                                 onclick="insertWaTag('company')">{{company}}</code> <code
                                 class="bg-slate-800 px-1 rounded text-blue-400 cursor-pointer hover:bg-slate-700"
+                                onclick="insertWaTag('companyAddress')">{{companyAddress}}</code> <code
+                                class="bg-slate-800 px-1 rounded text-blue-400 cursor-pointer hover:bg-slate-700"
                                 onclick="insertWaTag('interviewDate')">{{interviewDate}}</code> <code
                                 class="bg-slate-800 px-1 rounded text-blue-400 cursor-pointer hover:bg-slate-700"
                                 onclick="insertWaTag('interviewTime')">{{interviewTime}}</code> <code
@@ -1159,10 +1935,10 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import {
-            getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut
+            getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import {
-            getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, where, orderBy, onSnapshot, serverTimestamp
+            getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, query, where, orderBy, onSnapshot, serverTimestamp
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // --- FIREBASE CONFIG ---
@@ -1190,29 +1966,273 @@
         let cachedInterviews = [];
         let whatsappSelectedCandidates = new Set();
         let globalSearchQuery = '';
+        let candidateView = 'table'; // 'table' or 'cards'
 
-        document.getElementById('global-search').addEventListener('input', (e) => {
+        const searchInput = document.getElementById('global-search');
+        const clearBtn = document.getElementById('clear-search');
+        const searchCountEl = document.getElementById('search-count');
+
+        function escapeRegex(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+        function escapeHtml(unsafe) {
+            if (unsafe == null) return '';
+            return String(unsafe)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+        function highlight(text, q) {
+            const raw = text == null ? '' : String(text);
+            const safe = escapeHtml(raw);
+            if (!q) return safe;
+            try {
+                const re = new RegExp(escapeRegex(q), 'gi');
+                return safe.replace(re, match => `<mark class="bg-yellow-200 dark:bg-yellow-600/40">${escapeHtml(match)}</mark>`);
+            } catch (e) { return safe; }
+        }
+
+        // Debounce helper
+        function debounce(fn, wait) {
+            let t;
+            return function (...args) {
+                clearTimeout(t);
+                t = setTimeout(() => fn.apply(this, args), wait);
+            };
+        }
+
+        function computeSearchCount(query) {
+            if (!query) return 0;
+            const q = query.toLowerCase();
+            let count = 0;
+            count += cachedCandidates.filter(c => (c.name || '').toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q) || (c.phone || '').toLowerCase().includes(q)).length;
+            count += cachedJobs.filter(j => (j.title || '').toLowerCase().includes(q) || (j.department || '').toLowerCase().includes(q)).length;
+            count += cachedCompanies.filter(c => (c.name || '').toLowerCase().includes(q)).length;
+            return count;
+        }
+
+        function updateSearchCount() {
+            const q = searchInput.value.trim();
+            const cnt = computeSearchCount(q);
+            if (searchCountEl) {
+                searchCountEl.innerText = cnt + ' result' + (cnt === 1 ? '' : 's');
+                searchCountEl.classList.toggle('hidden', cnt === 0);
+            }
+        }
+
+        function getEffectiveQuery(section) {
+            if (!searchInput) return '';
+            return searchInput.value.trim().toLowerCase();
+        }
+
+        // Prefill job location when company is selected (always override per user request)
+        function prefillJobLocationFromCompany() {
+            const sel = document.getElementById('job-company-select');
+            const locInput = document.querySelector('#form-job [name=location]');
+            if (!sel || !locInput) return;
+            const companyId = sel.value;
+            const company = cachedCompanies.find(c => c.id === companyId);
+            if (company) {
+                locInput.value = company.location || company.address || '';
+            }
+        }
+
+        const handleSearchInput = debounce((e) => {
             globalSearchQuery = e.target.value.toLowerCase();
+            clearBtn.classList.toggle('hidden', !globalSearchQuery);
+            updateSearchCount();
+            renderCurrentSection();
+        }, 250);
+
+        searchInput.addEventListener('input', handleSearchInput);
+
+        clearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            globalSearchQuery = '';
+            clearBtn.classList.add('hidden');
+            updateSearchCount();
+            renderCurrentSection();
+            searchInput.focus();
+        });
+
+
+
+        // Keyboard shortcut: Ctrl/Cmd+K to focus search
+        window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                searchInput.focus();
+            }
+        });
+
+        // Global Escape Key to close modals
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modals = ['modal-company', 'modal-job', 'modal-candidate', 'modal-interview', 'modal-wa-template', 'modal-reports'];
+                modals.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el && !el.classList.contains('hidden')) closeModal(id);
+                });
+            }
+        });
+
+        function renderCurrentSection() {
             renderCompanies();
             renderJobs();
             renderCandidates();
             renderWaCandidatesChecklist();
             renderInterviews();
-        });
+        }
+
+        function toggleCandidateView() {
+            candidateView = candidateView === 'table' ? 'cards' : 'table';
+            const btn = document.getElementById('btn-toggle-candidates-view');
+            if (btn) btn.innerHTML = candidateView === 'table' ? '<i class="fas fa-table"></i>' : '<i class="fas fa-th-large"></i>';
+            renderCandidates();
+        }
+
+        function exportCandidatesCSV() {
+            const rows = [];
+            const list = (function () {
+                // reuse filter logic from renderCandidates
+                const filterVal = document.getElementById('filter-budget').value;
+                const q = getEffectiveQuery('candidates');
+                let arr = cachedCandidates.filter(c => {
+                    const job = cachedJobs.find(j => j.id === c.jobId || j.title === c.jobId);
+                    const jobTitle = job ? job.title.toLowerCase() : (c.jobId || '').toLowerCase();
+                    if (!q) return true;
+                    return (c.name || '').toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q) || jobTitle.includes(q) || (c.phone || '').toLowerCase().includes(q);
+                });
+                if (filterVal !== 'all') {
+                    arr = arr.filter(c => {
+                        const job = cachedJobs.find(j => j.id === c.jobId);
+                        if (!job) return true;
+                        const jobBudget = job.budget ? Number(job.budget) : (job.budgetMax ? Number(job.budgetMax) : 0);
+                        return filterVal === 'within' ? Number(c.expectedCTC || c.expectedSalary || 0) <= jobBudget : Number(c.expectedCTC || c.expectedSalary || 0) > jobBudget;
+                    });
+                }
+                return arr;
+            })();
+            if (list.length === 0) { alert('No candidates to export'); return; }
+            const headers = ['Name', 'Email', 'Phone', 'Experience', 'ExpectedCTC', 'CurrentCTC', 'Job'];
+            rows.push(headers.join(','));
+            list.forEach(c => {
+                const job = cachedJobs.find(j => j.id === c.jobId);
+                const vals = [c.name || '', c.email || '', c.phone || '', c.experience || '', c.expectedCTC || '', c.currentCTC || '', job ? job.title : ''];
+                rows.push(vals.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(','));
+            });
+            const csv = rows.join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'candidates_export.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+        }
+
+        function bulkSelectAndMessage() {
+            // select all filtered candidates and go to messaging view
+            const list = (function () {
+                const q = getEffectiveQuery('candidates');
+                const filterVal = document.getElementById('filter-budget').value;
+                let arr = cachedCandidates.filter(c => {
+                    const job = cachedJobs.find(j => j.id === c.jobId || j.title === c.jobId);
+                    const jobTitle = job ? job.title.toLowerCase() : (c.jobId || '').toLowerCase();
+                    if (!q) return true;
+                    return (c.name || '').toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q) || jobTitle.includes(q) || (c.phone || '').toLowerCase().includes(q);
+                });
+                if (filterVal !== 'all') {
+                    arr = arr.filter(c => {
+                        const job = cachedJobs.find(j => j.id === c.jobId);
+                        if (!job) return true;
+                        const jobBudget = job.budget ? Number(job.budget) : (job.budgetMax ? Number(job.budgetMax) : 0);
+                        return filterVal === 'within' ? Number(c.expectedCTC || c.expectedSalary || 0) <= jobBudget : Number(c.expectedCTC || c.expectedSalary || 0) > jobBudget;
+                    });
+                }
+                return arr;
+            })();
+            whatsappSelectedCandidates = new Set(list.map(c => c.id));
+            renderWaCandidatesChecklist();
+            showSection('messaging');
+        }
 
         // --- AUTH LOGIC ---
         const loginBtn = document.getElementById('btn-login');
         const logoutBtn = document.getElementById('btn-logout');
+        const resetBtn = document.getElementById('btn-reset');
 
-        loginBtn.addEventListener('click', async () => {
+        window.toggleAuthView = (view) => {
+            const loginView = document.getElementById('login-view');
+            const forgotView = document.getElementById('forgot-view');
+            const errorP = document.getElementById('auth-error');
+            const resetErrorP = document.getElementById('reset-error');
+            const resetSuccessP = document.getElementById('reset-success');
+
+            if (errorP) errorP.classList.add('hidden');
+            if (resetErrorP) resetErrorP.classList.add('hidden');
+            if (resetSuccessP) resetSuccessP.classList.add('hidden');
+
+            if (view === 'forgot') {
+                loginView.classList.add('hidden');
+                forgotView.classList.remove('hidden');
+            } else {
+                loginView.classList.remove('hidden');
+                forgotView.classList.add('hidden');
+            }
+        };
+
+        async function handleLogin() {
             const email = document.getElementById('auth-email').value;
             const pass = document.getElementById('auth-password').value;
-            const orig = loginBtn.innerText; loginBtn.innerText = 'Logging in...'; loginBtn.disabled = true;
+            if (!email || !pass) {
+                showError("Please enter both email and password.");
+                return;
+            }
+            const orig = loginBtn.innerText; loginBtn.innerText = 'Signing in...'; loginBtn.disabled = true;
             try {
                 await signInWithEmailAndPassword(auth, email, pass);
             } catch (err) { showError(err.message); }
             finally { loginBtn.innerText = orig; loginBtn.disabled = false; }
+        }
+
+        loginBtn.addEventListener('click', handleLogin);
+
+        // Enter Key Support for Login
+        document.getElementById('auth-email').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') document.getElementById('auth-password').focus();
         });
+        document.getElementById('auth-password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleLogin();
+        });
+
+        // Forgot Password Action
+        if (resetBtn) {
+            resetBtn.addEventListener('click', async () => {
+                const email = document.getElementById('reset-email').value;
+                const resetError = document.getElementById('reset-error');
+                const resetSuccess = document.getElementById('reset-success');
+
+                if (!email) {
+                    resetError.innerText = "Please enter your email address.";
+                    resetError.classList.remove('hidden');
+                    return;
+                }
+
+                const orig = resetBtn.innerText; resetBtn.innerText = 'Sending...'; resetBtn.disabled = true;
+                resetError.classList.add('hidden');
+                resetSuccess.classList.add('hidden');
+
+                try {
+                    await sendPasswordResetEmail(auth, email);
+                    resetSuccess.innerText = "Password reset email sent! Please check your inbox.";
+                    resetSuccess.classList.remove('hidden');
+                    document.getElementById('reset-email').value = '';
+                } catch (err) {
+                    resetError.innerText = getFriendlyErrorMessage(err.message);
+                    resetError.classList.remove('hidden');
+                } finally {
+                    resetBtn.innerText = orig;
+                    resetBtn.disabled = false;
+                }
+            });
+        }
 
         logoutBtn.addEventListener('click', () => signOut(auth));
 
@@ -1319,11 +2339,13 @@
         function renderWaCandidatesChecklist() {
             const container = document.getElementById('wa-candidates-checklist');
 
-            // Simple search filter
-            let list = cachedCandidates.filter(c =>
-                c.name.toLowerCase().includes(globalSearchQuery) ||
-                (c.phone && c.phone.replace(/[^0-9]/g, '').includes(globalSearchQuery.replace(/[^0-9]/g, '')))
-            );
+            // Scoped search filter for WA checklist
+            const q = getEffectiveQuery('candidates');
+            let list = cachedCandidates.filter(c => {
+                if (!q) return true;
+                const qn = q.toLowerCase();
+                return c.name.toLowerCase().includes(qn) || (c.phone && c.phone.replace(/[^0-9]/g, '').includes(qn.replace(/[^0-9]/g, '')));
+            });
 
             if (list.length === 0) {
                 container.innerHTML = `<div class="text-slate-500 text-xs p-2">No candidates found matching the search.</div>`;
@@ -1335,7 +2357,7 @@
                     <div class="flex items-center gap-3">
                         <input type="checkbox" id="wacand-${c.id}" value="${c.id}" class="wa-cand-checkbox h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" ${whatsappSelectedCandidates.has(c.id) ? 'checked' : ''} onchange="toggleWaCandidate('${c.id}', this.checked)">
                         <label for="wacand-${c.id}" class="text-sm cursor-pointer select-none">
-                            <div class="font-bold" style="color: var(--text-primary)">${c.name}</div>
+                            <div class="font-bold" style="color: var(--text-primary)">${highlight(c.name, q)}</div>
                             <div class="text-xs" style="color: var(--text-muted)">${c.phone || 'No Phone Number'}</div>
                         </label>
                     </div>
@@ -1373,6 +2395,7 @@
                 email: prospect ? prospect.email : 'candidate@email.com',
                 jobTitle: job ? job.title : 'the position',
                 company: company ? company.name : (job ? (job.company || 'HirePulse Recruitment') : 'HirePulse Recruitment'),
+                companyAddress: company ? (company.address || company.location || '') : '',
                 interviewDate: interview ? new Date(interview.dateTime).toLocaleDateString() : 'Date',
                 interviewTime: interview ? new Date(interview.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Time',
                 interviewMode: interview ? interview.mode : 'Mode'
@@ -1523,152 +2546,303 @@
             showToast("All email drafts opened.");
         };
 
-        function renderCompanies() {
-            const container = document.getElementById('companies-list');
-            const filtered = cachedCompanies.filter(c => c.name.toLowerCase().includes(globalSearchQuery));
-            if (filtered.length === 0) {
-                container.innerHTML = '<div class="text-slate-400 p-4 col-span-full">No companies found.</div>';
-                return;
-            }
-            container.innerHTML = filtered.map(c => `
-                <div class="glass-card p-6 rounded-xl flex flex-col justify-between group">
-                    <div>
-                        <div class="flex justify-between items-start">
-                            <h4 class="text-xl font-bold truncate pr-2">${c.name}</h4>
-                            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                                <button onclick="editCompany('${c.id}')" class="text-slate-500 hover:text-blue-400 p-1" title="Edit Company"><i class="fas fa-edit"></i></button>
-                                <button onclick="deleteDocById('companies', '${c.id}')" class="text-slate-500 hover:text-red-400 p-1" title="Delete Company"><i class="fas fa-trash"></i></button>
-                            </div>
-                        </div>
-                        <p class="text-blue-400 text-xs uppercase tracking-wide font-semibold mt-1">${c.industry || 'N/A'}</p>
-                        <div class="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                            ${c.location ? `<p><i class="fas fa-map-marker-alt w-5 text-slate-400 dark:text-slate-500"></i> ${c.location}</p>` : ''}
-                            ${c.website ? `<p><i class="fas fa-globe w-5 text-slate-400 dark:text-slate-500"></i> <a href="${c.website}" target="_blank" class="hover:text-blue-500 dark:hover:text-blue-400 underline decoration-slate-300 dark:decoration-slate-600 underline-offset-2">${c.website.replace(/^https?:\/\//, '')}</a></p>` : ''}
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
         function renderJobs() {
             const container = document.getElementById('jobs-list');
-            const filtered = cachedJobs.filter(j => j.title.toLowerCase().includes(globalSearchQuery) || j.department.toLowerCase().includes(globalSearchQuery) || (j.designation && j.designation.toLowerCase().includes(globalSearchQuery)));
+            const statusFilter = document.getElementById('filter-job-status').value;
+            const priorityFilter = document.getElementById('filter-job-priority').value;
+            const deptFilter = document.getElementById('filter-job-department').value;
+            const desigFilter = document.getElementById('filter-job-designation').value;
+            const q = getEffectiveQuery('jobs');
+
+            // Update Dynamic Filters (Departments & Designations)
+            const depts = [...new Set(cachedJobs.map(j => j.department).filter(Boolean))];
+            const desigs = [...new Set(cachedJobs.map(j => j.designation).filter(Boolean))];
+
+            const deptSelect = document.getElementById('filter-job-department');
+            const desigSelect = document.getElementById('filter-job-designation');
+
+            if (deptSelect.options.length <= 1 && depts.length > 0) {
+                depts.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d; opt.innerText = d;
+                    deptSelect.appendChild(opt);
+                });
+            }
+            if (desigSelect.options.length <= 1 && desigs.length > 0) {
+                desigs.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d; opt.innerText = d;
+                    desigSelect.appendChild(opt);
+                });
+            }
+
+            let filtered = cachedJobs.filter(j => {
+                const matchStatus = statusFilter === 'all' || j.status === statusFilter;
+                const matchPriority = priorityFilter === 'all' || j.priority === priorityFilter;
+                const matchDept = deptFilter === 'all' || j.department === deptFilter;
+                const matchDesig = desigFilter === 'all' || j.designation === desigFilter;
+                const matchSearch = !q || j.title.toLowerCase().includes(q) ||
+                    (j.department && j.department.toLowerCase().includes(q));
+                return matchStatus && matchPriority && matchDept && matchDesig && matchSearch;
+            });
+
             if (filtered.length === 0) {
-                container.innerHTML = '<div class="text-slate-400 p-4">No jobs found matching search.</div>';
+                container.innerHTML = '<div class="text-slate-400 p-8 col-span-full text-center bg-slate-800/20 rounded-2xl border border-dashed border-slate-700">No jobs found matching criteria.</div>';
                 return;
             }
-            container.innerHTML = filtered.map(job => {
-                const comp = cachedCompanies.find(c => c.id === job.companyId);
-                const compName = comp ? comp.name : (job.company || 'N/A');
-                return `
-                <div class="glass-card p-6 rounded-xl flex flex-col group relative">
-                    <div class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                        <button onclick="editJob('${job.id}')" class="p-2 text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 bg-white dark:bg-slate-800/80 rounded shadow-sm"><i class="fas fa-edit"></i></button>
-                        <button onclick="deleteDocById('jobs', '${job.id}')" class="p-2 text-slate-400 hover:text-red-500 dark:hover:text-red-400 bg-white dark:bg-slate-800/80 rounded shadow-sm"><i class="fas fa-trash"></i></button>
-                    </div>
-                    <div class="flex items-start justify-between pr-20">
-                        <div>
-                            <div class="flex items-center gap-3">
-                                <h4 class="text-xl font-bold text-slate-800 dark:text-white">${job.title}</h4>
-                                <span class="badge badge-blue">${job.priority}</span>
-                                
-                                ${(() => {
-                        // Check if closing date has passed today
-                        let isExpired = false;
-                        if (job.closingDate) {
-                            const closeDate = new Date(job.closingDate);
-                            closeDate.setHours(23, 59, 59, 999);
-                            if (new Date() > closeDate) isExpired = true;
-                        }
-                        const displayStatus = isExpired ? 'Closed' : (job.status || 'Open');
-                        const badgeClasses = displayStatus === 'Open' ? 'badge badge-green' : 'badge badge-red';
-                        return `<span class="${badgeClasses}">${displayStatus}</span>`;
-                    })()}
 
-                                ${job.mrfReceived === 'Yes' ? '<span class="badge badge-purple" title="MRF Received"><i class="fas fa-check-circle"></i> MRF</span>' : ''}
+            container.innerHTML = filtered.map(j => {
+                const company = cachedCompanies.find(c => c.id === j.companyId);
+                const candidatesForJob = cachedCandidates.filter(c => c.jobId === j.id);
+
+                const stats = {
+                    total: candidatesForJob.length,
+                    active: candidatesForJob.filter(c => ['Screening', 'Interview', 'Selected'].includes(c.stage)).length,
+                    hired: candidatesForJob.filter(c => c.stage === 'Hired').length
+                };
+
+                const priorityColors = {
+                    'Urgent': 'text-red-500 bg-red-100 dark:bg-red-900/30',
+                    'Medium': 'text-orange-500 bg-orange-100 dark:bg-orange-900/30',
+                    'Low': 'text-blue-500 bg-blue-100 dark:bg-blue-900/30'
+                };
+                const pColor = priorityColors[j.priority] || 'text-slate-500 bg-slate-100 dark:bg-slate-900/30';
+
+                return `
+                <div class="glass-card p-6 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-blue-500/50 transition-all group relative overflow-hidden">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-[10px] font-bold uppercase tracking-widest ${pColor} px-2 py-0.5 rounded-full">${j.priority || 'Medium'}</span>
+                                <span class="text-[10px] font-bold uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full">${j.status || 'Open'}</span>
                             </div>
-                            <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">${job.designation ? job.designation + ' • ' : ''}${job.department} • <i class="fas fa-building ms-1 me-1 text-slate-400 dark:text-slate-500"></i> ${compName} • <i class="fas fa-map-marker-alt ms-1 me-1 text-slate-400 dark:text-slate-500"></i> ${job.location}</p>
+                            <h4 class="text-xl font-bold text-slate-800 dark:text-white truncate pr-12">${highlight(j.title, q)}</h4>
+                            <p class="text-sm text-blue-500 font-medium">${highlight(company ? company.name : 'Unknown Company', q)}</p>
+                        </div>
+                        <div class="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="editJob('${j.id}')" class="p-2 text-slate-400 hover:text-blue-500 rounded-lg bg-slate-50 dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700"><i class="fas fa-edit"></i></button>
+                            <button onclick="deleteDocById('jobs', '${j.id}')" class="p-2 text-slate-400 hover:text-red-500 rounded-lg bg-slate-50 dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
-                    
-                    <div class="mt-5 grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-slate-100 dark:border-slate-800/50">
-                        <div>
-                            <p class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Budget</p>
-                            <p class="text-sm font-medium mt-0.5">₹${job.budget ? Number(job.budget).toLocaleString() : (job.budgetMax ? Number(job.budgetMax).toLocaleString() : 'N/A')}</p>
+
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="flex items-center gap-2 text-xs text-slate-500">
+                            <i class="fas fa-layer-group"></i>
+                            <span class="truncate">${j.department || 'N/A'}</span>
                         </div>
-                        <div>
-                            <p class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Open Date</p>
-                            <p class="text-sm font-medium mt-0.5">${job.createdAt ? new Date(job.createdAt.toDate ? job.createdAt.toDate() : job.createdAt).toLocaleDateString() : 'N/A'}</p>
+                        <div class="flex items-center gap-2 text-xs text-slate-500">
+                            <i class="fas fa-indian-rupee-sign"></i>
+                            <span>₹${j.budget ? (j.budget / 100000).toFixed(1) + 'L' : 'N/A'}</span>
                         </div>
-                        <div>
-                            <p class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Closing Date</p>
-                            <p class="text-sm font-medium mt-0.5">${job.closingDate ? new Date(job.closingDate).toLocaleDateString() : 'Continuous'}</p>
+                    </div>
+
+                    <div class="bg-slate-50 dark:bg-slate-900/40 rounded-xl p-4 mb-6 border border-slate-100 dark:border-slate-800/50">
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">Pipeline Overview</p>
+                        <div class="grid grid-cols-3 gap-2 text-center">
+                            <div>
+                                <p class="text-lg font-bold text-slate-800 dark:text-white">${stats.total}</p>
+                                <p class="text-[9px] uppercase font-semibold text-slate-500">Total</p>
+                            </div>
+                            <div class="border-x border-slate-200 dark:border-slate-700">
+                                <p class="text-lg font-bold text-blue-500">${stats.active}</p>
+                                <p class="text-[9px] uppercase font-semibold text-slate-500">Active</p>
+                            </div>
+                            <div>
+                                <p class="text-lg font-bold text-green-500">${stats.hired}</p>
+                                <p class="text-[9px] uppercase font-semibold text-slate-500">Hired</p>
+                            </div>
                         </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <p class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Skills</p>
-                            <p class="text-xs text-slate-400 mt-1 truncate" title="${job.skills || ''}">${job.skills || 'Not specified'}</p>
-                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button onclick="addCandidateForJob('${j.id}', '${j.department || ''}')" class="flex-1 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-700 dark:text-slate-300">Add Candidate</button>
+                        <button onclick="viewJobPipeline(this)" data-jobid="${j.id}" data-jobtitle="${j.title}" class="flex-1 py-2 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm">View Pipeline</button>
                     </div>
                 </div>
                 `;
             }).join('');
         }
 
-        function renderCandidates() {
-            const filterVal = document.getElementById('filter-budget').value;
-            const tableBody = document.getElementById('candidates-table-body');
+        function renderCompanies() {
+            const container = document.getElementById('companies-list');
+            const q = getEffectiveQuery('companies');
+            const filtered = q ? cachedCompanies.filter(c => (c.name || '').toLowerCase().includes(q)) : cachedCompanies.slice();
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="text-slate-400 p-8 col-span-full text-center bg-slate-800/20 rounded-2xl border border-dashed border-slate-700">No companies found.</div>';
+                return;
+            }
+            container.innerHTML = filtered.map(c => `
+                <div class="glass-card p-0 rounded-2xl flex flex-col group overflow-hidden border border-slate-200 dark:border-slate-800 hover:border-blue-500/50 transition-all duration-300 shadow-sm hover:shadow-xl relative">
+                    <div class="h-2 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl font-bold shadow-sm">
+                                    ${c.name.charAt(0)}
+                                </div>
+                                <div class="overflow-hidden min-w-0 flex-1">
+                                    <h4 class="text-lg font-bold truncate text-slate-800 dark:text-white pr-16">${highlight(c.name, q)}</h4>
+                                    <p class="text-blue-500 text-[10px] uppercase tracking-widest font-bold">${highlight(c.industry || 'Industry', q)}</p>
+                                </div>
+                            </div>
+                            <div class="absolute top-4 right-4 flex gap-1 shrink-0 bg-white/90 dark:bg-slate-900/90 p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity border border-slate-100 dark:border-slate-800 shadow-sm z-10">
+                                <button onclick="editCompany('${c.id}')" class="p-1.5 text-slate-400 hover:text-blue-500 rounded transition-colors" title="Edit Company"><i class="fas fa-edit text-sm"></i></button>
+                                <button onclick="deleteDocById('companies', '${c.id}')" class="p-1.5 text-slate-400 hover:text-red-500 rounded transition-colors" title="Delete Company"><i class="fas fa-trash text-sm"></i></button>
+                            </div>
+                        </div>
 
-            let list = cachedCandidates.filter(c => c.name.toLowerCase().includes(globalSearchQuery) || c.email.toLowerCase().includes(globalSearchQuery));
-            if (filterVal !== 'all') {
-                list = list.filter(c => {
-                    const job = cachedJobs.find(j => j.id === c.jobId);
-                    if (!job) return true;
-                    return filterVal === 'within' ? c.expectedSalary <= job.budgetMax : c.expectedSalary > job.budgetMax;
+                        <div class="space-y-3 mt-4">
+                            <div class="flex items-start gap-3">
+                                <i class="fas fa-map-location-dot mt-1 text-slate-400 dark:text-slate-500 text-xs"></i>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-tighter mb-0.5">Address</p>
+                                    <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed line-clamp-2">${highlight(c.address || c.location || 'No address provided', q)}</p>
+                                </div>
+                            </div>
+                            
+                            ${c.website ? `
+                            <div class="flex items-center gap-3">
+                                <i class="fas fa-globe text-slate-400 dark:text-slate-500 text-xs"></i>
+                                <div class="flex-1 min-w-0">
+                                    <a href="${c.website}" target="_blank" class="text-sm text-blue-600 dark:text-blue-400 hover:underline truncate block">
+                                        ${highlight(c.website.replace(/^https?:\/\//, ''), q)}
+                                    </a>
+                                </div>
+                            </div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+
+        function renderCandidates() {
+            const filterBudget = document.getElementById('filter-budget').value;
+            const filterStage = document.getElementById('filter-candidate-stage') ? document.getElementById('filter-candidate-stage').value : 'all';
+            const filterDept = document.getElementById('filter-candidate-dept') ? document.getElementById('filter-candidate-dept').value : 'all';
+            const filterExp = document.getElementById('filter-candidate-exp') ? document.getElementById('filter-candidate-exp').value : 'all';
+            const filterNp = document.getElementById('filter-candidate-np') ? document.getElementById('filter-candidate-np').value : 'all';
+            const filterSource = document.getElementById('filter-candidate-source') ? document.getElementById('filter-candidate-source').value : 'all';
+
+            const tableBody = document.getElementById('candidates-table-body');
+            const cardsContainer = document.getElementById('candidates-cards');
+            const q = getEffectiveQuery('candidates');
+
+            // shared filter logic
+            const list = (function getFilteredCandidates() {
+                let arr = cachedCandidates.filter(c => {
+                    const job = cachedJobs.find(j => j.id === c.jobId || j.title === c.jobId);
+                    const jobTitle = job ? job.title.toLowerCase() : (c.jobId || '').toLowerCase();
+                    const jobDept = job ? (job.department || '').toLowerCase() : '';
+
+                    // Search Filter
+                    const matchSearch = !q ||
+                        (c.name || '').toLowerCase().includes(q) ||
+                        (c.email || '').toLowerCase().includes(q) ||
+                        jobTitle.includes(q) ||
+                        (c.phone || '').toLowerCase().includes(q);
+
+                    if (!matchSearch) return false;
+
+                    // Stage Filter
+                    if (filterStage !== 'all' && c.stage !== filterStage) return false;
+
+                    // Department Filter
+                    if (filterDept !== 'all' && jobDept !== filterDept.toLowerCase()) return false;
+
+                    // Experience Filter
+                    const exp = Number(c.experience || 0);
+                    if (filterExp === 'fresh' && exp > 1) return false;
+                    if (filterExp === 'junior' && (exp <= 1 || exp > 3)) return false;
+                    if (filterExp === 'mid' && (exp <= 3 || exp > 7)) return false;
+                    if (filterExp === 'senior' && exp <= 7) return false;
+
+                    // Notice Period Filter
+                    const np = Number(c.noticePeriod || 0);
+                    if (filterNp === 'immediate' && np > 0) return false;
+                    if (filterNp === '15' && np > 15) return false;
+                    if (filterNp === '30' && np > 30) return false;
+                    if (filterNp === '60' && np > 60) return false;
+                    if (filterNp === '90' && np > 90) return false;
+
+                    // Source Filter
+                    if (filterSource !== 'all' && (c.source || 'Other') !== filterSource) return false;
+
+                    return true;
                 });
+
+                // Budget Filter
+                if (filterBudget !== 'all') {
+                    arr = arr.filter(c => {
+                        const job = cachedJobs.find(j => j.id === c.jobId);
+                        if (!job) return true;
+                        const jobBudget = job.budget ? Number(job.budget) : (job.budgetMax ? Number(job.budgetMax) : 0);
+                        const expCTC = Number(c.expectedCTC || c.expectedSalary || 0);
+                        return filterBudget === 'within' ? expCTC <= jobBudget : expCTC > jobBudget;
+                    });
+                }
+                return arr;
+            })();
+
+            // quick empty state
+            if (list.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500">No candidates found.</td></tr>`;
+                cardsContainer.innerHTML = `<div class="col-span-1 p-6 text-center text-slate-500">No candidates found.</div>`;
+                return;
             }
 
+            // render table rows
             tableBody.innerHTML = list.map(c => {
                 const job = cachedJobs.find(j => j.id === c.jobId);
                 let budgetStatus = { label: 'Unknown', color: 'badge badge-gray' };
 
                 let jobBudget = job ? (job.budget ? Number(job.budget) : (job.budgetMax ? Number(job.budgetMax) : 0)) : 0;
+                // Job budget is annual; candidate CTC is monthly → annualise for comparison
+                const annualExpCTC = Number(c.expectedCTC || 0) * 12;
 
                 if (job && jobBudget > 0) {
-                    if (c.expectedCTC <= jobBudget) budgetStatus = { label: 'Within Budget', color: 'badge badge-green' };
-                    else if (c.expectedCTC <= jobBudget * 1.1) budgetStatus = { label: 'Slightly Above', color: 'badge badge-orange' };
+                    if (annualExpCTC <= jobBudget) budgetStatus = { label: 'Within Budget', color: 'badge badge-green' };
+                    else if (annualExpCTC <= jobBudget * 1.1) budgetStatus = { label: 'Slightly Above', color: 'badge badge-orange' };
                     else budgetStatus = { label: 'Over Budget', color: 'badge badge-red' };
                 }
 
+                const initials = (c.name || '').split(' ').map(s => s[0]).join('').substring(0, 2).toUpperCase();
+
                 return `
-                    <tr class="theme-tr transition group">
+            <tr class="theme-tr transition group">
                         <td class="px-6 py-4">
-                            <div class="font-medium flex items-center gap-2 text-slate-800 dark:text-white">${c.name} <span class="bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600 uppercase" title="Source: ${c.source || 'N/A'}">${c.source ? c.source.substring(0, 2) : 'N/A'}</span></div>
-                            <div class="text-xs text-slate-500 flex gap-2 items-center mt-1">
-                                <a href="mailto:${c.email}" class="hover:text-blue-500 dark:hover:text-blue-400 truncate w-32 inline-block"><i class="fas fa-envelope mr-1"></i>${c.email}</a>
-                                <a href="https://wa.me/${c.phone ? c.phone.replace(/[^0-9]/g, '') : ''}" target="_blank" class="hover:text-whatsapp"><i class="fab fa-whatsapp mr-1"></i>${c.phone || 'N/A'}</a>
+                            <div class="font-medium flex items-center gap-3 text-slate-800 dark:text-white">
+                                <div class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm font-bold text-slate-700">${initials}</div>
+                                <div>
+                                    <div>${highlight(c.name, q)} <span class="bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 text-[9px] px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600 uppercase" title="Source: ${c.source || 'N/A'}">${c.source ? c.source.substring(0, 2) : 'N/A'}</span></div>
+                                    <div class="text-xs text-slate-500 flex gap-2 items-center mt-1">
+                                        <a href="mailto:${c.email}" class="hover:text-blue-500 dark:hover:text-blue-400 truncate w-32 inline-block"><i class="fas fa-envelope mr-1"></i>${highlight(c.email, q)}</a>
+                                        <a href="https://wa.me/${c.phone ? c.phone.replace(/[^0-9]/g, '') : ''}" target="_blank" class="hover:text-whatsapp"><i class="fab fa-whatsapp mr-1"></i>${highlight(c.phone || 'N/A', q)}</a>
+                                    </div>
+                                </div>
                             </div>
                         </td>
                         <td class="px-6 py-4 text-sm border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/20">
-                            <span class="text-slate-700 dark:text-slate-300 font-medium">${job ? job.title : 'Deleted Job'}</span>
-                            ${job && job.designation ? `<div class="text-xs text-slate-500 font-normal">${job.designation}</div>` : ''}
+                            <span class="text-slate-700 dark:text-slate-300 font-medium">${highlight(job ? job.title : 'Deleted Job', q)}</span>
+                            ${job && job.designation ? `<div class="text-xs text-slate-500 font-normal">${highlight(job.designation, q)}</div>` : ''}
                         </td>
                         <td class="px-6 py-4 text-sm border-b border-slate-200 dark:border-slate-800">
                             <div class="text-slate-700 dark:text-slate-300 font-medium">${c.experience ? c.experience + ' Yrs' : 'N/A'}</div>
                             <div class="text-[10px] text-slate-500 mt-1">NP: <span class="text-blue-600 dark:text-blue-300 font-bold">${c.noticePeriod || 0}</span> days</div>
                         </td>
                         <td class="px-6 py-4 border-b border-slate-200 dark:border-slate-800">
-                            <div class="text-sm font-semibold text-slate-800 dark:text-slate-300" title="Expected CTC">₹${c.expectedCTC ? parseInt(c.expectedCTC).toLocaleString() : '0'} <span class="text-[10px] font-normal text-slate-500">(Exp)</span></div>
-                            <div class="text-xs text-slate-500 mt-1" title="Current CTC">₹${c.currentCTC ? parseInt(c.currentCTC).toLocaleString() : 'N/A'} <span class="text-[9px]">(Cur)</span></div>
-                            ${c.offeredCTC ? `<div class="text-xs text-green-600 dark:text-green-400 mt-1 font-bold" title="Final CTC">₹${parseInt(c.offeredCTC).toLocaleString()} <span class="text-[8px] uppercase tracking-tighter">(Final)</span></div>` : ''}
+                            <div class="text-sm font-semibold text-slate-800 dark:text-slate-300" title="Expected Monthly CTC">₹${c.expectedCTC ? parseInt(c.expectedCTC).toLocaleString() : '0'}<span class="text-[9px] font-normal text-slate-500">/mo</span> <span class="text-[10px] font-normal text-slate-500">(Exp)</span></div>
+                            <div class="text-xs text-slate-500 mt-1" title="Current Monthly CTC">₹${c.currentCTC ? parseInt(c.currentCTC).toLocaleString() : 'N/A'}<span class="text-[8px]">/mo</span> <span class="text-[9px]">(Cur)</span></div>
+                            ${c.offeredCTC ? `<div class="text-xs text-green-600 dark:text-green-400 mt-1 font-bold" title="Final Monthly CTC">₹${parseInt(c.offeredCTC).toLocaleString()}<span class="text-[8px] uppercase tracking-tighter">/mo</span> <span class="text-[8px] uppercase tracking-tighter">(Final)</span></div>` : ''}
                         </td>
                         <td class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/20">
-                            <select onchange="updateCandidateStage('${c.id}', this.value)" class="bg-white dark:bg-slate-800/80 text-xs border border-slate-200 dark:border-slate-700/80 rounded py-1 px-2 text-slate-700 dark:text-slate-300 hover:border-blue-400 transition-colors focus:outline-none focus:border-blue-500 shadow-sm">
-                                <option class="bg-white dark:bg-slate-800" ${c.stage === 'Applied' ? 'selected' : ''}>Applied</option>
-                                <option class="bg-white dark:bg-slate-800" ${c.stage === 'Screening' ? 'selected' : ''}>Screening</option>
-                                <option class="bg-white dark:bg-slate-800" ${c.stage === 'Interview' ? 'selected' : ''}>Interview</option>
-                                <option class="bg-white dark:bg-slate-800" ${c.stage === 'Selected' ? 'selected' : ''}>Selected</option>
-                                <option class="bg-white dark:bg-slate-800" ${c.stage === 'Hired' ? 'selected' : ''}>Hired</option>
-                                <option class="bg-white dark:bg-slate-800" ${c.stage === 'Rejected' ? 'selected' : ''}>Rejected</option>
+                            <select onchange="updateCandidateStage('${c.id}', this.value)" class="filter-select compact text-xs">
+                                <option ${c.stage === 'Applied' ? 'selected' : ''}>Applied</option>
+                                <option ${c.stage === 'Screening' ? 'selected' : ''}>Screening</option>
+                                <option ${c.stage === 'Interview' ? 'selected' : ''}>Interview</option>
+                                <option ${c.stage === 'Selected' ? 'selected' : ''}>Selected</option>
+                                <option ${c.stage === 'Hired' ? 'selected' : ''}>Hired</option>
+                                <option ${c.stage === 'Rejected' ? 'selected' : ''}>Rejected</option>
                             </select>
                         </td>
                         <td class="px-6 py-4 text-center border-b border-slate-200 dark:border-slate-800 font-medium font-bold">
@@ -1680,25 +2854,82 @@
                                 <button onclick="deleteDocById('candidates', '${c.id}')" class="p-2 text-slate-400 hover:text-red-500 dark:hover:text-red-400 bg-slate-100 dark:bg-slate-800/80 rounded shadow-sm" title="Delete Candidate"><i class="fas fa-trash"></i></button>
                             </div>
                         </td>
-                    </tr>
+                        </tr>
+            `;
+            }).join('');
+
+            // render card view
+            cardsContainer.innerHTML = list.map(c => {
+                const job = cachedJobs.find(j => j.id === c.jobId);
+                const initials = (c.name || '').split(' ').map(s => s[0]).join('').substring(0, 2).toUpperCase();
+                // compute budget status for card view as well
+                let jobBudget = job ? (job.budget ? Number(job.budget) : (job.budgetMax ? Number(job.budgetMax) : 0)) : 0;
+                let budgetStatus = { label: 'Unknown', color: 'badge badge-gray' };
+                if (job && jobBudget > 0) {
+                    const expected = Number(c.expectedCTC || c.expectedSalary || 0);
+                    if (expected <= jobBudget) budgetStatus = { label: 'Within Budget', color: 'badge badge-green' };
+                    else if (expected <= jobBudget * 1.1) budgetStatus = { label: 'Slightly Above', color: 'badge badge-orange' };
+                    else budgetStatus = { label: 'Over Budget', color: 'badge badge-red' };
+                }
+                return `
+                <div class="glass-card p-4 rounded-xl">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-700">${initials}</div>
+                            <div>
+                                <div class="font-bold text-slate-800 dark:text-white">${highlight(c.name, q)}</div>
+                                <div class="text-sm text-slate-500">${job ? job.title : 'No Job'}</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-semibold">₹${c.expectedCTC ? parseInt(c.expectedCTC).toLocaleString() : '0'}</div>
+                            <div class="text-xs text-slate-500">${c.experience ? c.experience + ' Yrs' : 'N/A'}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-3">
+                        <div class="flex items-center gap-2">
+                            <button onclick="editCandidate('${c.id}')" class="px-3 py-1 rounded bg-slate-100 hover:bg-slate-200">Edit</button>
+                            <button onclick="deleteDocById('candidates', '${c.id}')" class="px-3 py-1 rounded bg-red-50 hover:bg-red-100 text-red-600">Delete</button>
+                        </div>
+                        <div class="text-xs text-slate-500">${budgetStatus.label}</div>
+                    </div>
+                </div>
                 `;
             }).join('');
+
+            // toggle view visibility
+            const cardsEl = document.getElementById('candidates-cards');
+            const tableEl = document.getElementById('candidates-table');
+            if (candidateView === 'cards') {
+                cardsEl.classList.remove('hidden');
+                tableEl.classList.add('hidden');
+            } else {
+                cardsEl.classList.add('hidden');
+                tableEl.classList.remove('hidden');
+            }
+            // Ensure any newly created select elements are converted to custom selects
+            try { initCustomSelects(); } catch (e) { console.warn('initCustomSelects after renderCandidates failed', e); }
         }
 
         function renderInterviews() {
             const container = document.getElementById('interviews-list');
+            const q = getEffectiveQuery('interviews');
+            const qnorm = q ? q.toLowerCase() : '';
             const filtered = cachedInterviews.filter(i => {
                 const cand = cachedCandidates.find(c => c.id === i.candidateId);
-                return cand ? cand.name.toLowerCase().includes(globalSearchQuery) : false;
+                if (!cand) return false;
+                if (!qnorm) return true;
+                return cand.name.toLowerCase().includes(qnorm) || (i.interviewer && i.interviewer.toLowerCase().includes(qnorm)) || (cand.phone && cand.phone.replace(/[^0-9]/g, '').includes(qnorm.replace(/[^0-9]/g, '')));
             });
+
             if (filtered.length === 0) {
                 container.innerHTML = '<div class="text-slate-400 p-4 col-span-2">No interviews matching search.</div>';
                 return;
             }
+
             container.innerHTML = filtered.map(i => {
                 const cand = cachedCandidates.find(c => c.id === i.candidateId);
-                const date = new Date(i.dateTime).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-
+                const date = i.dateTime ? new Date(i.dateTime).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : 'TBD';
                 const status = i.status || 'Scheduled';
                 let borderClass = 'border-blue-500';
                 let badgeClass = 'badge badge-blue';
@@ -1708,54 +2939,95 @@
                 if (status === 'Rejected') { borderClass = 'border-red-500'; badgeClass = 'badge badge-red'; }
 
                 return `
-                    <div class="glass-card p-6 rounded-xl border-l-4 ${borderClass} flex flex-col justify-between group">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <div class="flex items-center gap-3">
-                                    <h4 class="font-bold text-xl text-slate-800 dark:text-white">${cand ? cand.name : 'Unknown Candidate'}</h4>
-                                    <span class="text-[10px] px-2 py-0.5 rounded border uppercase font-bold tracking-wider ${badgeClass}">${status}</span>
-                                </div>
-                                <p class="text-sm mt-1.5 font-medium" style="color: var(--text-secondary)"><i class="far fa-clock mr-2 text-slate-400"></i>${date}</p>
-                                <p class="text-xs mt-1 lowercase font-bold tracking-tight" style="color: var(--text-muted)"><i class="fas ${i.mode && i.mode.includes('Video') ? 'fa-video text-blue-500' : 'fa-building text-orange-500'} mr-2"></i> ${i.mode}</p>
-                                ${i.interviewer ? `<p class="text-[10px] mt-2 italic font-medium" style="color: var(--text-muted)"><i class="fas fa-user-circle mr-1"></i> Interviewer: ${i.interviewer}</p>` : ''}
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="editInterview('${i.id}')" class="text-slate-400 hover:text-blue-500 p-2 opacity-0 group-hover:opacity-100 transition" title="Edit Interview"><i class="fas fa-edit"></i></button>
-                                <button onclick="deleteDocById('interviews', '${i.id}')" class="text-slate-400 hover:text-red-500 p-2 opacity-0 group-hover:opacity-100 transition" title="Delete Interview"><i class="fas fa-trash"></i></button>
-                            </div>
+            <div class="glass-card p-6 rounded-xl border-l-4 ${borderClass} flex flex-col justify-between group">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="flex items-center gap-3">
+                            <h4 class="font-bold text-xl text-slate-800 dark:text-white">${highlight(cand ? cand.name : 'Unknown Candidate', q)}</h4>
+                            <span class="text-[10px] px-2 py-0.5 rounded border uppercase font-bold tracking-wider ${badgeClass}">${status}</span>
                         </div>
+                        <p class="text-sm mt-1.5 font-medium" style="color: var(--text-secondary)"><i class="far fa-clock mr-2 text-slate-400"></i>${date}</p>
+                        <p class="text-xs mt-1 lowercase font-bold tracking-tight" style="color: var(--text-muted)"><i class="fas ${i.mode && i.mode.includes('Video') ? 'fa-video text-blue-500' : 'fa-building text-orange-500'} mr-2"></i> ${i.mode || ''}</p>
+                        ${i.interviewer ? `<p class="text-[10px] mt-2 italic font-medium" style="color: var(--text-muted)"><i class="fas fa-user-circle mr-1"></i> Interviewer: ${i.interviewer}</p>` : ''}
                     </div>
-                `;
+                    <div class="flex gap-2">
+                        <button onclick="editInterview('${i.id}')" class="text-slate-400 hover:text-blue-500 p-2 opacity-0 group-hover:opacity-100 transition" title="Edit Interview"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteDocById('interviews', '${i.id}')" class="text-slate-400 hover:text-red-500 p-2 opacity-0 group-hover:opacity-100 transition" title="Delete Interview"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            </div>
+            `;
             }).join('');
         }
 
         // --- DASHBOARD ANALYTICS ---
-        let stageChart, budgetChart;
+        let stageChart, budgetChart, sourceChart;
         function updateDashboard() {
-            document.getElementById('stat-total-candidates').innerText = cachedCandidates.length;
-            document.getElementById('stat-active-jobs').innerText = cachedJobs.length;
+            // Basic Counters
+            const totalCandidates = cachedCandidates.length;
+            const activeJobs = cachedJobs.filter(j => j.status === 'Open').length;
+            document.getElementById('stat-total-candidates').innerText = totalCandidates;
+            document.getElementById('stat-active-jobs').innerText = activeJobs || cachedJobs.length;
 
+            // Today's Interviews
             const todayStr = new Date().toISOString().split('T')[0];
             const todayInts = cachedInterviews.filter(i => i.dateTime && i.dateTime.startsWith(todayStr)).length;
             document.getElementById('stat-today-interviews').innerText = todayInts;
 
+            // Selection Rate
+            const selectedCount = cachedCandidates.filter(c => c.stage === 'Selected' || c.stage === 'Hired').length;
+            const selectionRate = totalCandidates > 0 ? Math.round((selectedCount / totalCandidates) * 100) : 0;
+            document.getElementById('stat-selection-rate').innerText = selectionRate + '%';
+
+            // Budget Adherence & Median CTC
             let withinBudgetCount = 0;
             let totalCandWithJob = 0;
+            let ctcs = [];
+
             cachedCandidates.forEach(c => {
                 const job = cachedJobs.find(j => j.id === c.jobId);
+                const expCTC = Number(c.expectedCTC || c.expectedSalary || 0); // monthly
+                const annualExpCTC = expCTC * 12; // annualise for budget comparison
+                if (expCTC > 0) ctcs.push(expCTC); // keep monthly for median stat
+
                 if (job) {
-                    let jobBudget = job.budget ? Number(job.budget) : (job.budgetMax ? Number(job.budgetMax) : 0);
-                    if (jobBudget > 0) {
+                    let jobBudget = job.budget ? Number(job.budget) : (job.budgetMax ? Number(job.budgetMax) : 0); // annual
+                    if (jobBudget > 0 && annualExpCTC > 0) {
                         totalCandWithJob++;
-                        if (c.expectedSalary <= jobBudget) withinBudgetCount++;
+                        if (annualExpCTC <= jobBudget) withinBudgetCount++;
                     }
                 }
             });
-            const adherence = totalCandWithJob > 0 ? Math.round((withinBudgetCount / totalCandWithJob) * 100) : 100;
-            const bElem = document.getElementById('stat-avg-budget');
-            bElem.innerText = adherence + '%';
-            bElem.className = `text-3xl font-bold mt-1 ${adherence >= 80 ? 'text-green-400' : adherence >= 50 ? 'text-orange-400' : 'text-red-400'}`;
 
+            const adherence = totalCandWithJob > 0 ? Math.round((withinBudgetCount / totalCandWithJob) * 100) : 100;
+            const bEl = document.getElementById('stat-avg-budget');
+            if (bEl) {
+                bEl.innerText = adherence + '%';
+                bEl.className = `text - xl font - bold mt - 1 ${adherence >= 80 ? 'text-green-500' : adherence >= 50 ? 'text-orange-500' : 'text-red-500'} `;
+            }
+
+            // Median CTC calculation (stored as monthly → display as annual LPA for context)
+            ctcs.sort((a, b) => a - b);
+            let median = 0;
+            if (ctcs.length > 0) {
+                const mid = Math.floor(ctcs.length / 2);
+                median = ctcs.length % 2 !== 0 ? ctcs[mid] : (ctcs[mid - 1] + ctcs[mid]) / 2;
+            }
+            const medianAnnual = median * 12;
+            document.getElementById('stat-median-ctc').innerText = medianAnnual ? `₹${(medianAnnual / 100000).toFixed(1)} L` : '₹0';
+
+            // Monthly Hires
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+            const monthlyHires = cachedCandidates.filter(c => {
+                if (c.stage !== 'Selected' && c.stage !== 'Hired') return false;
+                if (!c.createdAt) return false;
+                const d = new Date(c.createdAt.seconds * 1000);
+                return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+            }).length;
+            document.getElementById('stat-monthly-hires').innerText = monthlyHires;
+
+            // Pipeline Distribution Chart
             const stages = ['Applied', 'Screening', 'Interview', 'Selected', 'Rejected'];
             const stageCounts = stages.map(s => cachedCandidates.filter(c => c.stage === s).length);
 
@@ -1767,38 +3039,155 @@
                     datasets: [{
                         label: 'Candidates',
                         data: stageCounts,
-                        backgroundColor: '#3b82f6'
+                        backgroundColor: ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444'],
+                        borderRadius: 8
                     }]
                 },
                 options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, grid: { color: '#334155' } } }
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(51, 65, 85, 0.1)', borderDash: [5, 5] },
+                            ticks: { font: { size: 10 } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 10, weight: 'bold' } }
+                        }
+                    }
                 }
             });
 
-            // Budget vs Expected avg (update to new single budget)
-            const jobTitles = cachedJobs.slice(0, 5).map(j => j.title);
-            const budgetData = cachedJobs.slice(0, 5).map(j => j.budget ? Number(j.budget) : (j.budgetMax ? Number(j.budgetMax) : 0));
-            const expectedData = cachedJobs.slice(0, 5).map(j => {
-                const relevant = cachedCandidates.filter(c => c.jobId === j.id);
-                if (relevant.length === 0) return 0;
-                return relevant.reduce((acc, curr) => acc + parseInt(curr.expectedSalary), 0) / relevant.length;
+            // Source Distribution Chart (Dynamic from Candidate Data)
+            const sourceMap = {};
+            cachedCandidates.forEach(c => {
+                const s = c.source || 'Other';
+                sourceMap[s] = (sourceMap[s] || 0) + 1;
+            });
+
+            const sortedSources = Object.entries(sourceMap)
+                .sort((a, b) => b[1] - a[1]);
+
+            // Take top 5, rest as Other
+            const topSources = sortedSources.slice(0, 5);
+            const otherCount = sortedSources.slice(5).reduce((acc, curr) => acc + curr[1], 0);
+
+            let chartLabels = topSources.map(s => s[0]);
+            let chartData = topSources.map(s => s[1]);
+
+            if (otherCount > 0) {
+                chartLabels.push('Other');
+                chartData.push(otherCount);
+            }
+
+            if (sourceChart) sourceChart.destroy();
+            sourceChart = new Chart(document.getElementById('sourceChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        data: chartData,
+                        backgroundColor: ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#94a3b8'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } }
+                    }
+                }
+            });
+
+            // Trends Chart (Budget vs Real CTCs)
+            const recentJobs = cachedJobs.slice(0, 6);
+            const jobLabels = recentJobs.map(j => j.title.length > 15 ? j.title.substring(0, 12) + '...' : j.title);
+            const budgetData = recentJobs.map(j => j.budget ? Number(j.budget) : (j.budgetMax ? Number(j.budgetMax) : 0)); // annual
+            const avgExpData = recentJobs.map(j => {
+                const candidatesForJob = cachedCandidates.filter(c => c.jobId === j.id);
+                if (candidatesForJob.length === 0) return 0;
+                // monthly → annual to match job budget scale
+                const avgMonthly = candidatesForJob.reduce((acc, c) => acc + Number(c.expectedCTC || c.expectedSalary || 0), 0) / candidatesForJob.length;
+                return avgMonthly * 12;
             });
 
             if (budgetChart) budgetChart.destroy();
             budgetChart = new Chart(document.getElementById('budgetChart'), {
                 type: 'line',
                 data: {
-                    labels: jobTitles,
+                    labels: jobLabels,
                     datasets: [
-                        { label: 'Max Budget', data: budgetData, borderColor: '#10b981', tension: 0.3 },
-                        { label: 'Avg Expected', data: expectedData, borderColor: '#ef4444', tension: 0.3 }
+                        { label: 'Job Budget (Annual)', data: budgetData, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.4 },
+                        { label: 'Avg Expected CTC (Annual)', data: avgExpData, borderColor: '#ef4444', borderDash: [5, 5], tension: 0.4 }
                     ]
                 },
                 options: {
-                    scales: { y: { grid: { color: '#334155' } } }
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top', labels: { boxWidth: 15, font: { size: 11 } } } },
+                    scales: {
+                        y: {
+                            grid: { color: 'rgba(51, 65, 85, 0.1)' },
+                            ticks: { callback: (val) => '₹' + (val / 100000).toFixed(1) + 'L' }
+                        }
+                    }
                 }
             });
+
+            renderUpcomingInterviews();
+        }
+
+        function renderUpcomingInterviews() {
+            const container = document.getElementById('dashboard-interviews-list');
+            const q = getEffectiveQuery('interviews');
+            const now = new Date();
+            const futureInts = cachedInterviews
+                .filter(i => i.dateTime && new Date(i.dateTime) >= now)
+                .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+
+            document.getElementById('upcoming-count').innerText = `${futureInts.length} Scheduled`;
+
+            if (futureInts.length === 0) {
+                container.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 text-slate-400">
+                        <i class="fas fa-calendar-day text-4xl mb-4 opacity-20"></i>
+                        <p class="text-sm">No upcoming interviews</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = futureInts.slice(0, 10).map(i => {
+                const cand = cachedCandidates.find(c => c.id === i.candidateId);
+                const job = cand ? cachedJobs.find(j => j.id === cand.jobId) : null;
+                const dt = new Date(i.dateTime);
+                const timeStr = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const dateStr = dt.toLocaleDateString([], { day: 'numeric', month: 'short' });
+
+                return `
+            <div class="p-4 rounded-xl bg-white dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 hover:border-blue-500/30 transition-colors group">
+                <div class="flex justify-between items-start">
+                    <div class="flex items-center gap-3">
+                        <div class="flex flex-col items-center justify-center w-12 h-12 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold">
+                            <span class="text-[10px] uppercase leading-none">${dt.toLocaleString('default', { month: 'short' })}</span>
+                            <span class="text-lg leading-none mt-1">${dt.getDate()}</span>
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-800 dark:text-white group-hover:text-blue-500 transition-colors">${highlight(cand ? cand.name : 'Unknown', q)}</p>
+                            <p class="text-xs text-slate-500 truncate w-32">${job ? job.title : 'Position'}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-bold text-slate-700 dark:text-slate-300">${timeStr}</p>
+                        <span class="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">${i.mode || 'Online'}</span>
+                    </div>
+                </div>
+                    </div>`;
+            }).join('');
         }
 
         // --- FORMS & ACTIONS ---
@@ -1877,18 +3266,111 @@
             finally { btn.innerText = orig; btn.disabled = false; }
         };
 
+
+        window.viewJobPipeline = (btn) => {
+            const jobTitle = btn ? btn.getAttribute('data-jobtitle') : '';
+            showSection('candidates');
+            const searchEl = document.getElementById('global-search');
+            const clearBtn = document.getElementById('clear-search');
+            if (searchEl) {
+                searchEl.value = jobTitle || '';
+                globalSearchQuery = (jobTitle || '').toLowerCase();
+                if (clearBtn) clearBtn.classList.toggle('hidden', !globalSearchQuery);
+                updateSearchCount();
+            }
+            renderCandidates();
+            renderWaCandidatesChecklist();
+        };
+
+        window.addCandidateForJob = (jobId, department) => {
+            openModal('modal-candidate');
+            const deptSelect = document.getElementById('candidate-job-dept-select');
+            const jobSelect = document.getElementById('candidate-job-select');
+
+            if (deptSelect) {
+                deptSelect.value = department || '';
+                // Ensure the jobs dropdown is updated for this department
+                if (window.populateCandidateJobs) {
+                    window.populateCandidateJobs(department);
+                }
+            }
+
+            if (jobSelect) {
+                jobSelect.value = jobId || '';
+            }
+
+            // Sync with custom UI
+            try { initCustomSelects(); } catch (e) { console.warn('Sync failed in addCandidateForJob', e); }
+        };
+
         window.editJob = (id) => {
             const job = cachedJobs.find(j => j.id === id);
             if (!job) return;
             const form = document.getElementById('form-job');
             form.reset();
 
-            // Populate via input names
+            function populateElement(element, value) {
+                if (!element) return;
+                const tag = (element.tagName || '').toUpperCase();
+
+                if (tag === 'SELECT') {
+                    const valStr = value == null ? '' : String(value);
+                    const opt = Array.from(element.options).find(o => o.value === valStr || o.text === valStr);
+                    if (opt) {
+                        opt.selected = true;
+                        element.value = opt.value;
+                        element.dispatchEvent(new Event('change', { bubbles: true }));
+                    } else {
+                        // If matching option not found, clear as per user's choice
+                        element.value = '';
+                        element.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                    return;
+                }
+
+                // For radio/checkbox groups (RadioNodeList) or collections
+                if (element instanceof RadioNodeList || (element.length && !element.tagName)) {
+                    try {
+                        for (let i = 0; i < element.length; i++) {
+                            const child = element[i];
+                            if (child.type === 'radio') {
+                                child.checked = String(child.value) === String(value);
+                            } else if (child.type === 'checkbox') {
+                                // if value is boolean or matches value string
+                                child.checked = !!value && (String(child.value) === String(value) || value === true || value === 'true');
+                            } else {
+                                child.value = value;
+                            }
+                        }
+                    } catch (e) {
+                        // fallback
+                        try { element.value = value; } catch (e) { /* ignore */ }
+                    }
+                    return;
+                }
+
+                // Default for input, textarea, etc.
+                try { element.value = value == null ? '' : value; } catch (e) { /* ignore */ }
+            }
+
             for (const key in job) {
-                if (form.elements[key]) {
-                    form.elements[key].value = job[key];
+                const el = form.elements[key];
+                if (!el) continue;
+
+                // Handle collections (multiple elements with same name)
+                if (el.length && !el.tagName) {
+                    for (let i = 0; i < el.length; i++) {
+                        populateElement(el[i], job[key]);
+                    }
+                } else {
+                    populateElement(el, job[key]);
                 }
             }
+
+            // Refresh custom select UI to reflect populated values
+            try { initCustomSelects(); } catch (e) { console.warn('initCustomSelects in editJob failed', e); }
+            // Ensure location is set according to company after population (override intentionally)
+            try { prefillJobLocationFromCompany(); } catch (e) { /* ignore */ }
             document.getElementById('form-job-id').value = id;
             openModal('modal-job');
         };
@@ -1941,6 +3423,31 @@
                     form.elements[key].value = cand[key];
                 }
             }
+            // Ensure job select shows the candidate's applied job and update custom select UI
+            try {
+                const jobEl = form.elements['jobId'] || document.getElementById('candidate-job-select');
+                const deptEl = form.elements['jobDepartment'] || document.getElementById('candidate-job-dept-select');
+                // If candidate has jobId, find the job and set department first then job
+                if (cand.jobId) {
+                    const job = cachedJobs.find(j => j.id === cand.jobId);
+                    if (deptEl && job) {
+                        deptEl.value = job.department || '';
+                    }
+                    // repopulate the job select according to dept before setting value
+                    try { updateDropdowns(); } catch (e) { /* ignore */ }
+                    if (jobEl) {
+                        jobEl.value = cand.jobId || '';
+                        jobEl.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                } else {
+                    if (jobEl) {
+                        jobEl.value = '';
+                        jobEl.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }
+            } catch (e) { console.warn('Could not set candidate job select', e); }
+
+            try { initCustomSelects(); } catch (e) { console.warn('initCustomSelects in editCandidate failed', e); }
             document.getElementById('form-candidate-id').value = id;
             document.getElementById('modal-candidate-title').innerText = "Edit Candidate Profile";
             openModal('modal-candidate');
@@ -1990,7 +3497,7 @@
         window.handleInterviewCandidateSearch = (val) => {
             const list = document.getElementById('candidate-search-list');
             const match = cachedCandidates.find(c => {
-                const searchStr = `${c.name} | ${c.phone || ''} | ${c.email}`.toLowerCase();
+                const searchStr = `${c.name} | ${c.phone || ''} | ${c.email} `.toLowerCase();
                 return searchStr === val.toLowerCase();
             });
             if (match) {
@@ -2021,7 +3528,7 @@
             // Populate searchable candidate input
             const cand = cachedCandidates.find(c => c.id === current.candidateId);
             if (cand) {
-                document.getElementById('interview-candidate-search').value = `${cand.name} | ${cand.phone || ''} | ${cand.email}`;
+                document.getElementById('interview-candidate-search').value = `${cand.name} | ${cand.phone || ''} | ${cand.email} `;
                 document.getElementById('interview-candidate-id-hidden').value = cand.id;
             }
 
@@ -2036,7 +3543,7 @@
             const cand = cachedCandidates.find(c => c.id === i.candidateId);
             if (!cand || !cand.phone) { alert("Candidate is missing a phone number."); return; }
 
-            const templateId = document.getElementById(`template-select-${id}`)?.value;
+            const templateId = document.getElementById(`template - select - ${id} `)?.value;
             let message = "";
 
             if (templateId) {
@@ -2045,7 +3552,7 @@
             } else {
                 const job = cachedJobs.find(j => j.id === cand.jobId);
                 const date = new Date(i.dateTime).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-                message = `Hi ${cand.name}, this is a reminder regarding your interview for the ${job ? job.title : 'position'}. Scheduled on: ${date}. Mode: ${i.mode}. Please be prepared. Reply for any queries.`;
+                message = `Hi ${cand.name}, this is a reminder regarding your interview for the ${job ? job.title : 'position'}.Scheduled on: ${date}.Mode: ${i.mode}. Please be prepared.Reply for any queries.`;
             }
 
             const cleanPhone = cand.phone.replace(/[^0-9+]/g, '');
@@ -2061,7 +3568,7 @@
             const cand = cachedCandidates.find(c => c.id === i.candidateId);
             if (!cand || !cand.email) { alert("Candidate is missing an email address."); return; }
 
-            const templateId = document.getElementById(`template-select-${id}`)?.value;
+            const templateId = document.getElementById(`template - select - ${id} `)?.value;
             let body = "";
             let subject = "Interview Reminder";
 
@@ -2074,10 +3581,10 @@
                 const job = cachedJobs.find(j => j.id === cand.jobId);
                 const date = new Date(i.dateTime).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
                 subject = `Interview Reminder: ${job ? job.title : 'Position'} at HirePulse`;
-                body = `Hi ${cand.name},\n\nThis is a reminder regarding your interview for the ${job ? job.title : 'position'}.\n\nScheduled on: ${date}\nMode: ${i.mode}\n\nPlease let us know if you have any questions.\n\nBest regards,\nRecruitment Team`;
+                body = `Hi ${cand.name}, \n\nThis is a reminder regarding your interview for the ${job ? job.title : 'position'}.\n\nScheduled on: ${date} \nMode: ${i.mode} \n\nPlease let us know if you have any questions.\n\nBest regards, \nRecruitment Team`;
             }
 
-            const url = `mailto:${cand.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            const url = `mailto:${cand.email}?subject = ${encodeURIComponent(subject)}& body=${encodeURIComponent(body)} `;
             window.open(url, '_blank');
         };
 
@@ -2142,14 +3649,32 @@
                         });
                         showToast("Stage Updated & Job Closed!");
                     } else {
-                        // Re-open if was closed (only if currently closed)
-                        const job = cachedJobs.find(j => j.id === cand.jobId);
-                        if (job && (job.status === 'Closed' || job.closingDate)) {
-                            await updateDoc(doc(db, "jobs", cand.jobId), {
-                                closingDate: null,
-                                status: 'Open'
-                            });
-                            showToast("Stage Updated & Job Re-opened!");
+                        // Read the job doc directly from Firestore instead of relying
+                        // on the local cache, which may not have been updated yet.
+                        const jobRef = doc(db, "jobs", cand.jobId);
+                        const jobSnap = await getDoc(jobRef);
+                        if (jobSnap.exists()) {
+                            const jobData = jobSnap.data();
+                            if (jobData.status === 'Closed' || jobData.closingDate) {
+                                // Before re-opening, check if any other candidates
+                                // are still Hired/Selected for this same job.
+                                const otherHired = cachedCandidates.some(c =>
+                                    c.id !== id &&
+                                    c.jobId === cand.jobId &&
+                                    (c.stage === 'Selected' || c.stage === 'Hired')
+                                );
+                                if (!otherHired) {
+                                    await updateDoc(jobRef, {
+                                        closingDate: null,
+                                        status: 'Open'
+                                    });
+                                    showToast("Stage Updated & Job Re-opened!");
+                                } else {
+                                    showToast("Stage Updated (Job remains closed — other candidates are still Hired/Selected)");
+                                }
+                            } else {
+                                showToast("Stage Updated");
+                            }
                         } else {
                             showToast("Stage Updated");
                         }
@@ -2179,20 +3704,33 @@
                 const job = cachedJobs.find(j => j.id === c.jobId);
                 const company = job ? cachedCompanies.find(co => co.id === job.companyId) : null;
                 return {
+                    // ── Personal Details ──
                     "Candidate Name": c.name || "N/A",
                     "Email": c.email || "N/A",
                     "Phone": c.phone || "N/A",
-                    "Current CTC": c.currentCTC || 0,
-                    "Expected CTC": c.expectedCTC || 0,
-                    "Final CTC (Done)": c.offeredCTC || "TBD",
-                    "Notice Period (Days)": c.noticePeriod || 0,
+                    "Qualification": c.qualification || "N/A",
+                    "Address": c.address || "N/A",
+                    // ── Professional Details ──
+                    "Current Company": c.currentCompany || "N/A",
+                    "Designation": c.designation || "N/A",
                     "Experience (Years)": c.experience || 0,
-                    "Stage": c.stage || "Applied",
-                    "Job Title": job ? job.title : "N/A",
-                    "Company": company ? company.name : "N/A",
-                    "Skills": c.skills || "N/A",
                     "Source": c.source || "N/A",
-                    "Applied Date": c.createdAt ? new Date(c.createdAt.seconds * 1000).toLocaleDateString() : "N/A"
+                    // ── Applied Position ──
+                    "Applied For (Job)": job ? job.title : "N/A",
+                    "Department": job ? (job.department || "N/A") : "N/A",
+                    "Company": company ? company.name : "N/A",
+                    // ── CTC & Financials (Monthly) ──
+                    "Current CTC (Monthly ₹)": c.currentCTC || 0,
+                    "Current CTC Annual (LPA)": c.currentCTC ? +((c.currentCTC * 12) / 100000).toFixed(2) : 0,
+                    "Expected CTC (Monthly ₹)": c.expectedCTC || 0,
+                    "Expected CTC Annual (LPA)": c.expectedCTC ? +((c.expectedCTC * 12) / 100000).toFixed(2) : 0,
+                    "Final / Offered CTC (Monthly ₹)": c.offeredCTC || "TBD",
+                    "Final CTC Annual (LPA)": c.offeredCTC ? +((Number(c.offeredCTC) * 12) / 100000).toFixed(2) : "TBD",
+                    "Notice Period (Days)": c.noticePeriod || 0,
+                    "Why Changing Job": c.whyChangeJob || "N/A",
+                    // ── Status ──
+                    "Pipeline Stage": c.stage || "Applied",
+                    "Added Date": c.createdAt ? new Date(c.createdAt.seconds * 1000).toLocaleDateString() : "N/A"
                 };
             });
             exportToExcel(data, "Candidates_Report", "Candidates");
@@ -2201,17 +3739,32 @@
         window.fetchJobsReport = () => {
             const data = cachedJobs.map(j => {
                 const company = cachedCompanies.find(c => c.id === j.companyId);
-                const candidateCount = cachedCandidates.filter(c => c.jobId === j.id).length;
+                const jobCandidates = cachedCandidates.filter(c => c.jobId === j.id);
+                const countByStage = (stage) => jobCandidates.filter(c => c.stage === stage).length;
                 return {
+                    // ── Job Details ──
                     "Job Title": j.title || "N/A",
+                    "Designation": j.designation || "N/A",
                     "Company": company ? company.name : "N/A",
-                    "Category": j.category || "N/A",
-                    "Budget (Min)": j.budgetMin || 0,
-                    "Budget (Max)": j.budgetMax || 0,
+                    "Department": j.department || "N/A",
+                    "Min. Qualification": j.qualification || "N/A",
+                    "Location": j.location || "N/A",
+                    "Budget (INR)": j.budget || 0,
+                    "Hiring Priority": j.priority || "Medium",
                     "Status": j.status || "Open",
-                    "Candidates": candidateCount,
                     "Closing Date": j.closingDate || "N/A",
-                    "Salary Type": j.salaryType || "Monthly",
+                    "MRF Received": j.mrfReceived || "No",
+                    "Required Skills": j.skills || "N/A",
+                    "Job Description": j.description || "N/A",
+                    // ── Pipeline Counts ──
+                    "Total Candidates": jobCandidates.length,
+                    "Applied": countByStage("Applied"),
+                    "Screening": countByStage("Screening"),
+                    "Interview": countByStage("Interview"),
+                    "Selected": countByStage("Selected"),
+                    "Hired": countByStage("Hired"),
+                    "Rejected": countByStage("Rejected"),
+                    // ── Timestamps ──
                     "Posted Date": j.createdAt ? new Date(j.createdAt.seconds * 1000).toLocaleDateString() : "N/A"
                 };
             });
@@ -2220,13 +3773,27 @@
 
         window.fetchCompaniesReport = () => {
             const data = cachedCompanies.map(c => {
-                const jobCount = cachedJobs.filter(j => j.companyId === c.id).length;
+                const companyJobs = cachedJobs.filter(j => j.companyId === c.id);
+                const openJobs = companyJobs.filter(j => j.status !== 'Closed').length;
+                const closedJobs = companyJobs.filter(j => j.status === 'Closed').length;
+                const totalCandidates = cachedCandidates.filter(cd => {
+                    const job = cachedJobs.find(j => j.id === cd.jobId);
+                    return job && job.companyId === c.id;
+                }).length;
                 return {
+                    // ── Company Details ──
                     "Company Name": c.name || "N/A",
                     "Industry": c.industry || "N/A",
-                    "Location": c.location || "N/A",
+                    "Location / HQ": c.location || "N/A",
+                    "Full Address": c.address || "N/A",
                     "Website": c.website || "N/A",
-                    "Active Jobs": jobCount,
+                    "About": c.about || "N/A",
+                    // ── Recruitment Stats ──
+                    "Total Job Openings": companyJobs.length,
+                    "Open Positions": openJobs,
+                    "Closed Positions": closedJobs,
+                    "Total Candidates": totalCandidates,
+                    // ── Timestamps ──
                     "Added Date": c.createdAt ? new Date(c.createdAt.seconds * 1000).toLocaleDateString() : "N/A"
                 };
             });
@@ -2236,14 +3803,26 @@
         window.fetchInterviewsReport = () => {
             const data = cachedInterviews.map(i => {
                 const candidate = cachedCandidates.find(c => c.id === i.candidateId);
+                const job = candidate ? cachedJobs.find(j => j.id === candidate.jobId) : null;
+                const company = job ? cachedCompanies.find(co => co.id === job.companyId) : null;
                 return {
-                    "Candidate": candidate ? candidate.name : "N/A",
+                    // ── Candidate Info ──
+                    "Candidate Name": candidate ? candidate.name : "N/A",
+                    "Candidate Phone": candidate ? (candidate.phone || "N/A") : "N/A",
+                    "Candidate Email": candidate ? (candidate.email || "N/A") : "N/A",
+                    "Current Company": candidate ? (candidate.currentCompany || "N/A") : "N/A",
+                    "Candidate Stage": candidate ? (candidate.stage || "N/A") : "N/A",
+                    // ── Interview Details ──
                     "Interviewer": i.interviewer || "N/A",
                     "Date & Time": i.dateTime ? i.dateTime.replace('T', ' ') : "N/A",
-                    "Mode": i.mode || "Online",
+                    "Mode": i.mode || "N/A",
                     "Status": i.status || "Scheduled",
-                    "Meeting Link/Location": i.meetingLink || "N/A",
-                    "Feedback": i.feedback || "N/A"
+                    "Meeting Link / Location": i.meetingLink || "N/A",
+                    "Feedback": i.feedback || "N/A",
+                    // ── Job & Company ──
+                    "Job Title": job ? (job.title || "N/A") : "N/A",
+                    "Department": job ? (job.department || "N/A") : "N/A",
+                    "Company": company ? company.name : "N/A"
                 };
             });
             exportToExcel(data, "Interviews_Report", "Interviews");
@@ -2251,10 +3830,10 @@
 
         window.fetchTemplatesReport = () => {
             const data = cachedWaTemplates.map(t => ({
-                "Template Title": t.name || "N/A",
-                "Type": t.type || "WhatsApp",
-                "Category": t.category || "General",
+                "Template Name": t.name || "N/A",
+                "Category / Type": t.type || "N/A",
                 "Content": t.content || "N/A",
+                "Created Date": t.createdAt ? new Date(t.createdAt.seconds * 1000).toLocaleDateString() : "N/A",
                 "Last Updated": t.updatedAt ? new Date(t.updatedAt.seconds * 1000).toLocaleDateString() : "N/A"
             }));
             exportToExcel(data, "Messaging_Templates_Report", "Templates");
@@ -2270,42 +3849,365 @@
             }
         };
 
-        function updateDropdowns() {
-            const companySelect = document.getElementById('job-company-select');
+        // Helper to populate job select optionally filtered by department
+        window.populateCandidateJobs = function (department) {
             const jobSelect = document.getElementById('candidate-job-select');
-            const searchList = document.getElementById('candidate-search-list');
+            if (!jobSelect) return;
 
-            if (companySelect) companySelect.innerHTML = cachedCompanies.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-
-            // Filter out jobs whose closing date has passed for the selector
+            // Recalculate active jobs from fresh cached data
             const activeJobsForDropdown = cachedJobs.filter(j => {
                 if (!j.closingDate) return true;
                 const closeDate = new Date(j.closingDate);
                 closeDate.setHours(23, 59, 59, 999);
                 return new Date() <= closeDate;
             });
-            if (jobSelect) jobSelect.innerHTML = activeJobsForDropdown.map(j => `<option value="${j.id}">${j.title}</option>`).join('');
+
+            // If no department is selected, we don't show any jobs
+            if (!department) {
+                jobSelect.innerHTML = '';
+                const placeholderJob = document.createElement('option');
+                placeholderJob.value = '';
+                placeholderJob.disabled = true;
+                placeholderJob.selected = true;
+                placeholderJob.text = '-- Select Job --';
+                jobSelect.appendChild(placeholderJob);
+                return;
+            }
+
+            const jobsToShow = activeJobsForDropdown.filter(j => {
+                return (j.department || '').toString() === department;
+            });
+            const prev = jobSelect.value;
+            jobSelect.innerHTML = '';
+            const placeholderJob = document.createElement('option');
+            placeholderJob.value = '';
+            placeholderJob.disabled = true;
+            placeholderJob.selected = true;
+            placeholderJob.text = '-- Select Job --';
+            jobSelect.appendChild(placeholderJob);
+
+            if (jobsToShow.length === 0) {
+                const none = document.createElement('option'); none.value = ''; none.disabled = true; none.text = 'No active jobs in this department'; jobSelect.appendChild(none);
+            } else {
+                jobsToShow.forEach(j => {
+                    const opt = document.createElement('option'); opt.value = j.id; opt.text = j.title || j.id; jobSelect.appendChild(opt);
+                });
+            }
+
+            // restore previous if still present
+            if (prev) {
+                const found = Array.from(jobSelect.options).find(o => o.value === prev);
+                if (found) jobSelect.value = prev;
+            }
+
+            // Sync with custom UI
+            try { initCustomSelects(); } catch (e) { console.warn('Sync failed in populateCandidateJobs', e); }
+        }
+
+        function updateDropdowns() {
+            const companySelect = document.getElementById('job-company-select');
+            const deptSelect = document.getElementById('candidate-job-dept-select');
+            const searchList = document.getElementById('candidate-search-list');
+
+            // Populate company select safely
+            if (companySelect) {
+                companySelect.innerHTML = '';
+                // Placeholder option
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.disabled = true;
+                placeholder.selected = true;
+                placeholder.text = '-- Select Company --';
+                companySelect.appendChild(placeholder);
+                if (cachedCompanies.length === 0) {
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.text = 'No companies available';
+                    companySelect.appendChild(opt);
+                } else {
+                    cachedCompanies.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.id;
+                        opt.text = c.name || c.id;
+                        companySelect.appendChild(opt);
+                    });
+                    // Ensure selecting a company prefills the Job Location when appropriate
+                    if (!companySelect.dataset.prefillHandler) {
+                        companySelect.addEventListener('change', prefillJobLocationFromCompany);
+                        companySelect.dataset.prefillHandler = '1';
+                    }
+                }
+            }
+
+            if (deptSelect) {
+                const depts = [...new Set(cachedJobs.map(j => j.department).filter(Boolean))];
+                // preserve current value
+                const current = deptSelect.value;
+                deptSelect.innerHTML = '';
+                const allOpt = document.createElement('option'); allOpt.value = ''; allOpt.text = '-- Select Department --'; deptSelect.appendChild(allOpt);
+                depts.forEach(d => {
+                    const opt = document.createElement('option'); opt.value = d; opt.text = d; deptSelect.appendChild(opt);
+                });
+                if (current) deptSelect.value = current;
+                // attach change handler once
+                if (!deptSelect.dataset.handler) {
+                    deptSelect.addEventListener('change', () => {
+                        // repopulate jobs filtered by department
+                        window.populateCandidateJobs(deptSelect.value);
+                    });
+                    deptSelect.dataset.handler = '1';
+                }
+            }
+
+            // Sync Candidate Database Department Filter
+            const candDeptFilter = document.getElementById('filter-candidate-dept');
+            if (candDeptFilter) {
+                const depts = [...new Set(cachedJobs.map(j => j.department).filter(Boolean))];
+                const current = candDeptFilter.value;
+                candDeptFilter.innerHTML = '<option value="all">All Depts</option>';
+                depts.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d; opt.innerText = d;
+                    candDeptFilter.appendChild(opt);
+                });
+                if (current) candDeptFilter.value = current;
+            }
+
+            // initial populate for job select (respect dept filter if set)
+            const deptVal = deptSelect ? deptSelect.value : '';
+            window.populateCandidateJobs(deptVal);
 
             if (searchList) {
-                searchList.innerHTML = cachedCandidates.map(c =>
-                    `<option value="${c.name} | ${c.phone || ''} | ${c.email}" data-id="${c.id}"></option>`
-                ).join('');
+                searchList.innerHTML = '';
+                cachedCandidates.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = `${c.name} | ${c.phone || ''} | ${c.email}`;
+                    opt.dataset.id = c.id;
+                    searchList.appendChild(opt);
+                });
             }
+            // Re-initialize custom selects so UI reflects new options
+            try { initCustomSelects(); } catch (e) { console.warn('initCustomSelects error', e); }
         }
+
+        // Convert native selects (single-select) into custom dropdowns for consistent rounded UI.
+        function initCustomSelects() {
+            const selects = Array.from(document.querySelectorAll('select:not(.no-custom-select)'));
+            selects.forEach(sel => {
+                // skip multiple selects
+                if (sel.multiple) return;
+
+                // remove existing wrapper if present (rebuild on repopulate)
+                const next = sel.nextElementSibling;
+                if (next && next.classList && next.classList.contains('custom-select-wrapper')) {
+                    next.remove();
+                }
+
+                // hide native select but keep it in the DOM for form submission
+                sel.style.display = 'none';
+                sel.dataset.customized = '1';
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'custom-select-wrapper';
+
+                const display = document.createElement('div');
+                display.className = 'custom-select-display';
+                display.tabIndex = 0;
+                display.setAttribute('role', 'button');
+                display.setAttribute('aria-haspopup', 'listbox');
+                display.setAttribute('aria-expanded', 'false');
+                const label = document.createElement('div'); label.className = 'label';
+                const chev = document.createElement('div'); chev.innerHTML = '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+                display.appendChild(label);
+                display.appendChild(chev);
+
+                const optsBox = document.createElement('div');
+                optsBox.className = 'custom-select-options hidden';
+                optsBox.setAttribute('role', 'listbox');
+
+                // populate options
+                Array.from(sel.options).forEach((o, idx) => {
+                    const li = document.createElement('div');
+                    li.className = 'opt';
+                    li.dataset.value = o.value;
+                    li.innerText = o.text;
+                    li.tabIndex = o.disabled ? -1 : 0;
+                    li.setAttribute('role', 'option');
+                    if (o.disabled) {
+                        li.style.opacity = '0.6'; li.style.pointerEvents = 'none';
+                    }
+                    if (o.selected) {
+                        li.classList.add('active');
+                        label.innerText = o.text;
+                        li.setAttribute('aria-selected', 'true');
+                    }
+                    li.addEventListener('click', () => {
+                        // update original select
+                        sel.value = o.value;
+                        // update display
+                        label.innerText = o.text;
+                        // update active state
+                        optsBox.querySelectorAll('.opt').forEach(x => { x.classList.remove('active'); x.removeAttribute('aria-selected'); });
+                        li.classList.add('active');
+                        li.setAttribute('aria-selected', 'true');
+                        // close
+                        optsBox.classList.add('hidden');
+                        display.setAttribute('aria-expanded', 'false');
+                        // trigger change
+                        sel.dispatchEvent(new Event('change', { bubbles: true }));
+                        // If this is the company select, also run the prefill helper directly as a fallback
+                        if (sel.id === 'job-company-select') try { prefillJobLocationFromCompany(); } catch (e) { /* ignore */ }
+                        display.focus();
+                    });
+
+                    // keyboard support for option
+                    li.addEventListener('keydown', (ev) => {
+                        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); li.click(); }
+                    });
+
+                    optsBox.appendChild(li);
+                });
+
+                // If select is searchable, add an input to filter options
+                if (sel.classList && sel.classList.contains('searchable-select')) {
+                    const searchWrap = document.createElement('div');
+                    searchWrap.style.padding = '0.5rem';
+                    const searchInput = document.createElement('input');
+                    searchInput.type = 'search';
+                    searchInput.placeholder = 'Search...';
+                    searchInput.className = 'theme-input rounded';
+                    searchInput.style.width = '100%';
+                    searchInput.style.marginBottom = '0.35rem';
+                    searchWrap.appendChild(searchInput);
+                    // insert at top
+                    optsBox.insertBefore(searchWrap, optsBox.firstChild);
+
+                    const noMatch = document.createElement('div');
+                    noMatch.className = 'opt';
+                    noMatch.style.opacity = '0.6';
+                    noMatch.style.pointerEvents = 'none';
+                    noMatch.innerText = 'No matches';
+                    noMatch.style.display = 'none';
+                    optsBox.appendChild(noMatch);
+
+                    const filter = () => {
+                        const q = (searchInput.value || '').trim().toLowerCase();
+                        let any = false;
+                        Array.from(optsBox.querySelectorAll('.opt')).forEach(opt => {
+                            if (opt === noMatch) return;
+                            const txt = (opt.innerText || '').toLowerCase();
+                            const show = !q || txt.includes(q);
+                            opt.style.display = show ? '' : 'none';
+                            if (show) any = true;
+                        });
+                        noMatch.style.display = any ? 'none' : '';
+                    };
+
+                    searchInput.addEventListener('input', filter);
+                    // focus first visible option on ArrowDown
+                    searchInput.addEventListener('keydown', (ev) => {
+                        if (ev.key === 'ArrowDown') {
+                            ev.preventDefault();
+                            const first = optsBox.querySelector('.opt:not([style*="display: none"])');
+                            if (first) first.focus();
+                        }
+                    });
+                }
+
+                // if none selected, show first enabled option as placeholder
+                if (!label.innerText) {
+                    const firstOpt = Array.from(sel.options).find(o => !o.disabled);
+                    label.innerText = firstOpt ? firstOpt.text : '';
+                }
+
+                // toggle with click or keyboard
+                const toggleOptions = (e) => {
+                    if (e) e.stopPropagation();
+                    const open = !optsBox.classList.contains('hidden');
+                    document.querySelectorAll('.custom-select-options').forEach(el => el.classList.add('hidden'));
+                    document.querySelectorAll('.custom-select-display').forEach(d => d.setAttribute('aria-expanded', 'false'));
+                    if (!open) {
+                        optsBox.classList.remove('hidden');
+                        display.setAttribute('aria-expanded', 'true');
+                        // focus first enabled option
+                        const first = optsBox.querySelector('.opt:not([style*="pointer-events: none"])');
+                        if (first) first.focus();
+                    } else {
+                        optsBox.classList.add('hidden');
+                        display.setAttribute('aria-expanded', 'false');
+                    }
+                };
+
+                display.addEventListener('click', toggleOptions);
+                display.addEventListener('keydown', (ev) => {
+                    if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggleOptions(ev); }
+                    if (ev.key === 'ArrowDown') { ev.preventDefault(); if (optsBox.classList.contains('hidden')) toggleOptions(); else { const first = optsBox.querySelector('.opt:not([style*="pointer-events: none"])'); if (first) first.focus(); } }
+                });
+
+                // allow navigating options with arrow keys and Esc
+                optsBox.addEventListener('keydown', (ev) => {
+                    const focusable = Array.from(optsBox.querySelectorAll('.opt')).filter(n => n.tabIndex >= 0);
+                    const idx = focusable.indexOf(document.activeElement);
+                    if (ev.key === 'ArrowDown') { ev.preventDefault(); const next = focusable[idx + 1] || focusable[0]; if (next) next.focus(); }
+                    if (ev.key === 'ArrowUp') { ev.preventDefault(); const prev = focusable[idx - 1] || focusable[focusable.length - 1]; if (prev) prev.focus(); }
+                    if (ev.key === 'Escape') { ev.preventDefault(); optsBox.classList.add('hidden'); display.setAttribute('aria-expanded', 'false'); display.focus(); }
+                });
+
+                // close on outside click (only when clicking outside this wrapper)
+                window.addEventListener('click', (e) => { if (!wrapper.contains(e.target)) { optsBox.classList.add('hidden'); display.setAttribute('aria-expanded', 'false'); } });
+
+                // prevent clicks inside optsBox from bubbling to window (so inputs inside stay interactive)
+                optsBox.addEventListener('click', (e) => e.stopPropagation());
+
+                wrapper.appendChild(display);
+                wrapper.appendChild(optsBox);
+                sel.parentNode.insertBefore(wrapper, sel.nextSibling);
+            });
+        }
+
+        // Initialize custom selects once DOM is ready for interactive controls
+        setTimeout(() => { try { initCustomSelects(); } catch (e) { console.warn('initCustomSelects failed', e); } }, 300);
 
         // --- UTILS ---
         window.showSection = (sectionId) => {
             document.querySelectorAll('#content-area > div').forEach(div => div.classList.add('hidden'));
-            document.getElementById(`section-${sectionId}`).classList.remove('hidden');
+            const sectionEl = document.getElementById(`section-${sectionId}`);
+            if (sectionEl) sectionEl.classList.remove('hidden');
 
             document.querySelectorAll('.sidebar-btn').forEach(btn => btn.classList.remove('sidebar-item-active'));
-            document.getElementById(`btn-nav-${sectionId}`).classList.add('sidebar-item-active');
+            const navBtn = document.getElementById(`btn-nav-${sectionId}`);
+            if (navBtn) navBtn.classList.add('sidebar-item-active');
 
-            document.getElementById('section-title').innerText = sectionId.charAt(0).toUpperCase() + sectionId.slice(1);
+            const titleEl = document.getElementById('section-title');
+            if (titleEl) titleEl.innerText = sectionId.charAt(0).toUpperCase() + sectionId.slice(1);
 
-            if (sectionId === 'messaging') {
-                renderWaCandidatesChecklist();
-                previewSelectedTemplate();
+            // Ensure the visible section is rendered/refreshed so filters take effect
+            switch (sectionId) {
+                case 'dashboard':
+                    updateDashboard();
+                    break;
+                case 'companies':
+                    renderCompanies();
+                    break;
+                case 'jobs':
+                    renderJobs();
+                    break;
+                case 'candidates':
+                    renderCandidates();
+                    renderWaCandidatesChecklist();
+                    break;
+                case 'interviews':
+                    renderInterviews();
+                    break;
+                case 'messaging':
+                    renderWaCandidatesChecklist();
+                    previewSelectedTemplate();
+                    break;
+                case 'reports':
+                    updateDashboard();
+                    break;
+                default:
+                    break;
             }
         };
 
@@ -2322,8 +4224,30 @@
 
         function showError(msg) {
             const err = document.getElementById('auth-error');
-            err.innerText = msg;
-            err.classList.remove('hidden');
+            if (err) {
+                err.innerText = getFriendlyErrorMessage(msg);
+                err.classList.remove('hidden');
+            }
+        }
+
+        function getFriendlyErrorMessage(msg) {
+            if (!msg) return "An unknown error occurred.";
+
+            if (msg.includes('auth/invalid-credential') ||
+                msg.includes('auth/user-not-found') ||
+                msg.includes('auth/wrong-password')) {
+                return "Invalid email or password. Please try again.";
+            } else if (msg.includes('auth/invalid-email')) {
+                return "Please enter a valid email address.";
+            } else if (msg.includes('auth/network-request-failed')) {
+                return "Network error. Please check your connection.";
+            } else if (msg.includes('auth/too-many-requests')) {
+                return "Too many failed attempts. Please try again later.";
+            } else if (msg.includes('auth/user-disabled')) {
+                return "This account has been disabled.";
+            }
+
+            return msg; // Fallback to original message if not mapped
         }
 
         document.getElementById('filter-budget').onchange = renderCandidates;
@@ -2346,6 +4270,21 @@
             // For now, the CSS filter handles it enough
             chart.update();
         }
+
+        // Expose functions to global scope for inline handlers
+        window.renderJobs = renderJobs;
+        window.renderCandidates = renderCandidates;
+        window.renderCompanies = renderCompanies;
+        window.updateDropdowns = updateDropdowns;
+        window.renderInterviews = renderInterviews;
+        window.updateDashboard = updateDashboard;
+        window.renderWaTemplates = renderWaTemplates;
+        window.renderWaCandidatesChecklist = renderWaCandidatesChecklist;
+        window.updateWaDropdowns = updateWaDropdowns;
+        // expose new candidate utilities for inline handlers
+        window.toggleCandidateView = toggleCandidateView;
+        window.exportCandidatesCSV = exportCandidatesCSV;
+        window.bulkSelectAndMessage = bulkSelectAndMessage;
     </script>
 </body>
 
