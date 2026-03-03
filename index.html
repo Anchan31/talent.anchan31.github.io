@@ -21,6 +21,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -1032,10 +1033,14 @@
                         class="sidebar-label whitespace-nowrap">Candidates</span>
                 </a>
                 <a href="#" onclick="showSection('talentpool')"
-                    class="sidebar-btn flex items-center gap-3 p-3 rounded-lg transition-colors text-purple-400"
+                    class="sidebar-btn flex items-center justify-between p-3 rounded-lg transition-colors text-purple-400 group/nav"
                     id="btn-nav-talentpool" style="color: var(--text-secondary)">
-                    <i class="fas fa-dna w-5 flex-shrink-0"></i> <span class="sidebar-label whitespace-nowrap">Talent
-                        Pool</span>
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-dna w-5 flex-shrink-0"></i>
+                        <span class="sidebar-label whitespace-nowrap">Talent Pool</span>
+                    </div>
+                    <span id="talent-pool-badge"
+                        class="hidden bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm shadow-blue-500/20">0</span>
                 </a>
                 <div class="h-px bg-slate-200 dark:bg-slate-800 mx-3 my-2 opacity-50"></div>
                 <a href="#" onclick="showSection('interviews')"
@@ -1503,6 +1508,8 @@
                                     <option value="Selected">Selected</option>
                                     <option value="Hired">Hired</option>
                                     <option value="Rejected">Rejected</option>
+                                    <option value="Backed Out">Backed Out</option>
+                                    <option value="Not Interested">Not Interested</option>
                                 </select>
                             </div>
                             <div class="flex items-center gap-2">
@@ -2069,8 +2076,10 @@
                     <input type="text" name="location" required class="theme-input rounded">
                 </div>
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Budget (INR)</label>
-                    <input type="number" name="budget" required class="theme-input rounded">
+                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Budget (Annual INR)</label>
+                    <input type="number" name="budget" id="job-budget-input" required class="theme-input rounded"
+                        oninput="document.getElementById('job-budget-monthly').innerText = this.value ? '₹' + Math.round(this.value / 12).toLocaleString() + '/mo' : ''">
+                    <p id="job-budget-monthly" class="text-xs text-blue-500 font-medium mt-1"></p>
                 </div>
                 <div>
                     <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Hiring Priority</label>
@@ -2134,6 +2143,16 @@
                             class="text-red-400">*</span></label>
                     <input type="tel" name="phone" required placeholder="e.g. +919876543210"
                         class="theme-input rounded">
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-500 dark:text-slate-400">Gender <span
+                            class="text-red-400">*</span></label>
+                    <select name="gender" required class="theme-input rounded custom-select">
+                        <option value="">-- Select Gender --</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
                 </div>
                 <div>
                     <label class="block text-sm text-slate-500 dark:text-slate-400">Qualification <span
@@ -2405,6 +2424,8 @@
                         <option value="Interviewed">Done (Interviewed)</option>
                         <option value="Selected">Selected</option>
                         <option value="Rejected">Rejected</option>
+                        <option value="Backed Out">Backed Out</option>
+                        <option value="Not Interested">Not Interested</option>
                         <option value="On Hold">On Hold</option>
                     </select>
                     <p class="text-[10px] text-slate-500 mt-1">* Saving will also update candidate's current stage in
@@ -3168,6 +3189,7 @@
                 renderCandidates();
                 updateDashboard();
                 updateDropdowns();
+                if (typeof updateTalentPoolBadge === 'function') updateTalentPoolBadge();
             });
 
             // Listen for Interviews
@@ -3540,7 +3562,7 @@
                         </div>
                         <div class="flex items-center gap-2 text-xs text-slate-500">
                             <i class="fas fa-indian-rupee-sign"></i>
-                            <span>₹${j.budget ? (j.budget / 100000).toFixed(1) + 'L' : 'N/A'}</span>
+                            <span>₹${j.budget ? (j.budget / 100000).toFixed(1) + 'L' : 'N/A'} <span class="text-[9px] text-blue-500 font-semibold ml-1">${j.budget ? '(₹' + Math.round(j.budget / 12).toLocaleString() + '/mo)' : ''}</span></span>
                         </div>
                     </div>
 
@@ -3676,6 +3698,9 @@
                     // Source Filter
                     if (filterSource !== 'all' && (c.source || 'Other') !== filterSource) return false;
 
+                    // Talent Pool Filter - Exclude from main board
+                    if (c.inTalentPool) return false;
+
                     return true;
                 });
 
@@ -3705,13 +3730,26 @@
                 let budgetStatus = { label: 'Unknown', color: 'badge badge-gray' };
 
                 let jobBudget = job ? (job.budget ? Number(job.budget) : (job.budgetMax ? Number(job.budgetMax) : 0)) : 0;
-                // Job budget is annual; candidate CTC is monthly → annualise for comparison
-                const annualExpCTC = Number(c.expectedCTC || 0) * 12;
+                let monthlyJobBudget = Math.round(jobBudget / 12);
+
+                // Prioritize Final CTC for comparison, otherwise Expected CTC
+                const CandidateMonthlyCTC = Number(c.offeredCTC || c.expectedCTC || 0);
+                const annualCandCTC = CandidateMonthlyCTC * 12;
 
                 if (job && jobBudget > 0) {
-                    if (annualExpCTC <= jobBudget) budgetStatus = { label: 'Within Budget', color: 'badge badge-green' };
-                    else if (annualExpCTC <= jobBudget * 1.1) budgetStatus = { label: 'Slightly Above', color: 'badge badge-orange' };
-                    else budgetStatus = { label: 'Over Budget', color: 'badge badge-red' };
+                    const diffMonthly = CandidateMonthlyCTC - monthlyJobBudget;
+                    let diffText = '';
+                    if (diffMonthly > 0) {
+                        diffText = `(₹${diffMonthly.toLocaleString()}/mo Higher)`;
+                    } else if (diffMonthly < 0) {
+                        diffText = `(₹${Math.abs(diffMonthly).toLocaleString()}/mo Less)`;
+                    } else if (diffMonthly === 0 && CandidateMonthlyCTC > 0) {
+                        diffText = `(Exact Match)`;
+                    }
+
+                    if (annualCandCTC <= jobBudget) budgetStatus = { label: 'Within Budget', subText: diffText, color: 'badge badge-green' };
+                    else if (annualCandCTC <= jobBudget * 1.1) budgetStatus = { label: 'Slightly Above', subText: diffText, color: 'badge badge-orange' };
+                    else budgetStatus = { label: 'Over Budget', subText: diffText, color: 'badge badge-red' };
                 }
 
                 const initials = (c.name || '').split(' ').map(s => s[0]).join('').substring(0, 2).toUpperCase();
@@ -3742,6 +3780,7 @@
                             <div class="text-sm font-semibold text-slate-800 dark:text-slate-300" title="Expected Monthly CTC">₹${c.expectedCTC ? parseInt(c.expectedCTC).toLocaleString() : '0'}<span class="text-[9px] font-normal text-slate-500">/mo</span> <span class="text-[10px] font-normal text-slate-500">(Exp)</span></div>
                             <div class="text-xs text-slate-500 mt-1" title="Current Monthly CTC">₹${c.currentCTC ? parseInt(c.currentCTC).toLocaleString() : 'N/A'}<span class="text-[8px]">/mo</span> <span class="text-[9px]">(Cur)</span></div>
                             ${c.offeredCTC ? `<div class="text-xs text-green-600 dark:text-green-400 mt-1 font-bold" title="Final Monthly CTC">₹${parseInt(c.offeredCTC).toLocaleString()}<span class="text-[8px] uppercase tracking-tighter">/mo</span> <span class="text-[8px] uppercase tracking-tighter">(Final)</span></div>` : ''}
+                            ${job && monthlyJobBudget > 0 ? `<div class="text-[10px] text-blue-500 mt-1.5 font-medium border-t border-slate-100 dark:border-slate-800 pt-1" title="Job Monthly Budget">Max Budget: ₹${monthlyJobBudget.toLocaleString()}/mo</div>` : ''}
                         </td>
                         <td class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/20">
                             <select onchange="updateCandidateStage('${c.id}', this.value)" class="filter-select compact text-xs">
@@ -3751,10 +3790,15 @@
                                 <option ${c.stage === 'Selected' ? 'selected' : ''}>Selected</option>
                                 <option ${c.stage === 'Hired' ? 'selected' : ''}>Hired</option>
                                 <option ${c.stage === 'Rejected' ? 'selected' : ''}>Rejected</option>
+                                <option ${c.stage === 'Backed Out' ? 'selected' : ''}>Backed Out</option>
+                                <option ${c.stage === 'Not Interested' ? 'selected' : ''}>Not Interested</option>
                             </select>
                         </td>
-                        <td class="px-6 py-4 text-center border-b border-slate-200 dark:border-slate-800 font-medium font-bold">
-                            <span class="${budgetStatus.color}">${budgetStatus.label}</span>
+                        <td class="px-6 py-4 text-center border-b border-slate-200 dark:border-slate-800">
+                            <div class="flex flex-col items-center gap-1.5">
+                                <span class="${budgetStatus.color} font-bold">${budgetStatus.label}</span>
+                                ${budgetStatus.subText ? `<span class="text-[9px] font-bold text-slate-500 uppercase tracking-tight">${budgetStatus.subText}</span>` : ''}
+                            </div>
                         </td>
                         <td class="px-6 py-4 text-right border-b border-slate-200 dark:border-slate-800">
                             <div class="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition">
@@ -3771,14 +3815,23 @@
             cardsContainer.innerHTML = list.map(c => {
                 const job = cachedJobs.find(j => j.id === c.jobId);
                 const initials = (c.name || '').split(' ').map(s => s[0]).join('').substring(0, 2).toUpperCase();
-                // compute budget status for card view as well
                 let jobBudget = job ? (job.budget ? Number(job.budget) : (job.budgetMax ? Number(job.budgetMax) : 0)) : 0;
+                let monthlyJobBudget = Math.round(jobBudget / 12);
                 let budgetStatus = { label: 'Unknown', color: 'badge badge-gray' };
                 if (job && jobBudget > 0) {
-                    const expected = Number(c.expectedCTC || c.expectedSalary || 0);
-                    if (expected <= jobBudget) budgetStatus = { label: 'Within Budget', color: 'badge badge-green' };
-                    else if (expected <= jobBudget * 1.1) budgetStatus = { label: 'Slightly Above', color: 'badge badge-orange' };
-                    else budgetStatus = { label: 'Over Budget', color: 'badge badge-red' };
+                    const CandidateMonthlyCTC = Number(c.offeredCTC || c.expectedCTC || c.expectedSalary || 0);
+                    const annualCandCTC = CandidateMonthlyCTC * 12;
+                    const diffMonthly = CandidateMonthlyCTC - monthlyJobBudget;
+                    let diffText = '';
+                    if (diffMonthly > 0) {
+                        diffText = `(+₹${diffMonthly.toLocaleString()}/mo)`;
+                    } else if (diffMonthly < 0) {
+                        diffText = `(-₹${Math.abs(diffMonthly).toLocaleString()}/mo)`;
+                    }
+
+                    if (annualCandCTC <= jobBudget) budgetStatus = { label: 'Within Budget', subText: diffText, color: 'badge badge-green' };
+                    else if (annualCandCTC <= jobBudget * 1.1) budgetStatus = { label: 'Slightly Above', subText: diffText, color: 'badge badge-orange' };
+                    else budgetStatus = { label: 'Over Budget', subText: diffText, color: 'badge badge-red' };
                 }
                 return `
                 <div class="glass-card p-4 rounded-xl">
@@ -3791,8 +3844,9 @@
                             </div>
                         </div>
                         <div class="text-right">
-                            <div class="text-sm font-semibold">₹${c.expectedCTC ? parseInt(c.expectedCTC).toLocaleString() : '0'}</div>
-                            <div class="text-xs text-slate-500">${c.experience ? c.experience + ' Yrs' : 'N/A'}</div>
+                            <div class="text-sm font-semibold">₹${c.expectedCTC ? parseInt(c.expectedCTC).toLocaleString() : '0'}${c.offeredCTC ? ' <span class="text-[9px] text-green-500 font-bold">(Final)</span>' : ''}</div>
+                            <div class="text-[10px] text-blue-500 font-medium">Budget: ${monthlyJobBudget > 0 ? '₹' + monthlyJobBudget.toLocaleString() + '/mo' : 'N/A'}</div>
+                            <div class="text-xs text-slate-500 mt-1">${c.experience ? c.experience + ' Yrs' : 'N/A'}</div>
                         </div>
                     </div>
                     <div class="flex items-center justify-between mt-3">
@@ -3801,7 +3855,10 @@
                             <button onclick="editCandidate('${c.id}')" class="px-3 py-1 rounded bg-slate-100 hover:bg-slate-200 text-xs text-slate-600">Edit</button>
                             <button onclick="deleteDocById('candidates', '${c.id}')" class="px-3 py-1 rounded bg-red-50 hover:bg-red-100 text-red-600 text-xs">Delete</button>
                         </div>
-                        <div class="text-[10px] uppercase font-bold tracking-wider ${budgetStatus.color.includes('green') ? 'text-green-500' : (budgetStatus.color.includes('orange') ? 'text-orange-500' : 'text-slate-400')}">${budgetStatus.label}</div>
+                        <div class="flex flex-col items-end">
+                            <div class="text-[10px] uppercase font-bold tracking-wider ${budgetStatus.color.includes('green') ? 'text-green-500' : (budgetStatus.color.includes('orange') ? 'text-orange-500' : (budgetStatus.color.includes('red') ? 'text-red-500' : 'text-slate-400'))}">${budgetStatus.label}</div>
+                            ${budgetStatus.subText ? `<div class="text-[8px] font-bold text-slate-500 uppercase tracking-tight mt-0.5">${budgetStatus.subText}</div>` : ''}
+                        </div>
                     </div>
                 </div>
                 `;
@@ -3846,7 +3903,7 @@
 
                 if (status === 'Done' || status === 'Interviewed') { borderClass = 'border-slate-300 dark:border-slate-500'; badgeClass = 'badge badge-gray'; }
                 if (status === 'Selected') { borderClass = 'border-green-500'; badgeClass = 'badge badge-green'; }
-                if (status === 'Rejected') { borderClass = 'border-red-500'; badgeClass = 'badge badge-red'; }
+                if (status === 'Rejected' || status === 'Backed Out' || status === 'Not Interested') { borderClass = 'border-red-500'; badgeClass = 'badge badge-red'; }
 
                 return `
             <div class="glass-card p-6 rounded-xl border-l-4 ${borderClass} flex flex-col justify-between group">
@@ -3907,8 +3964,8 @@
             const ptEl = document.getElementById('stat-pending-tasks');
             if (ptEl) ptEl.innerText = pendingTasks;
 
-            // Talent Pool (Candidates not hired/rejected)
-            const talentPool = cachedCandidates.filter(c => c.stage !== 'Hired' && c.stage !== 'Rejected').length;
+            // Talent Pool (Candidates not hired/rejected/backed out/not interested)
+            const talentPool = cachedCandidates.filter(c => c.stage !== 'Hired' && c.stage !== 'Rejected' && c.stage !== 'Backed Out' && c.stage !== 'Not Interested').length;
             const tpEl = document.getElementById('stat-talent-pool');
             if (tpEl) tpEl.innerText = talentPool;
 
@@ -3991,7 +4048,7 @@
             }
 
             // Pipeline Distribution Chart
-            const stages = ['Applied', 'Screening', 'Interview', 'Selected', 'Hired', 'Rejected'];
+            const stages = ['Applied', 'Screening', 'Interview', 'Selected', 'Hired', 'Rejected', 'Backed Out', 'Not Interested'];
             const stageCounts = stages.map(s => cachedCandidates.filter(c => c.stage === s).length);
 
             if (stageChartInstance) stageChartInstance.destroy();
@@ -4002,7 +4059,7 @@
                     datasets: [{
                         label: 'Candidates',
                         data: stageCounts,
-                        backgroundColor: ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#25D366', '#ef4444'],
+                        backgroundColor: ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#25D366', '#ef4444', '#64748b', '#94a3b8'],
                         borderRadius: 8
                     }]
                 },
@@ -4392,7 +4449,7 @@
             openModal('modal-job');
         };
 
-        // Cloundinary Config
+        // Cloudinary Config
         const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/drz2jldgj/auto/upload';
         const CLOUDINARY_PRESET = 'resume_uploads'; // <--- IMPORTANT: User must create this unsigned preset
         let pendingResumeFile = null;
@@ -4595,12 +4652,14 @@
 
                 // SYNC: Update candidate stage in database
                 if (candidateId && data.status) {
-                    // Do not change status if candidate is already Selected or Rejected
-                    if (currentStage !== "Selected" && currentStage !== "Rejected") {
+                    // Do not change status if candidate is already Selected or has exited the process
+                    if (currentStage !== "Selected" && currentStage !== "Rejected" && currentStage !== "Backed Out" && currentStage !== "Not Interested") {
                         let newStage = currentStage;
 
                         if (data.status === "Selected") newStage = "Selected";
                         else if (data.status === "Rejected") newStage = "Rejected";
+                        else if (data.status === "Backed Out") newStage = "Backed Out";
+                        else if (data.status === "Not Interested") newStage = "Not Interested";
                         else if (data.status === "Scheduled" || data.status === "Interviewed" || data.status === "On Hold") newStage = "Interview";
 
                         if (newStage !== currentStage) {
@@ -5194,6 +5253,7 @@
                     if (includeContact) {
                         row["Email"] = c.email || "N/A";
                         row["Phone"] = c.phone || "N/A";
+                        row["Gender"] = c.gender || "N/A";
                         row["Address"] = c.address || "N/A";
                     }
 
@@ -5276,6 +5336,7 @@
                     "Candidate Name": c.name || "N/A",
                     "Email": c.email || "N/A",
                     "Phone": c.phone || "N/A",
+                    "Gender": c.gender || "N/A",
                     "Qualification": c.qualification || "N/A",
                     "Address": c.address || "N/A",
                     // ── Professional Details ──
@@ -5337,6 +5398,8 @@
                     "Selected": countByStage("Selected"),
                     "Hired": countByStage("Hired"),
                     "Rejected": countByStage("Rejected"),
+                    "Backed Out": countByStage("Backed Out"),
+                    "Not Interested": countByStage("Not Interested"),
                     // ── Timestamps ──
                     "Posted Date": j.createdAt ? new Date(j.createdAt.seconds * 1000).toLocaleDateString() : "N/A"
                 };
@@ -5423,7 +5486,7 @@
                             const cand = cachedCandidates.find(c => c.id === interview.candidateId);
                             if (cand) {
                                 // Only revert if they aren't already explicitly selected/rejected
-                                if (cand.stage !== "Selected" && cand.stage !== "Rejected") {
+                                if (cand.stage !== "Selected" && cand.stage !== "Rejected" && cand.stage !== "Backed Out" && cand.stage !== "Not Interested") {
                                     await updateDoc(doc(db, "candidates", interview.candidateId), {
                                         stage: interview.previousStage
                                     });
@@ -6064,8 +6127,14 @@
                     const priorityClass = { 'Low': 'bg-slate-100', 'Medium': 'bg-blue-50', 'High': 'bg-orange-50', 'Urgent': 'bg-red-50' }[task.priority] || 'bg-slate-100';
                     const next = { 'todo': { label: 'Start', n: 'inprogress' }, 'inprogress': { label: 'Done', n: 'done' }, 'done': { label: 'Reopen', n: 'todo' } }[status];
                     columns[status].innerHTML += `
-                        <div class="glass-card p-4 rounded-xl border border-slate-200 mb-3 animate-in fade-in">
-                            <span class="text-[8px] font-bold uppercase px-2 py-0.5 rounded-full ${priorityClass}">${task.priority}</span>
+                        <div class="glass-card p-4 rounded-xl border border-slate-200 mb-3 animate-in fade-in group">
+                            <div class="flex justify-between items-start">
+                                <span class="text-[8px] font-bold uppercase px-2 py-0.5 rounded-full ${priorityClass}">${task.priority}</span>
+                                <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onclick="editTask('${task.id}')" class="text-slate-400 hover:text-blue-500 transition" title="Edit Task"><i class="fas fa-edit text-[10px]"></i></button>
+                                    <button onclick="deleteDocById('tasks', '${task.id}')" class="text-slate-400 hover:text-red-500 transition" title="Delete Task"><i class="fas fa-trash text-[10px]"></i></button>
+                                </div>
+                            </div>
                             <h5 class="text-sm font-bold mt-2">${task.title}</h5>
                             <div class="flex justify-between items-center mt-4 pt-2 border-t border-slate-100">
                                 <span class="text-[9px] text-slate-500">${task.dueDate || 'No date'}</span>
@@ -6080,7 +6149,24 @@
         window.openAddTaskModal = () => {
             const form = document.getElementById('form-task');
             if (form) form.reset();
-            document.getElementById('form-task-id').value = '';
+            const idInput = document.getElementById('form-task-id');
+            if (idInput) idInput.value = '';
+            openModal('modal-task');
+        };
+
+        window.editTask = (id) => {
+            const task = cachedTasks.find(t => t.id === id);
+            if (!task) return;
+            const form = document.getElementById('form-task');
+            if (form) form.reset();
+
+            const idInput = document.getElementById('form-task-id');
+            if (idInput) idInput.value = id;
+
+            if (form.elements['title']) form.elements['title'].value = task.title || '';
+            if (form.elements['priority']) form.elements['priority'].value = task.priority || 'Medium';
+            if (form.elements['dueDate']) form.elements['dueDate'].value = task.dueDate || '';
+
             openModal('modal-task');
         };
 
@@ -6119,27 +6205,270 @@
             if (!container) return;
             try {
                 const docSnap = await getDoc(doc(db, "settings", "publicPortal"));
-                const data = docSnap.exists() ? docSnap.data() : { companyPrompt: 'Join our team!', primaryColor: '#3b82f6' };
+                const data = docSnap.exists() ? docSnap.data() : {
+                    companyPrompt: 'Join our team!',
+                    primaryColor: '#3b82f6',
+                    isLocked: false,
+                    openDepartments: [],
+                    openPositions: [],
+                    logoUrl: '',
+                    backgroundUrl: '',
+                    fontFamily: 'Inter, sans-serif',
+                    steps: [
+                        { id: 'personal', label: 'Personal Details', enabled: true },
+                        { id: 'professional', label: 'Professional Details', enabled: true },
+                        { id: 'position', label: 'Applied Position', enabled: true },
+                        { id: 'financials', label: 'CTC & Financials', enabled: true },
+                        { id: 'resume', label: 'Resume Upload', enabled: true },
+                        { id: 'review', label: 'Review & Submit', enabled: true }
+                    ],
+                    fields: {
+                        phone: { required: true },
+                        currentCTC: { required: true },
+                        expectedCTC: { required: true },
+                        noticePeriod: { required: true }
+                    }
+                };
+
+                const depts = [...new Set(cachedJobs.map(j => j.department).filter(Boolean))].sort();
+                const allPositions = [...new Set(cachedJobs.map(j => j.title).filter(Boolean))].sort();
+
                 container.innerHTML = `
-                <form id="form-portal-settings" class="max-w-md space-y-4">
-                    <div class="glass-card p-6 rounded-2xl border border-slate-200 space-y-4">
-                        <h4 class="font-bold">Portal Branding</h4>
-                        <div><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Color</label><input type="color" name="primaryColor" value="${data.primaryColor}" class="w-full h-8 rounded shrink-0"></div>
-                        <div><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Welcome Text</label><input type="text" name="companyPrompt" value="${data.companyPrompt}" class="theme-input"></div>
-                        <button type="submit" class="w-full bg-blue-600 text-white py-2.5 rounded-xl font-bold">Save Settings</button>
+                <form id="form-portal-settings" class="w-full space-y-6">
+                    <div class="glass-card p-8 rounded-3xl border border-slate-200 shadow-xl space-y-8">
+                        
+                        <!-- Header & Master Toggle -->
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b pb-6 border-slate-100 dark:border-slate-800">
+                            <div>
+                                <h4 class="text-xl font-bold flex items-center gap-2">
+                                    <i class="fas fa-tower-broadcast text-blue-500"></i> Public Portal Configuration
+                                </h4>
+                                <p class="text-sm text-slate-500 mt-1">Manage branding, visibility, and access for your public career page.</p>
+                            </div>
+                            <div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
+                                <span class="text-xs font-bold uppercase tracking-widest text-slate-400">Portal Status</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="isLocked" class="sr-only peer" ${data.isLocked ? 'checked' : ''}>
+                                    <div class="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
+                                    <span class="ml-4 text-sm font-extrabold ${data.isLocked ? 'text-red-500' : 'text-green-500'} tracking-wide">${data.isLocked ? 'LOCKED' : 'ACTIVE'}</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                            <!-- Left Column: Branding -->
+                            <div class="space-y-6">
+                                <h4 class="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                    <i class="fas fa-palette text-blue-500"></i> Visual Branding
+                                </h4>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div class="space-y-1.5">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Theme Color</label>
+                                        <div class="flex items-center gap-3">
+                                            <input type="color" name="primaryColor" value="${data.primaryColor || '#3b82f6'}" class="w-12 h-12 rounded-xl cursor-pointer border-none p-0 bg-transparent">
+                                            <input type="text" value="${data.primaryColor || '#3b82f6'}" readonly class="theme-input !bg-slate-50 !border-none font-mono text-sm">
+                                        </div>
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Logo URL</label>
+                                        <input type="text" name="logoUrl" value="${data.logoUrl || ''}" placeholder="https://..." class="theme-input">
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Font Family</label>
+                                        <select name="fontFamily" class="theme-input appearance-none">
+                                            <option value="Inter, sans-serif" ${data.fontFamily === 'Inter, sans-serif' ? 'selected' : ''}>Inter (Modern)</option>
+                                            <option value="'Calibri', 'Segoe UI', sans-serif" ${data.fontFamily === "'Calibri', 'Segoe UI', sans-serif" ? 'selected' : ''}>Calibri (Office)</option>
+                                            <option value="'Roboto', sans-serif" ${data.fontFamily === "'Roboto', sans-serif" ? 'selected' : ''}>Roboto</option>
+                                            <option value="'Outfit', sans-serif" ${data.fontFamily === "'Outfit', sans-serif" ? 'selected' : ''}>Outfit (Premium)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Background URL / Preset</label>
+                                    <div class="flex flex-col gap-3">
+                                        <input type="text" name="backgroundUrl" id="background-url-input" value="${data.backgroundUrl || ''}" placeholder="https://..." class="theme-input">
+                                        <div class="flex flex-wrap gap-2">
+                                            <button type="button" onclick="document.getElementById('background-url-input').value='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2000&auto=format&fit=crop'; document.getElementById('background-url-input').dispatchEvent(new Event('input'))" class="text-[9px] px-2 py-1 rounded bg-slate-100 hover:bg-blue-50 hover:text-blue-600 transition">Abstract Blue</button>
+                                            <button type="button" onclick="document.getElementById('background-url-input').value='https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2000&auto=format&fit=crop'; document.getElementById('background-url-input').dispatchEvent(new Event('input'))" class="text-[9px] px-2 py-1 rounded bg-slate-100 hover:bg-blue-50 hover:text-blue-600 transition">Zoho Style</button>
+                                            <button type="button" onclick="document.getElementById('background-url-input').value='https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=2000&auto=format&fit=crop'; document.getElementById('background-url-input').dispatchEvent(new Event('input'))" class="text-[9px] px-2 py-1 rounded bg-slate-100 hover:bg-blue-50 hover:text-blue-600 transition">Dark Fluid</button>
+                                            <button type="button" onclick="document.getElementById('background-url-input').value='https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2000&auto=format&fit=crop'; document.getElementById('background-url-input').dispatchEvent(new Event('input'))" class="text-[9px] px-2 py-1 rounded bg-slate-100 hover:bg-blue-50 hover:text-blue-600 transition">Rainbow Mesh</button>
+                                            <button type="button" onclick="document.getElementById('background-url-input').value='';" class="text-[9px] px-2 py-1 rounded bg-slate-100 hover:bg-red-50 hover:text-red-600 transition">Clear BG</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Welcome Headline</label>
+                                    <input type="text" name="companyPrompt" value="${data.companyPrompt || 'Join our team!'}" class="theme-input">
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Visibility -->
+                            <div class="space-y-6">
+                                <h4 class="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                    <i class="fas fa-filter text-blue-500"></i> Exposure Logic
+                                </h4>
+                                
+                                <div class="space-y-3">
+                                    <div class="flex justify-between items-center">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Open Departments</label>
+                                        <span class="text-[9px] text-slate-400 italic">Select allowed depts</span>
+                                    </div>
+                                    <div id="portal-dept-checks" class="flex flex-wrap gap-2 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 min-h-[60px]">
+                                        ${depts.map(d => `
+                                            <label class="flex items-center gap-2.5 bg-white dark:bg-slate-800 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-all select-none">
+                                                <input type="checkbox" name="openDepartments" value="${d}" ${(data.openDepartments || []).includes(d) ? 'checked' : ''} class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all">
+                                                <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">${d}</span>
+                                            </label>
+                                        `).join('')}
+                                        ${depts.length === 0 ? '<p class="text-[10px] text-slate-400 py-2">No departments found in Job Openings</p>' : ''}
+                                    </div>
+                                </div>
+
+                                <div class="space-y-3">
+                                    <div class="flex justify-between items-center">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Open Positions</label>
+                                        <span id="pos-filter-hint" class="text-[9px] text-slate-400 italic">Showing all roles</span>
+                                    </div>
+                                    <div id="portal-pos-checks" class="max-h-[180px] overflow-y-auto flex flex-wrap gap-2 p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                                        <!-- Content updated by JS -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                         <!-- Wizard & Validation -->
+                        <div class="space-y-4 mt-8">
+                          <h4 class="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                            <i class="fas fa-route text-blue-500"></i> Wizard & Validation
+                          </h4>
+                          <div class="space-y-2">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Steps</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              ${(data.steps || []).map(s => `
+                                <label data-portal-step-row data-step-id="${s.id}"
+                                       class="flex items-center justify-between px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                                  <span class="text-xs font-semibold text-slate-700 dark:text-slate-200">${s.label}</span>
+                                  <input type="checkbox" name="stepEnabled-${s.id}" ${s.enabled ? 'checked' : ''} class="w-4 h-4">
+                                </label>
+                              `).join('')}
+                            </div>
+                          </div>
+                          <div class="space-y-2">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Required Fields</p>
+                            <div class="flex flex-wrap gap-2">
+                              ${['phone', 'currentCTC', 'expectedCTC', 'noticePeriod'].map(f => `
+                                <label data-portal-field-toggle data-field-id="${f}"
+                                       class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs">
+                                  <input type="checkbox" name="fieldRequired-${f}" ${(data.fields?.[f]?.required) ? 'checked' : ''} class="w-3.5 h-3.5">
+                                  <span class="text-xs capitalize">${f}</span>
+                                </label>
+                              `).join('')}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="pt-6 border-t border-slate-100 dark:border-slate-800">
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold shadow-xl shadow-blue-600/20 transition-all active:scale-[0.98] flex items-center justify-center gap-3">
+                                <i class="fas fa-save shadow-sm"></i>
+                                Save & Synchronize Public Portal
+                            </button>
+                        </div>
                     </div>
                 </form>`;
+
+                // Dynamic Position Filtering Logic
+                const posContainer = document.getElementById('portal-pos-checks');
+                const deptChecks = document.querySelectorAll('input[name="openDepartments"]');
+                const posHint = document.getElementById('pos-filter-hint');
+
+                // Maintain a master list of checked positions for the current session
+                const currentSelections = new Set(data.openPositions || []);
+
+                const updatePositions = () => {
+                    // Update master list from current DOM before re-rendering
+                    posContainer.querySelectorAll('input[name="openPositions"]').forEach(i => {
+                        if (i.checked) currentSelections.add(i.value);
+                        else currentSelections.delete(i.value);
+                    });
+
+                    const selectedDepts = Array.from(deptChecks).filter(i => i.checked).map(i => i.value);
+
+                    let filteredPositions = [];
+                    if (selectedDepts.length === 0) {
+                        filteredPositions = allPositions;
+                        posHint.innerText = "Showing all roles";
+                    } else {
+                        filteredPositions = [...new Set(cachedJobs.filter(j => selectedDepts.includes(j.department)).map(j => j.title))].sort();
+                        posHint.innerText = `Filtered for ${selectedDepts.length} Dept(s)`;
+                    }
+
+                    if (filteredPositions.length === 0) {
+                        posContainer.innerHTML = '<p class="text-[10px] text-slate-400 py-2 w-full text-center">No matching positions found</p>';
+                    } else {
+                        posContainer.innerHTML = filteredPositions.map(p => `
+                            <label class="flex items-center gap-2.5 bg-white dark:bg-slate-800 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-all select-none animate-in fade-in zoom-in duration-200">
+                                <input type="checkbox" name="openPositions" value="${p}" ${currentSelections.has(p) ? 'checked' : ''} class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all">
+                                <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">${p}</span>
+                            </label>
+                        `).join('');
+                    }
+                };
+
+                // Track position clicks to update master set
+                posContainer.addEventListener('change', (e) => {
+                    if (e.target.name === 'openPositions') {
+                        if (e.target.checked) currentSelections.add(e.target.value);
+                        else currentSelections.delete(e.target.value);
+                    }
+                });
+
+                // Attach listeners and initial render
+                deptChecks.forEach(i => i.addEventListener('change', updatePositions));
+                updatePositions();
+
                 document.getElementById('form-portal-settings').onsubmit = async (e) => {
                     e.preventDefault();
                     const fd = new FormData(e.target);
-                    const s = { primaryColor: fd.get('primaryColor'), companyPrompt: fd.get('companyPrompt'), updatedAt: serverTimestamp() };
+
+                    const openDepts = [];
+                    e.target.querySelectorAll('input[name="openDepartments"]:checked').forEach(i => openDepts.push(i.value));
+
+                    const openPosts = Array.from(currentSelections);
+
+                    const stepsConfig = [];
+                    e.target.querySelectorAll('[data-portal-step-row]').forEach(row => {
+                        const id = row.getAttribute('data-step-id');
+                        const enabled = row.querySelector('input[type="checkbox"]').checked;
+                        const existing = (data.steps || []).find(s => s.id === id) || { id, label: id, enabled: true };
+                        stepsConfig.push({ id, label: existing.label, enabled });
+                    });
+                    const fieldsConfig = {};
+                    ['phone', 'currentCTC', 'expectedCTC', 'noticePeriod'].forEach(f => {
+                        const checked = e.target.querySelector(`input[name="fieldRequired-${f}"]`)?.checked || false;
+                        fieldsConfig[f] = { required: checked };
+                    });
+
+                    const s = {
+                        primaryColor: fd.get('primaryColor'),
+                        companyPrompt: fd.get('companyPrompt'),
+                        logoUrl: fd.get('logoUrl'),
+                        backgroundUrl: fd.get('backgroundUrl'),
+                        fontFamily: fd.get('fontFamily'),
+                        isLocked: e.target.querySelector('input[name="isLocked"]').checked,
+                        openDepartments: openDepts,
+                        openPositions: openPosts,
+                        steps: stepsConfig,
+                        fields: fieldsConfig,
+                        updatedAt: serverTimestamp()
+                    };
+
                     try {
-                        // Using setDoc with UID-linked doc ID to avoid broad collection permissions
                         await setDoc(doc(db, "settings", "publicPortal"), s);
-                        showToast("Settings Saved");
+                        showToast("Portal Synchronized Successfully");
+                        loadPortalSettings();
                     } catch (e) {
                         console.error("Portal Save Error:", e);
-                        showError("Permission Denied: Ensure Firestore allows writing to 'settings/publicPortal'");
+                        showError("Permission Denied: Ensure Firestore allow writing to 'settings/publicPortal'");
                     }
                 };
             } catch (e) {
@@ -6156,7 +6485,7 @@
             const depts = [...new Set(cachedJobs.map(j => j.department).filter(Boolean))];
 
             if (depts.length === 0 && hired.length === 0) {
-                container.innerHTML = `<div class="py-20 text-center text-slate-400">No organizational data available yet.</div>`;
+                container.innerHTML = `< div class="py-20 text-center text-slate-400" > No organizational data available yet.</div > `;
                 return;
             }
 
@@ -6171,8 +6500,8 @@
             });
 
             container.innerHTML = `
-                <div class="flex flex-col items-center gap-12 w-full py-8">
-                    <!-- Root node (Company) -->
+                    < div class="flex flex-col items-center gap-12 w-full py-8" >
+                    < !--Root node(Company)-- >
                     <div class="flex flex-col items-center group">
                         <div class="px-8 py-4 bg-blue-600 text-white rounded-2xl shadow-xl font-bold text-lg border-2 border-blue-400/50 group-hover:scale-105 transition-transform">
                             Brawn Labs
@@ -6180,11 +6509,11 @@
                         <div class="w-px h-12 bg-blue-200 dark:bg-slate-700"></div>
                     </div>
 
-                    <!-- Departments Level -->
+                    <!--Departments Level-- >
                     <div class="flex flex-wrap justify-center gap-16 relative w-full">
                         <!-- Connecting Line for Horizontal Departments -->
                         <div class="absolute top-0 left-10 right-10 h-px bg-blue-100 dark:bg-slate-800 hidden md:block" style="top: -1px;"></div>
-                        
+
                         ${Object.keys(hierarchy).map(dept => `
                             <div class="flex flex-col items-center min-w-[200px]">
                                 <div class="w-px h-6 bg-blue-200 dark:bg-slate-700"></div>
@@ -6214,20 +6543,54 @@
                             </div>
                         `).join('')}
                     </div>
-                </div>
-            `;
+                </div >
+                    `;
         };
 
         window.renderTalentPool = () => {
             const table = document.getElementById('talent-pool-table-body');
             if (!table) return;
             const q = getEffectiveQuery('talentpool');
-            const list = cachedCandidates.filter(c => !q || c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q));
-            if (list.length === 0) { table.innerHTML = `<tr><td colspan="4" class="p-10 text-center text-slate-400">Empty Talent Pool.</td></tr>`; return; }
+            // Show only those in talent pool
+            let list = cachedCandidates.filter(c => c.inTalentPool === true);
+
+            // Apply search
+            if (q) {
+                list = list.filter(c =>
+                    c.name.toLowerCase().includes(q) ||
+                    c.email.toLowerCase().includes(q) ||
+                    (c.jobTitle && c.jobTitle.toLowerCase().includes(q))
+                );
+            }
+
+            if (list.length === 0) {
+                table.innerHTML = `<tr><td colspan="5" class="p-10 text-center text-slate-400">No new applications in the inbox.</td></tr>`;
+                return;
+            }
+
+            // Sort new ones to top
+            list.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
+
             table.innerHTML = list.map(c => `
-                <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition">
-                    <td class="px-6 py-4"><div class="font-bold text-slate-800">${highlight(c.name, q)}</div><div class="text-[10px] text-slate-500">${highlight(c.email, q)}</div></td>
-                    <td class="px-6 py-4 text-sm text-slate-600">${c.experience || 0} Yrs Exp</td>
+                <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition ${c.isNew ? 'bg-blue-50/30' : ''}">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <div>
+                                <div class="font-bold text-slate-800 flex items-center gap-2">
+                                    ${highlight(c.name, q)}
+                                    ${c.isNew ? '<span class="bg-blue-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded animate-pulse">NEW</span>' : ''}
+                                </div>
+                                <div class="text-[10px] text-slate-500">${highlight(c.email, q)}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-semibold text-slate-700">${c.jobTitle || 'N/A'}</div>
+                        <div class="text-[10px] text-slate-400">${c.jobDepartment || ''}</div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600">
+                        ${c.experience || 0} Yrs <span class="mx-1 opacity-30">|</span> ₹${(c.expectedCTC || 0).toLocaleString()}/mo
+                    </td>
                     <td class="px-6 py-4">
                         <div class="flex flex-wrap gap-1">
                             ${(c.tags || []).map(t => `<span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full">${t}</span>`).join('')}
@@ -6235,9 +6598,37 @@
                         </div>
                     </td>
                     <td class="px-6 py-4 text-right">
-                        <button onclick="editCandidate('${c.id}')" class="text-blue-500 text-xs font-bold px-3 py-1 bg-blue-50 rounded-lg hover:bg-blue-100 transition">View Profile</button>
+                        <div class="flex justify-end gap-2">
+                            <button onclick="editCandidate('${c.id}')" class="text-slate-500 text-xs font-bold px-3 py-1 bg-slate-100 rounded-lg hover:bg-slate-200 transition">View</button>
+                            <button onclick="moveToPipeline('${c.id}')" class="text-white text-xs font-bold px-3 py-1 bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm shadow-blue-500/20">Shortlist</button>
+                        </div>
                     </td>
                 </tr>`).join('');
+        };
+
+        window.moveToPipeline = async (id) => {
+            try {
+                const candRef = doc(db, "candidates", id);
+                await updateDoc(candRef, {
+                    inTalentPool: false,
+                    isNew: false,
+                    updatedAt: serverTimestamp()
+                });
+
+                // Update local cache
+                const cand = cachedCandidates.find(c => c.id === id);
+                if (cand) {
+                    cand.inTalentPool = false;
+                    cand.isNew = false;
+                }
+
+                showToast("Candidate moved to active pipeline!");
+                renderTalentPool();
+                updateDashboard();
+            } catch (e) {
+                console.error(e);
+                showError("Failed to move candidate");
+            }
         };
 
         window.addCandidateTag = async (id, tag) => {
@@ -6253,18 +6644,45 @@
             } catch (e) { showError("Failed"); }
         };
 
+        window.updateTalentPoolBadge = () => {
+            if (!cachedCandidates) return;
+            const newCount = cachedCandidates.filter(c => c.inTalentPool && c.isNew).length;
+            const badge = document.getElementById('talent-pool-badge');
+            if (badge) {
+                if (newCount > 0) {
+                    badge.innerText = newCount;
+                    badge.classList.remove('hidden');
+                    badge.classList.add('flex');
+                } else {
+                    badge.classList.add('hidden');
+                    badge.classList.remove('flex');
+                }
+            }
+        };
         document.getElementById('form-task').onsubmit = async (e) => {
             e.preventDefault();
             const fd = new FormData(e.target);
+            const taskId = document.getElementById('form-task-id') ? document.getElementById('form-task-id').value : '';
+
             try {
-                await addDoc(collection(db, "tasks"), {
-                    title: fd.get('title'),
-                    priority: fd.get('priority'),
-                    dueDate: fd.get('dueDate'),
-                    status: 'todo',
-                    createdAt: serverTimestamp()
-                });
-                closeModal('modal-task'); showToast("Task Created");
+                if (taskId) {
+                    await updateDoc(doc(db, "tasks", taskId), {
+                        title: fd.get('title'),
+                        priority: fd.get('priority'),
+                        dueDate: fd.get('dueDate')
+                    });
+                    showToast("Task Updated");
+                } else {
+                    await addDoc(collection(db, "tasks"), {
+                        title: fd.get('title'),
+                        priority: fd.get('priority'),
+                        dueDate: fd.get('dueDate'),
+                        status: 'todo',
+                        createdAt: serverTimestamp()
+                    });
+                    showToast("Task Created");
+                }
+                closeModal('modal-task');
             } catch (e) { showError("Failed"); }
         };
 
