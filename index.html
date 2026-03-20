@@ -201,21 +201,21 @@
                 <form id="form-task" class="p-8 space-y-6">
                     <input type="hidden" id="form-task-id">
                     <div>
-                        <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Task
+                        <label for="task-title" class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Task
                             Title</label>
-                        <input type="text" name="title" required placeholder="e.g. Follow up with Interviewers"
+                        <input type="text" id="task-title" name="title" required placeholder="e.g. Follow up with Interviewers" autocomplete="off"
                             class="theme-input bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:ring-4 focus:ring-orange-500/10 transition-all font-medium">
                     </div>
                     <div>
-                        <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Description</label>
-                        <textarea name="description" rows="3" placeholder="Add more context about this task..."
+                        <label for="task-description" class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Description</label>
+                        <textarea id="task-description" name="description" rows="3" placeholder="Add more context about this task..."
                             class="theme-input bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:ring-4 focus:ring-orange-500/10 transition-all font-medium resize-none"></textarea>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label
+                            <label for="task-priority"
                                 class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">Priority</label>
-                            <select name="priority" class="theme-input cursor-pointer">
+                            <select id="task-priority" name="priority" class="theme-input cursor-pointer">
                                 <option value="Low">Low</option>
                                 <option value="Medium" selected>Medium</option>
                                 <option value="High">High</option>
@@ -223,14 +223,14 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">Due
+                            <label for="task-due-date" class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1.5">Due
                                 Date</label>
-                            <input type="date" name="dueDate" class="theme-input cursor-pointer">
+                            <input type="date" id="task-due-date" name="dueDate" class="theme-input cursor-pointer">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Tags (comma separated)</label>
-                        <input type="text" name="tags" placeholder="e.g. Urgent, Interview, High Priority"
+                        <label for="task-tags" class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Tags (comma separated)</label>
+                        <input type="text" id="task-tags" name="tags" placeholder="e.g. Urgent, Interview, High Priority" autocomplete="off"
                             class="theme-input bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:ring-4 focus:ring-orange-500/10 transition-all font-medium">
                     </div>
                     <div>
@@ -315,7 +315,7 @@
                             <div class="flex justify-between items-center">
                                 <label for="auth-password"
                                     class="text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
-                                <button onclick="toggleAuthView('forgot')"
+                                <button onclick="toggleAuthView('forgot')" tabindex="-1"
                                     class="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">Forgot
                                     Password?</button>
                             </div>
@@ -325,6 +325,9 @@
                                 </span>
                                 <input type="password" id="auth-password" placeholder="••••••••"
                                     class="theme-input pl-10 rounded-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 h-12">
+                                <div id="caps-lock-warning" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-orange-500 flex items-center gap-1 bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded border border-orange-100 dark:border-orange-800/30">
+                                    <i class="fas fa-exclamation-triangle"></i> CAPS ON
+                                </div>
                             </div>
                         </div>
 
@@ -519,47 +522,6 @@
                 </div>
 
                 <div class="flex items-center gap-4">
-                    <!-- Theme Toggle -->
-                    <button id="theme-toggle"
-                        class="w-10 h-10 flex items-center justify-center rounded-xl transition-all hover:bg-slate-100 dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
-                        style="color: var(--text-secondary)">
-                        <i class="fas fa-moon dark:hidden"></i>
-                        <i class="fas fa-sun hidden dark:inline"></i>
-                    </button>
-
-                    <!-- Notification Bell -->
-                    <div class="relative" id="notification-wrapper">
-                        <button id="notification-bell" onclick="toggleNotifications(event)"
-                            class="w-10 h-10 flex items-center justify-center rounded-xl transition-all hover:bg-slate-100 dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 relative"
-                            style="color: var(--text-secondary)" title="Notifications">
-                            <i class="fas fa-bell text-lg"></i>
-                            <span id="notif-badge"
-                                class="hidden absolute -top-1 -right-1 min-w-[20px] h-5 px-1 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full shadow-lg shadow-red-500/30 animate-bounce">0</span>
-                        </button>
-                        <div id="notification-panel"
-                            class="hidden absolute right-0 top-14 w-[400px] max-h-[520px] rounded-2xl shadow-2xl border overflow-hidden z-50"
-                            style="background: var(--bg-primary); border-color: var(--border-color)">
-                            <div class="flex items-center justify-between px-5 py-4 border-b"
-                                style="border-color: var(--border-color)">
-                                <h4 class="text-sm font-bold flex items-center gap-2"
-                                    style="color: var(--text-primary)">
-                                    <i class="fas fa-bell text-blue-500"></i> Notifications
-                                </h4>
-                                <button onclick="markAllNotificationsRead()"
-                                    class="text-[10px] font-bold uppercase tracking-wider text-blue-500 hover:text-blue-700 transition-colors">
-                                    Mark all read
-                                </button>
-                            </div>
-                            <div id="notification-items" class="overflow-y-auto max-h-[440px] divide-y"
-                                style="--tw-divide-opacity:1; border-color: var(--border-color)">
-                                <div class="flex flex-col items-center justify-center py-12 text-slate-400">
-                                    <i class="fas fa-bell-slash text-3xl mb-3 opacity-20"></i>
-                                    <p class="text-sm">No notifications</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Profile Dropdown -->
                     <div class="profile-dropdown">
                         <button onclick="toggleProfileMenu(event)"
@@ -580,6 +542,15 @@
                                 <p class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Signed in as
                                 </p>
                                 <p class="text-sm font-semibold truncate" id="menu-user-email">admin@recruitment.com</p>
+                            </div>
+                            <!-- Dark Mode Toggle moved here -->
+                            <div class="profile-menu-item" id="theme-toggle" onclick="toggleTheme()">
+                                <i class="fa-solid fa-moon text-blue-500"></i>
+                                <span>Appearance</span>
+                                <div class="ml-auto flex items-center gap-1.5">
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest hidden dark:block">Dark</span>
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block dark:hidden">Light</span>
+                                </div>
                             </div>
                             <div class="border-t border-slate-100 dark:border-slate-800 my-1"></div>
                             <div class="profile-menu-item text-red-500" id="nav-btn-logout">
@@ -1177,7 +1148,7 @@
                                         <label
                                             class="flex items-center gap-2 cursor-pointer select-none border-r border-slate-200 pr-4 mr-2">
                                             <input type="checkbox" id="inbox-select-all"
-                                                class="w-4 h-4 rounded border-slate-300 text-blue-600 transition-all">
+                                                class="w-4 h-4 rounded border-gray-300 text-blue-600 transition-all">
                                             <span
                                                 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Select
                                                 All</span>
@@ -1257,99 +1228,191 @@
                 </div>
 
                 <!-- INTERVIEWS VIEW -->
-                <div id="section-interviews" class="hidden space-y-6">
+                <div id="section-interviews" class="hidden space-y-8 animate-fade-up">
+                    <!-- Interview Header & Quick Stats -->
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+                        <div>
+                            <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Interview Pipeline</h2>
+                            <p class="text-sm text-slate-500">Manage schedules, feedback, and outcomes</p>
+                        </div>
+                        <div class="flex gap-3">
+                            <button onclick="openInterviewsCalendar()" class="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm">
+                                <i class="fa-solid fa-calendar-days text-blue-500"></i> Calendar View
+                            </button>
+                            <button onclick="scheduleNewInterview()" class="px-5 py-2.5 bg-blue-600 text-white rounded-2xl text-xs font-bold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20">
+                                <i class="fa-solid fa-plus"></i> Schedule Interview
+                            </button>
+                        </div>
+                    </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="interviews-list">
-                        <!-- Interviews injected here -->
+                    <!-- Interview Summary Row -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="glass-card p-6 rounded-3xl border-b-4 border-blue-500 flex items-center gap-5">
+                            <div class="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-600">
+                                <i class="fa-solid fa-clock-rotate-left text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Upcoming</p>
+                                <h4 class="text-2xl font-black text-slate-800 dark:text-white mt-0.5" id="stat-int-upcoming">0</h4>
+                            </div>
+                        </div>
+                        <div class="glass-card p-6 rounded-3xl border-b-4 border-orange-500 flex items-center gap-5">
+                            <div class="w-14 h-14 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center text-orange-600">
+                                <i class="fa-solid fa-clipboard-question text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pending Feedback</p>
+                                <h4 class="text-2xl font-black text-orange-600 mt-0.5" id="stat-int-pending">0</h4>
+                            </div>
+                        </div>
+                        <div class="glass-card p-6 rounded-3xl border-b-4 border-emerald-500 flex items-center gap-5">
+                            <div class="w-14 h-14 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center text-emerald-600">
+                                <i class="fa-solid fa-calendar-check text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Completed Today</p>
+                                <h4 class="text-2xl font-black text-emerald-600 mt-0.5" id="stat-int-completed">0</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Content Grid -->
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                        <div class="xl:col-span-2 space-y-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="font-bold text-slate-800 dark:text-white">Active Schedules</h3>
+                                <div class="flex gap-2">
+                                    <button class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-500 transition-colors"><i class="fas fa-th-large"></i></button>
+                                    <button class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-500 transition-colors"><i class="fas fa-list"></i></button>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="interviews-list">
+                                <!-- Interviews injected here -->
+                                <div class="col-span-full py-20 flex flex-col items-center justify-center text-slate-400 bg-slate-50/50 dark:bg-slate-900/20 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                                    <i class="fa-solid fa-calendar-xmark text-4xl mb-4 opacity-20"></i>
+                                    <p class="font-medium">No interviews scheduled for the selected period</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Sidebar: Quick Actions & Notifications -->
+                        <div class="space-y-6">
+                            <div class="glass-card p-6 rounded-3xl">
+                                <h4 class="font-bold text-slate-800 dark:text-white mb-4">Interview Guidelines</h4>
+                                <ul class="space-y-3">
+                                    <li class="flex gap-3 text-xs text-slate-500">
+                                        <i class="fas fa-check-circle text-emerald-500 mt-0.5"></i>
+                                        <span>Ensure all interviewers have access to the candidate resume</span>
+                                    </li>
+                                    <li class="flex gap-3 text-xs text-slate-500">
+                                        <i class="fas fa-check-circle text-emerald-500 mt-0.5"></i>
+                                        <span>Submit feedback within 24 hours of completion</span>
+                                    </li>
+                                    <li class="flex gap-3 text-xs text-slate-500">
+                                        <i class="fas fa-check-circle text-emerald-500 mt-0.5"></i>
+                                        <span>Update candidate stage immediately after round outcome</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- MESSAGING VIEW -->
-                <div id="section-messaging" class="hidden space-y-6">
+                <div id="section-messaging" class="hidden space-y-8 animate-fade-up">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+                        <div>
+                            <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Communication Center</h2>
+                            <p class="text-sm text-slate-500">Reach out to candidates via WhatsApp & Email</p>
+                        </div>
+                    </div>
 
-
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <!-- Left Panel: Templates List & Sending -->
                         <div class="lg:col-span-2 space-y-6">
-
                             <!-- Template Selection & Bulk Action -->
-                            <div class="glass-card p-6 rounded-xl border" style="border-color: var(--border-color)">
-                                <h4 class="text-lg font-semibold mb-4" style="color: var(--text-primary)">Launch
-                                    Campaign</h4>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                    <div>
-                                        <label class="block text-sm text-slate-500 dark:text-slate-400 mb-1">Select
-                                            Template</label>
-                                        <select id="wa-template-select" class="theme-input rounded"
-                                            onchange="previewSelectedTemplate()">
+                            <div class="glass-card p-8 rounded-3xl group border-transparent hover:border-blue-200 transition-all duration-300">
+                                <h4 class="font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
+                                    <i class="fas fa-paper-plane text-blue-500"></i> Compose Message
+                                </h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                    <div class="space-y-2">
+                                        <label for="wa-template-select" class="block text-[10px] font-black uppercase tracking-widest text-slate-400">Target Template</label>
+                                        <select id="wa-template-select" class="theme-input rounded-2xl h-12" onchange="previewSelectedTemplate()">
                                             <option value="">-- Choose Template --</option>
                                         </select>
                                     </div>
-                                    <div class="flex items-end gap-2">
-                                        <button onclick="sendBulkWhatsApp()"
-                                            class="w-full bg-whatsapp hover-bg-whatsapp text-white p-2.5 rounded hover:bg-opacity-90 transition font-medium flex justify-center items-center gap-2">
-                                            <i class="fab fa-whatsapp"></i> WhatsApp
+                                    <div class="flex items-end gap-3">
+                                        <button onclick="sendBulkWhatsApp()" class="flex-1 bg-whatsapp text-white h-12 rounded-2xl hover:brightness-110 transition-all font-bold flex justify-center items-center gap-2 shadow-lg shadow-[#25D366]/20">
+                                            <i class="fab fa-whatsapp"></i> Send WhatsApp
                                         </button>
-                                        <button onclick="sendBulkEmail()"
-                                            class="w-full bg-slate-700 hover:bg-slate-600 text-white p-2.5 rounded transition font-medium flex justify-center items-center gap-2">
-                                            <i class="fas fa-envelope"></i> Email
+                                        <button onclick="sendBulkEmail()" class="flex-1 bg-slate-800 dark:bg-blue-600 text-white h-12 rounded-2xl hover:brightness-110 transition-all font-bold flex justify-center items-center gap-2 shadow-lg shadow-blue-600/20">
+                                            <i class="fas fa-envelope"></i> Send Email
                                         </button>
                                     </div>
                                 </div>
 
-                                <h5 class="text-sm font-semibold mb-2 mt-6" style="color: var(--text-secondary)">Select
-                                    Candidates to Message</h5>
-                                <div class="flex items-center gap-2 mb-3">
-                                    <input type="checkbox" id="selectAllCandidates" onchange="toggleAllCandidates(this)"
-                                        class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                    <label for="selectAllCandidates" class="text-sm cursor-pointer"
-                                        style="color: var(--text-muted)">Select All Candidates in View</label>
-                                </div>
-                                <div class="max-h-64 overflow-y-auto pr-2" id="wa-candidates-checklist">
-                                    <!-- Candidate Checkboxes Injected Here -->
+                                <div class="space-y-4">
+                                    <div class="flex items-center justify-between">
+                                        <h5 class="text-sm font-bold text-slate-700 dark:text-slate-300">Recipient Selection</h5>
+                                        <div class="flex items-center gap-2">
+                                            <input type="checkbox" id="selectAllCandidates" onchange="toggleAllCandidates(this)" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                                            <label for="selectAllCandidates" class="text-xs font-bold text-slate-500 cursor-pointer">Select All Visible</label>
+                                        </div>
+                                    </div>
+                                    <div class="max-h-72 overflow-y-auto pr-2 custom-scrollbar grid grid-cols-1 md:grid-cols-2 gap-3" id="wa-candidates-checklist">
+                                        <!-- Candidate Checkboxes Injected Here -->
+                                        <div class="col-span-full py-12 flex flex-col items-center justify-center text-slate-400 opacity-50">
+                                            <i class="fas fa-user-friends text-3xl mb-3"></i>
+                                            <p class="text-xs">Select a job or pool to see candidates</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Templates List -->
-                            <div>
-                                <h4 class="text-lg font-semibold mb-3">Saved Templates</h4>
+                            <!-- Templates Management -->
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="font-bold text-slate-800 dark:text-white">Quick Templates</h4>
+                                    <div class="relative w-64">
+                                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                        <input type="text" id="template-search" onkeyup="filterTemplates(this.value)" placeholder="Search templates..." class="w-full pl-10 pr-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                                    </div>
+                                </div>
                                 <div class="grid grid-cols-1 gap-3" id="wa-templates-list">
                                     <!-- Templates Injected Here -->
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Right Panel: Phone Preview -->
-                        <div class="flex justify-center items-start pt-4">
-                            <div class="phone-frame">
+                        <!-- Right Panel: Live Preview -->
+                        <div class="space-y-6 sticky top-24">
+                            <h4 class="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                <i class="fas fa-eye text-blue-500"></i> Live Preview
+                            </h4>
+                            <div class="phone-frame scale-90 origin-top">
                                 <div class="phone-notch"></div>
-                                <!-- WhatsApp Header Mock -->
-                                <div
-                                    class="bg-[#f0f2f5] dark:bg-[#202c33] px-4 py-3 flex items-center gap-3 z-10 w-full transition-colors border-b border-slate-200 dark:border-transparent">
+                                <div class="bg-[#f0f2f5] dark:bg-[#202c33] px-4 py-3 flex items-center gap-3 w-full border-b border-slate-200 dark:border-transparent">
                                     <i class="fas fa-arrow-left text-slate-600 dark:text-slate-300"></i>
-                                    <div
-                                        class="w-8 h-8 rounded-full bg-slate-400 dark:bg-slate-600 flex items-center justify-center text-white text-xs">
-                                        <i class="fas fa-user"></i>
+                                    <div class="w-8 h-8 rounded-full bg-slate-300 dark:bg-slate-700 flex items-center justify-center text-white">
+                                        <i class="fas fa-user text-xs"></i>
                                     </div>
                                     <div class="flex-1">
-                                        <div class="text-slate-800 dark:text-white font-medium text-sm leading-tight">
-                                            Candidate Name</div>
+                                        <div class="text-slate-800 dark:text-white font-bold text-xs uppercase tracking-tighter" id="preview-candidate-name">Recipient Name</div>
+                                        <div class="text-[9px] text-emerald-500 font-bold uppercase">Online</div>
                                     </div>
                                 </div>
-                                <div class="whatsapp-chat-area w-full" id="wa-live-preview"
-                                    style="background-color: #efeae2;">
-                                    <div class="wa-message-bubble">Your message preview will appear here...</div>
+                                <div class="whatsapp-chat-area w-full overflow-y-auto p-4 flex flex-col gap-2" id="wa-live-preview" style="background-color: #efeae2;">
+                                    <div class="wa-message-bubble max-w-[85%] bg-white dark:bg-slate-800 p-3 rounded-2xl rounded-tl-none text-xs shadow-sm self-start">
+                                        <p class="text-slate-700 dark:text-slate-200">Your message preview will appear here in real-time...</p>
+                                        <span class="text-[8px] text-slate-400 block text-right mt-1">10:45 AM</span>
+                                    </div>
                                 </div>
-                                <!-- Type Area Mock -->
-                                <div
-                                    class="bg-[#f0f2f5] dark:bg-[#202c33] p-2 flex items-center gap-2 z-10 w-full transition-colors">
-                                    <i class="far fa-smile text-slate-500 dark:text-slate-400 text-xl ml-2"></i>
-                                    <div
-                                        class="bg-white dark:bg-[#2a3942] rounded-full h-10 flex-1 px-4 py-2 text-slate-400 text-sm flex items-center shadow-sm">
-                                        Message</div>
-                                    <div
-                                        class="w-10 h-10 rounded-full bg-[#00a884] flex items-center justify-center text-white shadow">
-                                        <i class="fas fa-microphone"></i>
+                                <div class="bg-[#f0f2f5] dark:bg-[#202c33] p-3 flex items-center gap-3 w-full">
+                                    <i class="far fa-smile text-slate-500 text-xl"></i>
+                                    <div class="bg-white dark:bg-[#2a3942] rounded-full h-10 flex-1 px-4 text-slate-400 text-xs flex items-center shadow-sm">Type a message</div>
+                                    <div class="w-10 h-10 rounded-full bg-[#00a884] flex items-center justify-center text-white shadow-lg">
+                                        <i class="fas fa-paper-plane text-xs"></i>
                                     </div>
                                 </div>
                             </div>
@@ -1358,127 +1421,171 @@
                 </div>
 
                 <!-- REPORTS VIEW -->
-                <div id="section-reports" class="hidden space-y-6">
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <!-- Candidates Report Card -->
-                        <div class="glass-card p-6 rounded-2xl border transition-colors group"
-                            style="border-color: var(--border-color)">
-                            <div class="flex items-center gap-4 mb-4">
-                                <div
-                                    class="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
-                                    <i class="fas fa-user-tie text-xl"></i>
+                <div id="section-reports" class="hidden space-y-8">
+                    <!-- Top Ribbon Metrics -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <!-- Report Card: Hiring Funnel -->
+                        <div class="glass-card p-6 rounded-3xl group hover:shadow-2xl transition-all duration-300">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-600">
+                                    <i class="fas fa-filter text-xl"></i>
                                 </div>
-                                <div>
-                                    <h4 class="font-bold text-lg" style="color: var(--text-primary)">Candidates Report
-                                    </h4>
-                                    <p class="text-xs" style="color: var(--text-muted)">Full profiles & performance</p>
-                                </div>
+                                <button onclick="openAdvancedReport()" class="text-[10px] font-bold text-blue-500 uppercase hover:underline">View All</button>
                             </div>
-                            <p class="text-sm mb-6" style="color: var(--text-secondary)">Export all candidate details
-                                including CTCs, NP, Job association, and Stages.</p>
-                            <div class="flex gap-2">
-                                <button onclick="fetchCandidatesReport()"
-                                    class="flex-1 bg-slate-800 hover:bg-green-600 text-white p-3 rounded-xl transition duration-300 flex items-center justify-center gap-2 font-semibold shadow-lg text-sm">
-                                    <i class="fas fa-download"></i> Quick Export
-                                </button>
-                                <button onclick="openAdvancedReport('candidates')"
-                                    class="flex-1 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl transition duration-300 flex items-center justify-center gap-2 font-semibold shadow-lg text-sm">
-                                    <i class="fas fa-filter"></i> Advanced Filter
-                                </button>
+                            <h4 class="font-bold text-slate-800 dark:text-white mb-1">Conversion Rate</h4>
+                            <p class="text-xs text-slate-500 mb-4">Application to Hired ratio</p>
+                            <div class="flex items-end gap-2">
+                                <span class="text-2xl font-black text-slate-800 dark:text-white" id="report-conversion-rate">12.5%</span>
+                                <span class="text-[10px] font-bold text-emerald-500 mb-1"><i class="fas fa-caret-up"></i> 2.1%</span>
                             </div>
                         </div>
 
-                        <!-- Jobs Report Card -->
-                        <div class="glass-card p-6 rounded-2xl border transition-colors group"
-                            style="border-color: var(--border-color)">
-                            <div class="flex items-center gap-4 mb-4">
-                                <div
-                                    class="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
-                                    <i class="fas fa-briefcase text-xl"></i>
+                        <!-- Report Card: Time to Fill -->
+                        <div class="glass-card p-6 rounded-3xl group hover:shadow-2xl transition-all duration-300">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center text-orange-600">
+                                    <i class="fas fa-stopwatch text-xl"></i>
                                 </div>
+                                <span class="text-[9px] font-black text-orange-500 bg-orange-50 dark:bg-orange-900/40 px-2 py-0.5 rounded-full uppercase">Efficiency</span>
+                            </div>
+                            <h4 class="font-bold text-slate-800 dark:text-white mb-1">Avg Time to Fill</h4>
+                            <p class="text-xs text-slate-500 mb-4">Duration from MRF to Hired</p>
+                            <div class="flex items-end gap-2">
+                                <span class="text-2xl font-black text-slate-800 dark:text-white" id="report-avg-time-to-fill">18 Days</span>
+                                <span class="text-[10px] font-bold text-emerald-500 mb-1"><i class="fas fa-caret-down"></i> 3 Days</span>
+                            </div>
+                        </div>
+
+                        <!-- Report Card: Budget Utilization -->
+                        <div class="glass-card p-6 rounded-3xl group hover:shadow-2xl transition-all duration-300">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center text-emerald-600">
+                                    <i class="fas fa-wallet text-xl"></i>
+                                </div>
+                                <span class="text-[9px] font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-900/40 px-2 py-0.5 rounded-full uppercase">Finance</span>
+                            </div>
+                            <h4 class="font-bold text-slate-800 dark:text-white mb-1">Budget Adherence</h4>
+                            <p class="text-xs text-slate-500 mb-4">Offered vs Budgeted CTC</p>
+                            <div class="flex items-end gap-2">
+                                <span class="text-2xl font-black text-slate-800 dark:text-white" id="report-budget-adherence">94.2%</span>
+                                <span class="text-[10px] font-bold text-slate-400 mb-1">Optimal</span>
+                            </div>
+                        </div>
+
+                        <!-- Report Card: Source Quality -->
+                        <div class="glass-card p-6 rounded-3xl group hover:shadow-2xl transition-all duration-300">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center text-purple-600">
+                                    <i class="fas fa-bullseye text-xl"></i>
+                                </div>
+                                <span class="text-[9px] font-black text-purple-500 bg-purple-50 dark:bg-purple-900/40 px-2 py-0.5 rounded-full uppercase">Source</span>
+                            </div>
+                            <h4 class="font-bold text-slate-800 dark:text-white mb-1">Top Sourcing Channel</h4>
+                            <p class="text-xs text-slate-500 mb-4">Based on hire quality</p>
+                            <div class="flex items-end gap-2">
+                                <span class="text-2xl font-black text-slate-800 dark:text-white" id="report-top-channel">LinkedIn</span>
+                                <span class="text-[10px] font-bold text-blue-500 mb-1">62% Hires</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Section -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Pipeline Distribution (Charts) -->
+                        <div class="glass-card p-8 rounded-3xl lg:col-span-2 space-y-8">
+                            <div class="flex justify-between items-center">
                                 <div>
-                                    <h4 class="font-bold text-lg" style="color: var(--text-primary)">Jobs Report</h4>
-                                    <p class="text-xs" style="color: var(--text-muted)">Active & closed openings</p>
+                                    <h4 class="font-bold text-lg text-slate-800 dark:text-white">Hiring Analytics</h4>
+                                    <p class="text-sm text-slate-500">Pipeline and Sourcing Trends</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-bold ring-1 ring-slate-200 dark:ring-slate-700">Stage</button>
+                                    <button class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-600/20">Source</button>
                                 </div>
                             </div>
-                            <p class="text-sm mb-6" style="color: var(--text-secondary)">Detailed list of job openings
-                                with budgets, company associations, and current status.</p>
-                            <div class="flex gap-2">
-                                <button onclick="fetchJobsReport()"
-                                    class="flex-1 bg-slate-800 hover:bg-green-600 text-white p-3 rounded-xl transition duration-300 flex items-center justify-center gap-2 font-semibold shadow-lg text-sm">
-                                    <i class="fas fa-download"></i> Quick Export
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div class="h-64 relative">
+                                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 text-center">Pipeline Stages</p>
+                                    <canvas id="stageChart"></canvas>
+                                </div>
+                                <div class="h-64 relative">
+                                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 text-center">Source Distribution</p>
+                                    <canvas id="sourceChart"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="pt-8 border-t border-slate-100 dark:border-slate-800">
+                                <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6">Financial Trends (Budget vs Expected)</p>
+                                <div class="h-72">
+                                    <canvas id="budgetChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Hiring Funnel & Exports -->
+                        <div class="space-y-6">
+                            <!-- Manual Hiring Funnel -->
+                            <div class="glass-card p-8 rounded-3xl">
+                                <div class="flex justify-between items-center mb-6">
+                                    <h4 class="font-bold text-slate-800 dark:text-white">Hiring Funnel</h4>
+                                    <i class="fas fa-filter text-blue-500 opacity-50"></i>
+                                </div>
+                                <div id="hiring-funnel-chart" class="space-y-4">
+                                    <!-- Dynamic content from script.js renderHiringFunnel() -->
+                                    <div class="py-12 text-center text-slate-400">
+                                        <i class="fas fa-circle-notch fa-spin mb-2"></i>
+                                        <p class="text-xs uppercase font-bold tracking-widest">Calculating...</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                        <!-- System-wide Exports -->
+                        <div class="glass-card p-8 rounded-3xl flex flex-col">
+                            <h4 class="font-bold text-lg text-slate-800 dark:text-white mb-6">Quick Exports</h4>
+                            <div class="space-y-4 flex-1">
+                                <button onclick="fetchCandidatesReport()" class="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:bg-blue-600 hover:text-white transition-all flex items-center justify-between group border border-transparent hover:border-blue-100">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-10 h-10 bg-white dark:bg-slate-700 rounded-xl flex items-center justify-center shadow-sm">
+                                            <i class="fas fa-user-glue text-blue-500"></i>
+                                        </div>
+                                        <div class="text-left">
+                                            <p class="font-bold text-sm">Candidates Master</p>
+                                            <p class="text-[10px] opacity-70 font-bold uppercase tracking-widest">Excel (XLSX)</p>
+                                        </div>
+                                    </div>
+                                    <i class="fas fa-chevron-right text-[10px] opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all"></i>
                                 </button>
-                                <button onclick="openAdvancedReport('jobs')"
-                                    class="flex-1 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl transition duration-300 flex items-center justify-center gap-2 font-semibold shadow-lg text-sm">
-                                    <i class="fas fa-filter"></i> Advanced Filter
+                                
+                                <button onclick="fetchJobsReport()" class="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:bg-blue-600 hover:text-white transition-all flex items-center justify-between group border border-transparent hover:border-blue-100">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-10 h-10 bg-white dark:bg-slate-700 rounded-xl flex items-center justify-center shadow-sm">
+                                            <i class="fas fa-briefcase text-emerald-500"></i>
+                                        </div>
+                                        <div class="text-left">
+                                            <p class="font-bold text-sm">Active Job Openings</p>
+                                            <p class="text-[10px] opacity-70 font-bold uppercase tracking-widest">PDF Export</p>
+                                        </div>
+                                    </div>
+                                    <i class="fas fa-chevron-right text-[10px] opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all"></i>
+                                </button>
+
+                                <button onclick="fetchInterviewsReport()" class="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:bg-blue-600 hover:text-white transition-all flex items-center justify-between group border border-transparent hover:border-blue-100">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-10 h-10 bg-white dark:bg-slate-700 rounded-xl flex items-center justify-center shadow-sm">
+                                            <i class="fas fa-calendar-alt text-orange-500"></i>
+                                        </div>
+                                        <div class="text-left">
+                                            <p class="font-bold text-sm">Interview History</p>
+                                            <p class="text-[10px] opacity-70 font-bold uppercase tracking-widest">Full Log</p>
+                                        </div>
+                                    </div>
+                                    <i class="fas fa-chevron-right text-[10px] opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all"></i>
                                 </button>
                             </div>
-                        </div>
 
-                        <!-- Companies Report Card -->
-                        <div class="glass-card p-6 rounded-2xl border transition-colors group"
-                            style="border-color: var(--border-color)">
-                            <div class="flex items-center gap-4 mb-4">
-                                <div
-                                    class="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
-                                    <i class="fas fa-building text-xl"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-bold text-lg" style="color: var(--text-primary)">Companies Report
-                                    </h4>
-                                    <p class="text-xs" style="color: var(--text-muted)">Partner organizations</p>
-                                </div>
-                            </div>
-                            <p class="text-sm mb-6" style="color: var(--text-secondary)">Comprehensive data of all
-                                registered companies and their industry details.</p>
-                            <button onclick="fetchCompaniesReport()"
-                                class="w-full bg-slate-800 hover:bg-green-600 text-white p-3 rounded-xl transition duration-300 flex items-center justify-center gap-2 font-semibold shadow-lg">
-                                <i class="fas fa-download"></i> Export to XLSX
-                            </button>
-                        </div>
-
-                        <!-- Interviews Report Card -->
-                        <div class="glass-card p-6 rounded-2xl border transition-colors group"
-                            style="border-color: var(--border-color)">
-                            <div class="flex items-center gap-4 mb-4">
-                                <div
-                                    class="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
-                                    <i class="fas fa-calendar-check text-xl"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-bold text-lg" style="color: var(--text-primary)">Interviews Report
-                                    </h4>
-                                    <p class="text-xs" style="color: var(--text-muted)">Schedules & interviewers</p>
-                                </div>
-                            </div>
-                            <p class="text-sm mb-6" style="color: var(--text-secondary)">Complete history of scheduled
-                                interviews, modes, interviewers, and outcomes.</p>
-                            <button onclick="fetchInterviewsReport()"
-                                class="w-full bg-slate-800 hover:bg-green-600 text-white p-3 rounded-xl transition duration-300 flex items-center justify-center gap-2 font-semibold shadow-lg">
-                                <i class="fas fa-download"></i> Export to XLSX
-                            </button>
-                        </div>
-
-                        <!-- Templates Report Card -->
-                        <div class="glass-card p-6 rounded-2xl border transition-colors group"
-                            style="border-color: var(--border-color)">
-                            <div class="flex items-center gap-4 mb-4">
-                                <div
-                                    class="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
-                                    <i class="fas fa-envelope-open-text text-xl"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-bold text-lg" style="color: var(--text-primary)">Templates Report
-                                    </h4>
-                                    <p class="text-xs" style="color: var(--text-muted)">Communication assets</p>
-                                </div>
-                            </div>
-                            <p class="text-sm mb-6" style="color: var(--text-secondary)">Audit log of all WhatsApp and
-                                Email messaging templates saved in the system.</p>
-                            <button onclick="fetchTemplatesReport()"
-                                class="w-full bg-slate-800 hover:bg-green-600 text-white p-3 rounded-xl transition duration-300 flex items-center justify-center gap-2 font-semibold shadow-lg">
-                                <i class="fas fa-download"></i> Export to XLSX
+                            <button onclick="openAdvancedReport()" class="w-full py-4 mt-6 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
+                                <i class="fas fa-cog"></i> Advanced Report Builder
                             </button>
                         </div>
                     </div>
@@ -1494,29 +1601,29 @@
             <form id="form-company" class="space-y-4">
                 <input type="hidden" name="id" id="form-company-id">
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Company Name</label>
-                    <input type="text" name="name" required class="theme-input rounded">
+                    <label for="comp-name" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Company Name</label>
+                    <input type="text" id="comp-name" name="name" required class="theme-input rounded" autocomplete="organization">
                 </div>
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Industry</label>
-                    <input type="text" name="industry" class="theme-input rounded">
+                    <label for="comp-industry" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Industry</label>
+                    <input type="text" id="comp-industry" name="industry" class="theme-input rounded" autocomplete="off">
                 </div>
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Website</label>
-                    <input type="url" name="website" placeholder="https://" class="theme-input rounded">
+                    <label for="comp-website" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Website</label>
+                    <input type="url" id="comp-website" name="website" placeholder="https://" class="theme-input rounded" autocomplete="url">
                 </div>
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Location / Headquarters</label>
-                    <input type="text" name="location" class="theme-input rounded">
+                    <label for="comp-location" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Location / Headquarters</label>
+                    <input type="text" id="comp-location" name="location" class="theme-input rounded" autocomplete="address-level2">
                 </div>
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Full Address</label>
-                    <textarea name="address" rows="3" class="theme-input rounded resize-none"
+                    <label for="comp-address" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Full Address</label>
+                    <textarea id="comp-address" name="address" rows="3" class="theme-input rounded resize-none" autocomplete="street-address"
                         placeholder="Enter complete office address for recruitment messages..."></textarea>
                 </div>
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">About Company</label>
-                    <textarea name="about" rows="3" class="theme-input rounded resize-none"
+                    <label for="comp-about" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">About Company</label>
+                    <textarea id="comp-about" name="about" rows="3" class="theme-input rounded resize-none"
                         placeholder="Brief description of the company..."></textarea>
                 </div>
                 <div class="flex justify-end gap-3 mt-6">
@@ -1536,60 +1643,60 @@
                 <input type="hidden" name="id" id="form-job-id">
                 <div class="md:col-span-2 grid grid-cols-2 gap-4">
                     <div class="col-span-1">
-                        <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Job Title</label>
-                        <input type="text" name="title" required class="theme-input rounded">
+                        <label for="job-title" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Job Title</label>
+                        <input type="text" id="job-title" name="title" required class="theme-input rounded" autocomplete="organization-title">
                     </div>
                     <div class="col-span-1">
-                        <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Designation</label>
-                        <input type="text" name="designation" required class="theme-input rounded">
+                        <label for="job-designation" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Designation</label>
+                        <input type="text" id="job-designation" name="designation" required class="theme-input rounded" autocomplete="off">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Company</label>
+                    <label for="job-company-select" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Company</label>
                     <select name="companyId" id="job-company-select" required class="theme-input rounded">
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Department</label>
-                    <input type="text" name="department" required class="theme-input rounded">
+                    <label for="job-department" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Department</label>
+                    <input type="text" id="job-department" name="department" required class="theme-input rounded" autocomplete="off">
                 </div>
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Minimum Qualification</label>
-                    <input type="text" name="qualification" placeholder="e.g. Bachelor's in Computer Science"
-                        class="theme-input rounded">
+                    <label for="job-qualification" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Minimum Qualification</label>
+                    <input type="text" id="job-qualification" name="qualification" placeholder="e.g. Bachelor's in Computer Science"
+                        class="theme-input rounded" autocomplete="off">
                 </div>
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Location</label>
-                    <input type="text" name="location" required class="theme-input rounded">
+                    <label for="job-location" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Location</label>
+                    <input type="text" id="job-location" name="location" required class="theme-input rounded" autocomplete="address-level2">
                 </div>
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Budget (Annual INR)</label>
+                    <label for="job-budget-input" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Budget (Annual INR)</label>
                     <input type="number" name="budget" id="job-budget-input" required class="theme-input rounded"
                         oninput="document.getElementById('job-budget-monthly').innerText = this.value ? '₹' + Math.round(this.value / 12).toLocaleString() + '/mo' : ''">
                     <p id="job-budget-monthly" class="text-xs text-blue-500 font-medium mt-1"></p>
                 </div>
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Hiring Priority</label>
-                    <select name="priority" class="theme-input rounded">
+                    <label for="job-priority" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Hiring Priority</label>
+                    <select id="job-priority" name="priority" class="theme-input rounded">
                         <option value="Low">Low</option>
                         <option value="Medium">Medium</option>
                         <option value="Urgent">Urgent</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Closing Date</label>
-                    <input type="date" name="closingDate" class="theme-input rounded">
+                    <label for="job-closing-date" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Closing Date</label>
+                    <input type="date" id="job-closing-date" name="closingDate" class="theme-input rounded">
                 </div>
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">MRF Received?</label>
-                    <select name="mrfReceived" class="theme-input rounded">
+                    <label for="job-mrf" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">MRF Received?</label>
+                    <select id="job-mrf" name="mrfReceived" class="theme-input rounded">
                         <option value="No">No</option>
                         <option value="Yes">Yes</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Job Status</label>
-                    <select name="status" class="theme-input rounded">
+                    <label for="job-status" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Job Status</label>
+                    <select id="job-status" name="status" class="theme-input rounded">
                         <option value="Open">Open</option>
                         <option value="Draft">Draft</option>
                         <option value="Closed">Closed</option>
@@ -1597,8 +1704,8 @@
                 </div>
 
                 <div class="col-span-full">
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Job Description</label>
-                    <textarea name="description" rows="3" class="theme-input rounded resize-y"></textarea>
+                    <label for="job-desc" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Job Description</label>
+                    <textarea id="job-desc" name="description" rows="3" class="theme-input rounded resize-y"></textarea>
                 </div>
                 <div class="col-span-full flex justify-end gap-3 mt-6">
                     <button type="button" onclick="closeModal('modal-job')"
@@ -1624,25 +1731,25 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm text-slate-500 dark:text-slate-400">Full Name <span
+                    <label for="cand-name" class="block text-sm text-slate-500 dark:text-slate-400">Full Name <span
                             class="text-red-400">*</span></label>
-                    <input type="text" name="name" required class="theme-input rounded">
+                    <input type="text" id="cand-name" name="name" required class="theme-input rounded" autocomplete="name">
                 </div>
                 <div>
-                    <label class="block text-sm text-slate-500 dark:text-slate-400">Email <span
+                    <label for="cand-email" class="block text-sm text-slate-500 dark:text-slate-400">Email <span
                             class="text-red-400">*</span></label>
-                    <input type="email" name="email" required class="theme-input rounded">
+                    <input type="email" id="cand-email" name="email" required class="theme-input rounded" autocomplete="email">
                 </div>
                 <div>
-                    <label class="block text-sm text-slate-500 dark:text-slate-400">Phone (WhatsApp) <span
+                    <label for="cand-phone" class="block text-sm text-slate-500 dark:text-slate-400">Phone (WhatsApp) <span
                             class="text-red-400">*</span></label>
-                    <input type="tel" name="phone" required placeholder="e.g. +919876543210"
-                        class="theme-input rounded">
+                    <input type="tel" id="cand-phone" name="phone" required placeholder="e.g. +919876543210"
+                        class="theme-input rounded" autocomplete="tel">
                 </div>
                 <div>
-                    <label class="block text-sm text-slate-500 dark:text-slate-400">Gender <span
+                    <label for="cand-gender" class="block text-sm text-slate-500 dark:text-slate-400">Gender <span
                             class="text-red-400">*</span></label>
-                    <select name="gender" required class="theme-input rounded custom-select">
+                    <select id="cand-gender" name="gender" required class="theme-input rounded custom-select">
                         <option value="">-- Select Gender --</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
@@ -1650,9 +1757,9 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm text-slate-500 dark:text-slate-400">Qualification <span
+                    <label for="cand-qualification" class="block text-sm text-slate-500 dark:text-slate-400">Qualification <span
                             class="text-slate-400 text-xs font-normal">(optional)</span></label>
-                    <select name="qualification" class="theme-input rounded searchable-select">
+                    <select id="cand-qualification" name="qualification" class="theme-input rounded searchable-select">
                         <option value="">-- Select Qualification --</option>
                         <optgroup label="─── School Level ───">
                             <option value="10th Pass">10th Pass (SSC / Matriculation)</option>
@@ -1727,7 +1834,7 @@
                 </div>
                 <!-- Other Qualification – shown only when "Other" is selected -->
                 <div id="hr-other-qual-wrap" class="hidden">
-                    <label class="block text-sm text-slate-500 dark:text-slate-400">Specify Qualification</label>
+                    <label for="hr-other-qual-input" class="block text-sm text-slate-500 dark:text-slate-400">Specify Qualification</label>
                     <input type="text" id="hr-other-qual-input" name="qualificationOther"
                         placeholder="e.g. D.Pharm, PGDM, B.Voc…" class="theme-input rounded">
                 </div>
@@ -1738,19 +1845,18 @@
                         Address Details</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div class="md:col-span-2">
-                            <label class="block text-sm text-slate-500 dark:text-slate-400">Street / House / Flat
+                            <label for="hr-address-street" class="block text-sm text-slate-500 dark:text-slate-400">Street / House / Flat
                                 No.</label>
-                            <input type="text" name="addressStreet"
-                                placeholder="e.g. Flat 4B, Sunrise Apartments, MG Road" class="theme-input rounded">
+                            <input type="text" id="hr-address-street" name="addressStreet"
+                                placeholder="e.g. Flat 4B, Sunrise Apartments, MG Road" class="theme-input rounded" autocomplete="address-line1">
                         </div>
                         <div>
-                            <label class="block text-sm text-slate-500 dark:text-slate-400">City / Town</label>
-                            <input type="text" name="addressCity" placeholder="e.g. Pune" class="theme-input rounded"
-                                id="hr-address-city">
+                            <label for="hr-address-city" class="block text-sm text-slate-500 dark:text-slate-400">City / Town</label>
+                            <input type="text" id="hr-address-city" name="addressCity" placeholder="e.g. Pune" class="theme-input rounded" autocomplete="address-level2">
                         </div>
                         <div>
-                            <label class="block text-sm text-slate-500 dark:text-slate-400">State</label>
-                            <select name="addressState" class="theme-input rounded" id="hr-address-state">
+                            <label for="hr-address-state" class="block text-sm text-slate-500 dark:text-slate-400">State</label>
+                            <select id="hr-address-state" name="addressState" class="theme-input rounded" autocomplete="address-level1">
                                 <option value="">-- Select State --</option>
                                 <option>Andhra Pradesh</option>
                                 <option>Arunachal Pradesh</option>
@@ -1793,9 +1899,9 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm text-slate-500 dark:text-slate-400">Pincode</label>
+                            <label for="hr-address-pincode" class="block text-sm text-slate-500 dark:text-slate-400">Pincode</label>
                             <input type="text" name="addressPincode" id="hr-address-pincode" maxlength="6"
-                                pattern="[0-9]{6}" placeholder="e.g. 411001" class="theme-input rounded">
+                                pattern="[0-9]{6}" placeholder="e.g. 411001" class="theme-input rounded" autocomplete="postal-code">
                         </div>
                     </div>
                 </div>
@@ -1808,25 +1914,25 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm text-slate-500 dark:text-slate-400">Current Company <span
+                    <label for="cand-current-company" class="block text-sm text-slate-500 dark:text-slate-400">Current Company <span
                             class="text-red-400">*</span></label>
-                    <input type="text" name="currentCompany" required placeholder="e.g. Infosys Ltd."
-                        class="theme-input rounded">
+                    <input type="text" id="cand-current-company" name="currentCompany" required placeholder="e.g. Infosys Ltd."
+                        class="theme-input rounded" autocomplete="organization">
                 </div>
                 <div>
-                    <label class="block text-sm text-slate-500 dark:text-slate-400">Designation <span
+                    <label for="cand-designation" class="block text-sm text-slate-500 dark:text-slate-400">Designation <span
                             class="text-slate-400 text-xs font-normal">(optional)</span></label>
-                    <input type="text" name="designation" placeholder="e.g. Senior Software Engineer"
-                        class="theme-input rounded">
+                    <input type="text" id="cand-designation" name="designation" placeholder="e.g. Senior Software Engineer"
+                        class="theme-input rounded" autocomplete="organization-title">
                 </div>
                 <div>
-                    <label class="block text-sm text-slate-500 dark:text-slate-400">Years of Experience <span
+                    <label for="cand-experience" class="block text-sm text-slate-500 dark:text-slate-400">Years of Experience <span
                             class="text-red-400">*</span></label>
-                    <input type="number" step="0.1" name="experience" required class="theme-input rounded">
+                    <input type="number" id="cand-experience" step="0.1" name="experience" required class="theme-input rounded">
                 </div>
                 <div>
-                    <label class="block text-sm text-slate-500 dark:text-slate-400">Source</label>
-                    <select name="source" class="theme-input rounded">
+                    <label for="cand-source" class="block text-sm text-slate-500 dark:text-slate-400">Source</label>
+                    <select id="cand-source" name="source" class="theme-input rounded">
                         <option value="LinkedIn">LinkedIn</option>
                         <option value="Naukri.com">Naukri.com</option>
                         <option value="Indeed">Indeed</option>
@@ -1846,13 +1952,13 @@
 
                 <div class="col-span-full grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm text-slate-500 dark:text-slate-400">Department</label>
+                        <label for="candidate-job-dept-select" class="block text-sm text-slate-500 dark:text-slate-400">Department</label>
                         <select id="candidate-job-dept-select" name="jobDepartment" class="theme-input rounded">
                             <option value="">-- Select Department --</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm text-slate-500 dark:text-slate-400">Position <span
+                        <label for="candidate-job-select" class="block text-sm text-slate-500 dark:text-slate-400">Position <span
                                 class="text-red-400">*</span></label>
                         <select id="candidate-job-select" name="jobId" required
                             class="theme-input rounded searchable-select"></select>
@@ -1867,47 +1973,47 @@
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm text-slate-500 dark:text-slate-400">Current CTC <span
+                        <label for="cand-current-ctc" class="block text-sm text-slate-500 dark:text-slate-400">Current CTC <span
                                 class="text-red-400">*</span> <span
                                 class="text-xs font-semibold text-blue-400">/mo</span></label>
-                        <input type="number" name="currentCTC" required class="theme-input rounded"
-                            placeholder="e.g. 35000">
+                        <input type="number" id="cand-current-ctc" name="currentCTC" required class="theme-input rounded"
+                            placeholder="e.g. 35000" autocomplete="off">
                     </div>
                     <div>
-                        <label class="block text-sm text-slate-500 dark:text-slate-400">Expected CTC <span
+                        <label for="cand-expected-ctc" class="block text-sm text-slate-500 dark:text-slate-400">Expected CTC <span
                                 class="text-red-400">*</span> <span
                                 class="text-xs font-semibold text-blue-400">/mo</span></label>
-                        <input type="number" name="expectedCTC" required class="theme-input rounded"
-                            placeholder="e.g. 45000">
+                        <input type="number" id="cand-expected-ctc" name="expectedCTC" required class="theme-input rounded"
+                            placeholder="e.g. 45000" autocomplete="off">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm text-slate-500 dark:text-slate-400">Final CTC (Done) <span
+                        <label for="cand-offered-ctc" class="block text-sm text-slate-500 dark:text-slate-400">Final CTC (Done) <span
                                 class="text-xs font-semibold text-blue-400">/mo</span></label>
-                        <input type="number" name="offeredCTC" class="theme-input rounded" placeholder="If selected">
+                        <input type="number" id="cand-offered-ctc" name="offeredCTC" class="theme-input rounded" placeholder="If selected" autocomplete="off">
                     </div>
                     <div>
-                        <label class="block text-sm text-slate-500 dark:text-slate-400">Notice Period (Days) <span
+                        <label for="cand-notice-period" class="block text-sm text-slate-500 dark:text-slate-400">Notice Period (Days) <span
                                 class="text-red-400">*</span></label>
-                        <input type="number" name="noticePeriod" required class="theme-input rounded">
+                        <input type="number" id="cand-notice-period" name="noticePeriod" required class="theme-input rounded" autocomplete="off">
                     </div>
                 </div>
                 <div class="col-span-full">
-                    <label class="block text-sm text-slate-500 dark:text-slate-400">Why Change Job?</label>
-                    <textarea name="whyChangeJob" rows="2" class="theme-input rounded resize-y"></textarea>
+                    <label for="cand-why-change" class="block text-sm text-slate-500 dark:text-slate-400">Why Change Job?</label>
+                    <textarea id="cand-why-change" name="whyChangeJob" rows="2" class="theme-input rounded resize-y"></textarea>
                 </div>
 
                 <div class="col-span-full grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                     <div>
-                        <label class="block text-sm text-slate-500 dark:text-slate-400">Offer Letter Sent?</label>
-                        <select name="offerLetterSent" class="theme-input rounded">
+                        <label for="cand-offer-sent" class="block text-sm text-slate-500 dark:text-slate-400">Offer Letter Sent?</label>
+                        <select id="cand-offer-sent" name="offerLetterSent" class="theme-input rounded">
                             <option value="No">No</option>
                             <option value="Yes">Yes</option>
                         </select>
                     </div>
                     <div class="space-y-1">
-                        <label class="block text-sm text-slate-500 dark:text-slate-400">Candidate Resume <span
+                        <label for="resumeFileInput" class="block text-sm text-slate-500 dark:text-slate-400">Candidate Resume <span
                                 class="text-[10px] text-blue-500 opacity-60 font-bold uppercase">(PDF/DOC)</span></label>
                         <div class="flex items-center gap-2">
                             <div class="relative flex-1">
@@ -1953,36 +2059,36 @@
             <form id="form-interview" class="space-y-4">
                 <input type="hidden" name="id" id="form-interview-id">
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Search Candidate
+                    <label for="interview-candidate-search" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Search Candidate
                         (Name/Mobile/Email)</label>
-                    <input type="text" list="candidate-search-list" id="interview-candidate-search"
+                    <input type="text" list="candidate-search-list" id="interview-candidate-search" autocomplete="off"
                         placeholder="Type to search..." class="theme-input rounded"
                         oninput="syncInterviewCandidateId(this.value)">
                     <input type="hidden" name="candidateId" id="interview-candidate-id-hidden" required>
                     <datalist id="candidate-search-list"></datalist>
                 </div>
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Interviewer Name</label>
-                    <input type="text" name="interviewer" required placeholder="Who will conduct it?"
+                    <label for="interview-interviewer" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Interviewer Name</label>
+                    <input type="text" id="interview-interviewer" name="interviewer" required placeholder="Who will conduct it?" autocomplete="name"
                         class="theme-input rounded">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Date & Time</label>
-                        <input type="datetime-local" name="dateTime" required class="theme-input rounded">
+                        <label for="interview-datetime" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Date & Time</label>
+                        <input type="datetime-local" id="interview-datetime" name="dateTime" required class="theme-input rounded">
                     </div>
                     <div>
-                        <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Mode</label>
-                        <select name="mode" class="theme-input rounded">
+                        <label for="interview-mode" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Mode</label>
+                        <select id="interview-mode" name="mode" class="theme-input rounded">
                             <option>Online (Video Call)</option>
                             <option>Offline (Office)</option>
                         </select>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Apply Status to
+                    <label for="interview-status-apply" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Apply Status to
                         Candidate</label>
-                    <select name="status" class="theme-input rounded">
+                    <select id="interview-status-apply" name="status" class="theme-input rounded">
                         <option value="Scheduled">Scheduled</option>
                         <option value="Interviewed">Done (Interviewed)</option>
                         <option value="Selected">Selected</option>
@@ -2080,6 +2186,7 @@
                     <!-- Search Bar -->
                     <div class="p-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                         <div class="relative">
+                            <label for="advanced-report-search" class="sr-only">Search in filtered results</label>
                             <i
                                 class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
                             <input type="text" id="advanced-report-search" placeholder="Search in filtered results..."
@@ -2092,6 +2199,7 @@
                     <div
                         class="px-6 py-3 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 flex items-center font-bold text-slate-600 dark:text-slate-300 text-sm">
                         <div class="w-12 flex justify-center">
+                            <label for="advanced-report-select-all" class="sr-only">Select all items</label>
                             <input type="checkbox" id="advanced-report-select-all"
                                 onchange="toggleAllReportSelection(this.checked)"
                                 class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 bg-white border-gray-300">
@@ -2144,13 +2252,13 @@
                     <input type="hidden" name="id" id="form-wa-template-id">
                     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Template Name</label>
-                            <input type="text" name="name" required placeholder="e.g. Initial Outreach"
+                            <label for="wa-tpl-name" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Template Name</label>
+                            <input type="text" id="wa-tpl-name" name="name" required placeholder="e.g. Initial Outreach" autocomplete="off"
                                 class="theme-input rounded">
                         </div>
                         <div>
-                            <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Category</label>
-                            <select name="type" class="theme-input rounded">
+                            <label for="wa-tpl-type" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Category</label>
+                            <select id="wa-tpl-type" name="type" class="theme-input rounded">
                                 <option>Welcome/Sourcing</option>
                                 <option>Follow-up</option>
                                 <option>Interview Reminder</option>
@@ -2159,7 +2267,7 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Message Content</label>
+                        <label for="wa-tpl-content" class="block text-sm mb-1 text-slate-500 dark:text-slate-400">Message Content</label>
                         <div class="mb-3">
                             <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Insert
                                 Variables</p>
@@ -2235,7 +2343,7 @@
                                 </div>
                             </div>
                         </div>
-                        <textarea id="wa-template-content" name="content" required rows="7"
+                        <textarea id="wa-tpl-content" name="content" required rows="7"
                             oninput="updateLivePreviewOnEdit()"
                             placeholder="Hi {{name}}, we have a {{jobTitle}} opening at our company..."
                             class="theme-input rounded resize-y font-mono text-sm leading-relaxed"></textarea>
@@ -2338,6 +2446,7 @@
 
     <script type="module" src="script.js"></script>
     <script type="module" src="firebase_config.js"></script>
+
 
     <!-- Floating Draggable Calculator -->
     <div id="floating-calculator" class="fixed z-[999] w-72 glass-card rounded-2xl shadow-2xl overflow-hidden hidden"

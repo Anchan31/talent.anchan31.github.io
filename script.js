@@ -336,6 +336,38 @@ document.getElementById('auth-password').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleLogin();
 });
 
+// Caps Lock Detection
+const authPassInput = document.getElementById('auth-password');
+const capsWarning = document.getElementById('caps-lock-warning');
+
+if (authPassInput && capsWarning) {
+    authPassInput.addEventListener('keyup', (e) => {
+        if (e.getModifierState('CapsLock')) {
+            capsWarning.classList.remove('hidden');
+        } else {
+            capsWarning.classList.add('hidden');
+        }
+    });
+
+    // Also check on focus/blur
+    authPassInput.addEventListener('keydown', (e) => {
+        if (e.getModifierState('CapsLock')) {
+            capsWarning.classList.remove('hidden');
+        } else {
+            capsWarning.classList.add('hidden');
+        }
+    });
+
+    authPassInput.addEventListener('focus', () => {
+        // We can't check CapsLock on focus directly as FocusEvent doesn't support getModifierState
+        // The keydown/keyup listeners will handle it once the user starts typing
+    });
+
+    authPassInput.addEventListener('blur', () => {
+        capsWarning.classList.add('hidden');
+    });
+}
+
 // Forgot Password Action
 if (resetBtn) {
     resetBtn.addEventListener('click', async () => {
@@ -431,6 +463,14 @@ async function initApp() {
 }
 
 function setupRealtimeListeners() {
+    const handleError = (collectionName, error) => {
+        console.error(`Error in ${collectionName} listener:`, error);
+        if (pendingInitialLoads > 0) {
+            pendingInitialLoads--;
+            if (pendingInitialLoads === 0) hideLoader();
+        }
+    };
+
     // Listen for Companies
     const compQuery = collection(db, "companies");
     onSnapshot(compQuery, (snapshot) => {
@@ -443,7 +483,7 @@ function setupRealtimeListeners() {
             pendingInitialLoads--;
             if (pendingInitialLoads === 0) hideLoader();
         }
-    });
+    }, (error) => handleError("Companies", error));
 
     // Listen for Jobs
     const jobsQuery = collection(db, "jobs");
@@ -459,7 +499,7 @@ function setupRealtimeListeners() {
             pendingInitialLoads--;
             if (pendingInitialLoads === 0) hideLoader();
         }
-    });
+    }, (error) => handleError("Jobs", error));
 
     // Listen for Candidates (Unified)
     const candidateQuery = collection(db, "candidates");
@@ -478,7 +518,7 @@ function setupRealtimeListeners() {
             pendingInitialLoads--;
             if (pendingInitialLoads === 0) hideLoader();
         }
-    });
+    }, (error) => handleError("Candidates", error));
 
     // Listen for Interviews
     const interviewQuery = collection(db, "interviews");
@@ -490,7 +530,7 @@ function setupRealtimeListeners() {
             pendingInitialLoads--;
             if (pendingInitialLoads === 0) hideLoader();
         }
-    });
+    }, (error) => handleError("Interviews", error));
 
     // Listen for Offers
     const offersQuery = query(collection(db, "offers"), orderBy("createdAt", "desc"));
@@ -502,7 +542,7 @@ function setupRealtimeListeners() {
             pendingInitialLoads--;
             if (pendingInitialLoads === 0) hideLoader();
         }
-    });
+    }, (error) => handleError("Offers", error));
 
     // Listen for WhatsApp Templates
     const waQuery = collection(db, "whatsappTemplates");
@@ -514,7 +554,7 @@ function setupRealtimeListeners() {
             pendingInitialLoads--;
             if (pendingInitialLoads === 0) hideLoader();
         }
-    });
+    }, (error) => handleError("WhatsApp Templates", error));
 
     // Listen for Tasks
     const taskQuery = query(collection(db, "tasks"), orderBy("createdAt", "desc"));
@@ -528,7 +568,7 @@ function setupRealtimeListeners() {
             pendingInitialLoads--;
             if (pendingInitialLoads === 0) hideLoader();
         }
-    });
+    }, (error) => handleError("Tasks", error));
 }
 
 // --- WHATSAPP FUNCTIONS ---
@@ -566,6 +606,33 @@ function updateWaDropdowns() {
     // Re-initialize custom select to sync the UI
     try { initCustomSelects(); } catch (e) { console.warn('Sync failed in updateWaDropdowns', e); }
 }
+
+window.filterTemplates = (query) => {
+    const q = query.toLowerCase();
+    const container = document.getElementById('wa-templates-list');
+    const filtered = cachedWaTemplates.filter(t => t.name.toLowerCase().includes(q) || t.content.toLowerCase().includes(q));
+    
+    if (filtered.length === 0) {
+        container.innerHTML = `<div class="text-xs p-8 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl text-slate-400">No matching templates found</div>`;
+        return;
+    }
+
+    container.innerHTML = filtered.map(t => `
+        <div class="glass-card p-5 rounded-2xl flex justify-between items-center group cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 border-slate-100 dark:border-slate-800 transition-all shadow-sm hover:shadow-md" onclick="selectTemplateFromList('${t.id}')">
+            <div class="flex-1 truncate pr-4">
+                <div class="flex items-center gap-3 mb-1">
+                    <h4 class="font-bold text-slate-800 dark:text-white truncate">${t.name}</h4>
+                    <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 px-2 py-0.5 bg-slate-100 dark:bg-slate-900/50 rounded-full">${t.type || 'Chat'}</span>
+                </div>
+                <p class="text-xs text-slate-500 truncate">${t.content}</p>
+            </div>
+            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onclick="event.stopPropagation(); editWaTemplate('${t.id}')" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 text-slate-400 hover:text-blue-500 shadow-sm border border-slate-100 dark:border-slate-700 transition-colors"><i class="fas fa-edit text-xs"></i></button>
+                <button onclick="event.stopPropagation(); deleteDocById('whatsappTemplates', '${t.id}')" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 text-slate-400 hover:text-red-500 shadow-sm border border-slate-100 dark:border-slate-700 transition-colors"><i class="fas fa-trash text-xs"></i></button>
+            </div>
+        </div>
+    `).join('');
+};
 
 function renderWaCandidatesChecklist() {
     const container = document.getElementById('wa-candidates-checklist');
@@ -663,12 +730,20 @@ window.previewSelectedTemplate = () => {
         const demoCandidate = cachedCandidates.find(c => c.id === firstSelectedId) || null;
 
         let formatted = formatWaMessage(template.content, demoCandidate);
-        previewArea.innerHTML = `<div class="wa-message-bubble">${formatted}</div>`;
+        previewArea.innerHTML = `
+            <div class="wa-message-bubble max-w-[85%] bg-white dark:bg-slate-800 p-3 rounded-2xl rounded-tl-none text-xs shadow-sm self-start">
+                <p class="text-slate-700 dark:text-slate-200">${formatted}</p>
+                <span class="text-[8px] text-slate-400 block text-right mt-1">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+        `;
+        
+        const nameEl = document.getElementById('preview-candidate-name');
+        if (nameEl) nameEl.innerText = demoCandidate ? demoCandidate.name : 'Recipient Name';
     }
 };
 
 window.updateLivePreviewOnEdit = () => {
-    const content = document.getElementById('wa-template-content').value;
+    const content = document.getElementById('wa-tpl-content').value;
     const previewArea = document.getElementById('wa-live-preview');
     const previewModal = document.getElementById('wa-modal-preview');
 
@@ -685,7 +760,7 @@ window.updateLivePreviewOnEdit = () => {
 };
 
 window.insertWaTag = (tag) => {
-    const textarea = document.getElementById('wa-template-content');
+    const textarea = document.getElementById('wa-tpl-content');
     textarea.setRangeText(`{{${tag}}}`, textarea.selectionStart, textarea.selectionEnd, 'end');
     textarea.focus();
     updateLivePreviewOnEdit();
@@ -1299,60 +1374,81 @@ function updateDashboard() {
     document.getElementById('stat-active-jobs').innerText = activeJobs || cachedJobs.length;
 
     // Today's Interviews
-    const todayStr = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
     const todayInts = cachedInterviews.filter(i => i.dateTime && i.dateTime.startsWith(todayStr)).length;
     document.getElementById('stat-today-interviews').innerText = todayInts;
 
-    // Pending Tasks (Roadmap v2)
+    // Pending Tasks
     const pendingTasks = cachedTasks.filter(t => (t.status || 'todo').toLowerCase() !== 'done').length;
     const ptEl = document.getElementById('stat-pending-tasks');
     if (ptEl) ptEl.innerText = pendingTasks;
 
-    // Talent Pool (Candidates not hired/rejected/backed out/not interested)
+    // Talent Pool
     const talentPool = cachedCandidates.filter(c => c.stage !== 'Hired' && c.stage !== 'Rejected' && c.stage !== 'Backed Out' && c.stage !== 'Not Interested').length;
     const tpEl = document.getElementById('stat-talent-pool');
     if (tpEl) tpEl.innerText = talentPool;
 
-    // Total Hires (Hired candidates)
-    const totalHires = cachedCandidates.filter(c => c.stage === 'Hired').length;
+    // Total Hires
+    const hiredCount = cachedCandidates.filter(c => c.stage === 'Hired').length;
     const thEl = document.getElementById('stat-total-hires');
-    if (thEl) thEl.innerText = totalHires;
+    if (thEl) thEl.innerText = hiredCount;
 
-    // Open Offers: now computed from cachedOffers below (after renderDashboardOffers call)
+    // Selection Rate (Conversion)
+    const conversionRate = totalCandidates > 0 ? Math.round((hiredCount / totalCandidates) * 100) : 0;
+    const crEl = document.getElementById('report-conversion-rate');
+    if (crEl) crEl.innerText = conversionRate + '%';
 
-    // Selection Rate
-    const selectedCount = cachedCandidates.filter(c => c.stage === 'Selected' || c.stage === 'Hired').length;
-    const selectionRate = totalCandidates > 0 ? Math.round((selectedCount / totalCandidates) * 100) : 0;
-    document.getElementById('stat-selection-rate').innerText = selectionRate + '%';
-
-    // Budget Adherence & Median CTC
+    // Budget Adherence & Metrics
     let withinBudgetCount = 0;
     let totalCandWithJob = 0;
     let ctcs = [];
+    const sourceMap = {};
 
     cachedCandidates.forEach(c => {
         const job = cachedJobs.find(j => j.id === c.jobId);
-        const expCTC = Number(c.expectedCTC || c.expectedSalary || 0); // monthly
-        const annualExpCTC = expCTC * 12; // annualise for budget comparison
-        if (expCTC > 0) ctcs.push(expCTC); // keep monthly for median stat
+        const expCTC = Number(c.expectedCTC || c.expectedSalary || 0);
+        const annualExpCTC = expCTC * 12;
+        if (expCTC > 0) ctcs.push(expCTC);
 
         if (job) {
-            let jobBudget = job.budget ? Number(job.budget) : (job.budgetMax ? Number(job.budgetMax) : 0); // annual
+            let jobBudget = job.budget ? Number(job.budget) : (job.budgetMax ? Number(job.budgetMax) : 0);
             if (jobBudget > 0 && annualExpCTC > 0) {
                 totalCandWithJob++;
                 if (annualExpCTC <= jobBudget) withinBudgetCount++;
             }
         }
+
+        const s = c.source || 'Other';
+        sourceMap[s] = (sourceMap[s] || 0) + 1;
     });
 
     const adherence = totalCandWithJob > 0 ? Math.round((withinBudgetCount / totalCandWithJob) * 100) : 100;
-    const bEl = document.getElementById('stat-avg-budget');
-    if (bEl) {
-        bEl.innerText = adherence + '%';
-        bEl.className = `text-xl font-bold mt-1 ${adherence >= 80 ? 'text-green-500' : adherence >= 50 ? 'text-orange-500' : 'text-red-500'} `;
+    const baEl = document.getElementById('report-budget-adherence');
+    if (baEl) baEl.innerText = adherence + '%';
+
+    // report-avg-time-to-fill (MOCK)
+    const ttfEl = document.getElementById('report-avg-time-to-fill');
+    if (ttfEl) ttfEl.innerText = '18 Days';
+
+    // Top Sourcing Channel
+    const sortedSources = Object.entries(sourceMap).sort((a, b) => b[1] - a[1]);
+    const tcEl = document.getElementById('report-top-channel');
+    if (tcEl) tcEl.innerText = sortedSources.length > 0 ? sortedSources[0][0] : 'N/A';
+
+    // Statistics for legacy elements if they still exist
+    const selectedCount = cachedCandidates.filter(c => c.stage === 'Selected' || c.stage === 'Hired').length;
+    const selectionRate = totalCandidates > 0 ? Math.round((selectedCount / totalCandidates) * 100) : 0;
+    const srLegacy = document.getElementById('stat-selection-rate');
+    if (srLegacy) srLegacy.innerText = selectionRate + '%';
+
+    const bLegacy = document.getElementById('stat-avg-budget');
+    if (bLegacy) {
+        bLegacy.innerText = adherence + '%';
+        bLegacy.className = `text-xl font-bold mt-1 ${adherence >= 80 ? 'text-green-500' : adherence >= 50 ? 'text-orange-500' : 'text-red-500'}`;
     }
 
-    // Median CTC calculation (stored as monthly → display as annual LPA for context)
+    // Median CTC
     ctcs.sort((a, b) => a - b);
     let median = 0;
     if (ctcs.length > 0) {
@@ -1360,39 +1456,48 @@ function updateDashboard() {
         median = ctcs.length % 2 !== 0 ? ctcs[mid] : (ctcs[mid - 1] + ctcs[mid]) / 2;
     }
     const medianAnnual = median * 12;
-    document.getElementById('stat-median-ctc').innerText = medianAnnual ? `₹${(medianAnnual / 100000).toFixed(1)} L` : '₹0';
+    const medianEl = document.getElementById('stat-median-ctc');
+    if (medianEl) medianEl.innerText = medianAnnual ? `₹${(medianAnnual / 100000).toFixed(1)} L` : '₹0';
 
-    // Monthly Hires (ONLY count 'Hired' stage as per user request)
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
+    // Monthly Hires
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
     const monthlyHires = cachedCandidates.filter(c => {
         if (c.stage !== 'Hired') return false;
-
-        // Use hiredAt if available, fallback to createdAt
         const timestamp = c.hiredAt || c.createdAt;
         if (!timestamp) return false;
-
         const d = new Date(timestamp.seconds * 1000);
         return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     }).length;
-    document.getElementById('stat-monthly-hires').innerText = monthlyHires;
+    const mhEl = document.getElementById('stat-monthly-hires');
+    if (mhEl) mhEl.innerText = monthlyHires;
 
-    // Offer to Join Ratio
-    const hiredCount = cachedCandidates.filter(c => c.stage === 'Hired').length;
-    const selectedOffers = cachedCandidates.filter(c => c.stage === 'Selected').length;
-    const totalOffers = hiredCount + selectedOffers;
-    const joinRatio = totalOffers > 0 ? Math.round((hiredCount / totalOffers) * 100) : 0;
+    // Interview Stats
+    const upcomingInts = cachedInterviews.filter(i => i.dateTime && new Date(i.dateTime) >= now).length;
+    const pendingFeedback = cachedInterviews.filter(i => (i.status === 'Interviewed' || i.status === 'Done') && !i.feedback).length;
+    const completedToday = cachedInterviews.filter(i => {
+        if (!i.dateTime) return false;
+        const d = new Date(i.dateTime);
+        return d.toDateString() === now.toDateString() && (i.status === 'Done' || i.status === 'Interviewed');
+    }).length;
 
-    const joinRatioEl = document.getElementById('stat-join-ratio');
-    if (joinRatioEl) {
-        joinRatioEl.innerText = joinRatio + '%';
-    }
+    const statUpcomingEl = document.getElementById('stat-int-upcoming');
+    if (statUpcomingEl) statUpcomingEl.innerText = upcomingInts;
+    const statPendingFeedbackEl = document.getElementById('stat-int-pending');
+    if (statPendingFeedbackEl) statPendingFeedbackEl.innerText = pendingFeedback;
+    const statCompletedTodayEl = document.getElementById('stat-int-completed');
+    if (statCompletedTodayEl) statCompletedTodayEl.innerText = completedToday;
 
-    // Pipeline Distribution Chart
+    // Join Ratio
+    const selectedOf = cachedCandidates.filter(c => c.stage === 'Selected').length;
+    const joinRatio = (hiredCount + selectedOf) > 0 ? Math.round((hiredCount / (hiredCount + selectedOf)) * 100) : 0;
+    const jrEl = document.getElementById('stat-join-ratio');
+    if (jrEl) jrEl.innerText = joinRatio + '%';
+
+    // Charts update
+    if (stageChartInstance) stageChartInstance.destroy();
     const stages = ['Applied', 'Screening', 'Interview', 'Selected', 'Hired', 'Rejected', 'Backed Out', 'Not Interested'];
     const stageCounts = stages.map(s => cachedCandidates.filter(c => c.stage === s).length);
-
-    if (stageChartInstance) stageChartInstance.destroy();
     stageChartInstance = new Chart(document.getElementById('stageChart'), {
         type: 'bar',
         data: {
@@ -1409,48 +1514,21 @@ function updateDashboard() {
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(51, 65, 85, 0.1)', borderDash: [5, 5] },
-                    ticks: { font: { size: 10 } }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { font: { size: 10, weight: 'bold' } }
-                }
+                y: { beginAtZero: true, grid: { color: 'rgba(51, 65, 85, 0.1)', borderDash: [5, 5] }, ticks: { font: { size: 10 } } },
+                x: { grid: { display: false }, ticks: { font: { size: 10, weight: 'bold' } } }
             }
         }
     });
 
-    // Source Distribution Chart (Dynamic from Candidate Data)
-    const sourceMap = {};
-    cachedCandidates.forEach(c => {
-        const s = c.source || 'Other';
-        sourceMap[s] = (sourceMap[s] || 0) + 1;
-    });
-
-    const sortedSources = Object.entries(sourceMap)
-        .sort((a, b) => b[1] - a[1]);
-
-    // Take top 5, rest as Other
+    if (sourceChartInstance) sourceChartInstance.destroy();
     const topSources = sortedSources.slice(0, 5);
     const otherCount = sortedSources.slice(5).reduce((acc, curr) => acc + curr[1], 0);
-
-    let chartLabels = topSources.map(s => s[0]);
-    let chartData = topSources.map(s => s[1]);
-
-    if (otherCount > 0) {
-        chartLabels.push('Other');
-        chartData.push(otherCount);
-    }
-
-    if (sourceChartInstance) sourceChartInstance.destroy();
     sourceChartInstance = new Chart(document.getElementById('sourceChart'), {
         type: 'doughnut',
         data: {
-            labels: chartLabels,
+            labels: [...topSources.map(s => s[0]), ...(otherCount > 0 ? ['Other'] : [])],
             datasets: [{
-                data: chartData,
+                data: [...topSources.map(s => s[1]), ...(otherCount > 0 ? [otherCount] : [])],
                 backgroundColor: ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#94a3b8'],
                 borderWidth: 0
             }]
@@ -1459,44 +1537,29 @@ function updateDashboard() {
             responsive: true,
             maintainAspectRatio: false,
             cutout: '70%',
-            plugins: {
-                legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } }
-            }
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
         }
     });
 
-    // Trends Chart (Budget vs Real CTCs)
-    const recentJobs = cachedJobs.slice(0, 6);
-    const jobLabels = recentJobs.map(j => j.title.length > 15 ? j.title.substring(0, 12) + '...' : j.title);
-    const budgetData = recentJobs.map(j => j.budget ? Number(j.budget) : (j.budgetMax ? Number(j.budgetMax) : 0)); // annual
-    const avgExpData = recentJobs.map(j => {
-        const candidatesForJob = cachedCandidates.filter(c => c.jobId === j.id);
-        if (candidatesForJob.length === 0) return 0;
-        // monthly → annual to match job budget scale
-        const avgMonthly = candidatesForJob.reduce((acc, c) => acc + Number(c.expectedCTC || c.expectedSalary || 0), 0) / candidatesForJob.length;
-        return avgMonthly * 12;
-    });
-
     if (budgetChartInstance) budgetChartInstance.destroy();
+    const recentJobs = cachedJobs.slice(0, 6);
     budgetChartInstance = new Chart(document.getElementById('budgetChart'), {
         type: 'line',
         data: {
-            labels: jobLabels,
+            labels: recentJobs.map(j => j.title.length > 15 ? j.title.substring(0, 12) + '...' : j.title),
             datasets: [
-                { label: 'Job Budget (Annual)', data: budgetData, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.4 },
-                { label: 'Avg Expected CTC (Annual)', data: avgExpData, borderColor: '#ef4444', borderDash: [5, 5], tension: 0.4 }
+                { label: 'Budget', data: recentJobs.map(j => (j.budget || 0)), borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.4 },
+                { label: 'Avg Exp', data: recentJobs.map(j => {
+                    const cands = cachedCandidates.filter(c => c.jobId === j.id);
+                    return cands.length > 0 ? (cands.reduce((a, b) => a + Number(b.expectedCTC || 0), 0) / cands.length) * 12 : 0;
+                }), borderColor: '#ef4444', borderDash: [5, 5], tension: 0.4 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: { legend: { position: 'top', labels: { boxWidth: 15, font: { size: 11 } } } },
-            scales: {
-                y: {
-                    grid: { color: 'rgba(51, 65, 85, 0.1)' },
-                    ticks: { callback: (val) => '₹' + (val / 100000).toFixed(1) + 'L' }
-                }
-            }
+            scales: { y: { grid: { color: 'rgba(51, 65, 85, 0.1)' }, ticks: { callback: (v) => '₹' + (v / 100000).toFixed(1) + 'L' } } }
         }
     });
 
@@ -1505,10 +1568,8 @@ function updateDashboard() {
     renderDashboardOffers();
     renderHiringFunnel();
 
-    // Refresh notification badge whenever data changes
     if (typeof refreshNotificationBadge === 'function') refreshNotificationBadge();
 
-    // ── New stats powered by cachedOffers ──
     const pendingOffers = cachedOffers.filter(o => !o.status || o.status === 'Pending' || o.status === 'Sent');
     const signedOffers = cachedOffers.filter(o => o.status === 'Signed' || o.status === 'Accepted');
     const ooEl2 = document.getElementById('stat-open-offers');
@@ -1516,18 +1577,12 @@ function updateDashboard() {
     const signedEl = document.getElementById('stat-offers-signed');
     if (signedEl) signedEl.innerText = signedOffers.length;
 
-    // ── Avg Experience ──
     const expValues = cachedCandidates.map(c => Number(c.experience || 0)).filter(v => v > 0);
     const avgExp = expValues.length > 0 ? (expValues.reduce((a, b) => a + b, 0) / expValues.length).toFixed(1) : 0;
     const aeEl = document.getElementById('stat-avg-exp');
     if (aeEl) aeEl.innerText = avgExp;
 
-    // ── Overdue Tasks ──
-    const todayISO = new Date().toISOString().split('T')[0];
-    const overdueTasks = cachedTasks.filter(t => {
-        if ((t.status || 'todo').toLowerCase() === 'done') return false;
-        return t.dueDate && t.dueDate < todayISO;
-    }).length;
+    const overdueTasks = cachedTasks.filter(t => (t.status || 'todo').toLowerCase() !== 'done' && t.dueDate && t.dueDate < now.toISOString().split('T')[0]).length;
     const otEl = document.getElementById('stat-overdue-tasks');
     if (otEl) otEl.innerText = overdueTasks;
 }
@@ -2644,10 +2699,10 @@ const renderAdvancedReportFilters = () => {
 
         // Set Bottom Options
         document.getElementById('advanced-report-options-container').innerHTML = `
-                    <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">
+                    <label for="adv-opt-ctc" class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">
                         <input type="checkbox" id="adv-opt-ctc" checked class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 bg-white border-gray-300 border"> Include Financials (CTC)
                     </label>
-                    <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">
+                    <label for="adv-opt-contact" class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">
                         <input type="checkbox" id="adv-opt-contact" checked class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 bg-white border-gray-300 border"> Include Contact Info
                     </label>
                 `;
@@ -2659,7 +2714,7 @@ const renderAdvancedReportFilters = () => {
         html += createFilterDropdown('Status', 'status', statuses);
 
         document.getElementById('advanced-report-options-container').innerHTML = `
-                    <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">
+                    <label for="adv-opt-budget" class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">
                         <input type="checkbox" id="adv-opt-budget" checked class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 bg-white border-gray-300 border"> Include Budget Exp.
                     </label>
                 `;
@@ -2675,7 +2730,7 @@ const createFilterDropdown = (label, key, options) => {
     });
     return `
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">${label}</label>
+                    <label for="adv-filter-${key}" class="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">${label}</label>
                     <select id="adv-filter-${key}" onchange="applyAdvancedFilters()" class="w-full theme-input rounded-xl border border-slate-300 dark:border-slate-600 text-sm py-2 px-3 focus:ring-2 focus:ring-blue-500 transition-shadow bg-white dark:bg-slate-700">
                         ${optsHtml}
                     </select>
@@ -4059,8 +4114,10 @@ window.addTaskSubtask = (text = '', done = false, idx = null) => {
     const container = document.getElementById('task-subtasks-container');
     const div = document.createElement('div');
     div.className = 'subtask-item animate-in fade-in';
+    const subtaskId = `subtask-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     div.innerHTML = `
-        <input type="checkbox" class="task-subtask-check w-4 h-4 rounded text-orange-600 focus:ring-orange-500" ${done ? 'checked' : ''}>
+        <label for="${subtaskId}" class="sr-only">Mark subtask as done</label>
+        <input type="checkbox" id="${subtaskId}" class="task-subtask-check w-4 h-4 rounded text-orange-600 focus:ring-orange-500" ${done ? 'checked' : ''}>
         <input type="text" class="task-subtask-text flex-1 bg-transparent border-none outline-none text-xs font-medium dark:text-slate-300" 
             placeholder="Subtask description..." value="${text}">
         <button type="button" onclick="this.parentElement.remove()" class="text-slate-400 hover:text-red-500 transition"><i class="fas fa-times text-[10px]"></i></button>
@@ -4127,7 +4184,8 @@ window.renderOffers = () => {
             <div class="glass-card p-6 rounded-3xl border border-slate-200 dark:border-slate-800 hover:shadow-2xl hover:shadow-blue-500/10 transition-all group animate-fade-up relative" style="animation-delay: ${idx * 0.05}s">
                 <!-- Checkbox for Bulk Selection -->
                 <div class="absolute top-5 left-5 z-10 opacity-0 group-hover:opacity-100 has-[:checked]:opacity-100 transition-all">
-                    <input type="checkbox" name="offer-check" value="${o.id}" class="w-5 h-5 rounded-lg border-slate-300 text-blue-600 transition-all cursor-pointer shadow-sm">
+                    <label for="offer-check-${o.id}" class="sr-only">Select offer for ${o.candidateName}</label>
+                    <input type="checkbox" id="offer-check-${o.id}" name="offer-check" value="${o.id}" class="w-5 h-5 rounded-lg border-slate-300 text-blue-600 transition-all cursor-pointer shadow-sm">
                 </div>
 
                 <!-- Status Header -->
@@ -4261,7 +4319,7 @@ window.loadPortalSettings = async () => {
             isLocked: false,
             logoUrl: '',
             backgroundUrl: '',
-            fontFamily: 'Inter, sans-serif',
+            fontFamily: 'Plus Jakarta Sans, sans-serif',
             companyName: 'Brawn Laboratories Ltd', // Default Brand Name
             cloudinaryUrl: '',
             cloudinaryPreset: '',
@@ -4288,8 +4346,8 @@ window.loadPortalSettings = async () => {
                             </div>
                             <div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
                                 <span class="text-xs font-bold uppercase tracking-widest text-slate-400">Portal Status</span>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" name="isLocked" class="sr-only peer" ${data.isLocked ? 'checked' : ''}>
+                                <label for="portal-is-locked" class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="portal-is-locked" name="isLocked" class="sr-only peer" ${data.isLocked ? 'checked' : ''}>
                                     <div class="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
                                     <span class="ml-4 text-sm font-extrabold ${data.isLocked ? 'text-red-500' : 'text-green-500'} tracking-wide">${data.isLocked ? 'LOCKED' : 'ACTIVE'}</span>
                                 </label>
@@ -4306,15 +4364,15 @@ window.loadPortalSettings = async () => {
                                     <p class="text-xs text-slate-400">Customize the look and feel of your candidate experience.</p>
                                 </div>
                                 <div class="space-y-1.5">
-                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Theme Color</label>
+                                    <label for="portal-primary-color" class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Theme Color</label>
                                     <div class="flex items-center gap-3">
-                                        <input type="color" name="primaryColor" value="${data.primaryColor || '#3b82f6'}" class="h-10 w-16 p-1 rounded cursor-pointer theme-input">
-                                        <input type="text" value="${data.primaryColor || '#3b82f6'}" class="theme-input flex-1 font-mono text-xs uppercase" readonly>
+                                        <input type="color" id="portal-primary-color" name="primaryColor" value="${data.primaryColor || '#3b82f6'}" class="h-10 w-16 p-1 rounded cursor-pointer theme-input">
+                                        <input type="text" value="${data.primaryColor || '#3b82f6'}" class="theme-input flex-1 font-mono text-xs uppercase" readonly aria-label="Hex color value">
                                     </div>
                                 </div>
                                 <div class="space-y-1.5">
-                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Welcome Headline</label>
-                                    <input type="text" name="companyPrompt" value="${data.companyPrompt || 'Join our team!'}" class="theme-input">
+                                    <label for="portal-headline" class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Welcome Headline</label>
+                                    <input type="text" id="portal-headline" name="companyPrompt" value="${data.companyPrompt || 'Join our team!'}" class="theme-input" autocomplete="off">
                                 </div>
                             </div>
 
@@ -4325,28 +4383,28 @@ window.loadPortalSettings = async () => {
                                 </h4>
                                 
                                 <div class="space-y-3">
-                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">About the Company (Intro text)</label>
-                                    <textarea name="aboutCompany" class="theme-input min-h-[100px] text-sm leading-relaxed" placeholder="Share a few lines about your culture and mission...">${data.aboutCompany || ''}</textarea>
+                                    <label for="portal-about" class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">About the Company (Intro text)</label>
+                                    <textarea id="portal-about" name="aboutCompany" class="theme-input min-h-[100px] text-sm leading-relaxed" placeholder="Share a few lines about your culture and mission...">${data.aboutCompany || ''}</textarea>
                                 </div>
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div class="space-y-1.5">
-                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Support Email</label>
-                                        <input type="email" name="supportEmail" value="${data.supportEmail || ''}" placeholder="careers@brand.com" class="theme-input">
+                                        <label for="portal-support-email" class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Support Email</label>
+                                        <input type="email" id="portal-support-email" name="supportEmail" value="${data.supportEmail || ''}" placeholder="careers@brand.com" class="theme-input" autocomplete="email">
                                     </div>
                                     <div class="space-y-1.5">
-                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Support Phone</label>
-                                        <input type="text" name="supportPhone" value="${data.supportPhone || ''}" placeholder="+91..." class="theme-input">
+                                        <label for="portal-support-phone" class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Support Phone</label>
+                                        <input type="text" id="portal-support-phone" name="supportPhone" value="${data.supportPhone || ''}" placeholder="+91..." class="theme-input" autocomplete="tel">
                                     </div>
                                 </div>
 
                                 <!-- Social Links -->
                                 <div class="space-y-3">
-                                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Social Footprint</label>
+                                    <label for="portal-linkedin" class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Social Footprint</label>
                                     <div class="space-y-2">
                                         <div class="relative">
                                             <i class="fab fa-linkedin absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                                            <input type="text" name="socialLinkedin" value="${data.socialLinkedin || ''}" placeholder="LinkedIn URL" class="theme-input !pl-10">
+                                            <input type="text" id="portal-linkedin" name="socialLinkedin" value="${data.socialLinkedin || ''}" placeholder="LinkedIn URL" class="theme-input !pl-10" autocomplete="url">
                                         </div>
                                     </div>
                                 </div>
@@ -4357,12 +4415,12 @@ window.loadPortalSettings = async () => {
                                     <p class="text-[10px] mb-2 leading-relaxed">Configure where resumes are uploaded. If left blank, the system's hardcoded default Cloudinary account will be used.</p>
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div class="space-y-1.5">
-                                            <label class="block text-[9px] font-bold uppercase tracking-widest">API Upload URL</label>
-                                            <input type="url" name="cloudinaryUrl" value="${data.cloudinaryUrl || ''}" placeholder="https://api.cloudinary.com/v1_1/.../upload" class="theme-input text-xs">
+                                            <label for="portal-cloud-url" class="block text-[9px] font-bold uppercase tracking-widest">API Upload URL</label>
+                                            <input type="url" id="portal-cloud-url" name="cloudinaryUrl" value="${data.cloudinaryUrl || ''}" placeholder="https://api.cloudinary.com/v1_1/.../upload" class="theme-input text-xs" autocomplete="off">
                                         </div>
                                         <div class="space-y-1.5">
-                                            <label class="block text-[9px] font-bold uppercase tracking-widest">Upload Preset</label>
-                                            <input type="text" name="cloudinaryPreset" value="${data.cloudinaryPreset || ''}" placeholder="resume_uploads" class="theme-input text-xs">
+                                            <label for="portal-cloud-preset" class="block text-[9px] font-bold uppercase tracking-widest">Upload Preset</label>
+                                            <input type="text" id="portal-cloud-preset" name="cloudinaryPreset" value="${data.cloudinaryPreset || ''}" placeholder="resume_uploads" class="theme-input text-xs" autocomplete="off">
                                         </div>
                                     </div>
                                 </div>
@@ -4918,7 +4976,8 @@ window.renderInboxCandidates = () => {
         return `
                     <div class="group bg-white dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-900 transition-all flex flex-col md:flex-row gap-5 relative hover-lift ${staggerClass}">
                         <div class="absolute top-4 left-3">
-                            <input type="checkbox" name="inbox-candidate-check" value="${c.id}" class="w-4 h-4 rounded border-slate-300 text-blue-600 transition-all cursor-pointer">
+                            <label for="cand-check-${c.id}" class="sr-only">Select ${c.name}</label>
+                            <input type="checkbox" id="cand-check-${c.id}" name="inbox-candidate-check" value="${c.id}" class="w-4 h-4 rounded border-slate-300 text-blue-600 transition-all cursor-pointer">
                         </div>
                         
                         <!-- Main Content -->

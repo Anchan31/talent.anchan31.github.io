@@ -189,6 +189,33 @@
         .dark .portal-locked-overlay {
             background-color: #0f172a;
         }
+
+        /* Auth Modal Refactor */
+        #auth-modal-overlay:not(.hidden) {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 1.5rem;
+            animation: fade-in 0.2s ease-out;
+        }
+
+        .auth-modal-content {
+            width: 100%;
+            max-width: 440px;
+            position: relative;
+            animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slide-up {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 
@@ -224,68 +251,75 @@
                         <i class="fas fa-sign-out-alt"></i>
                     </button>
                 </div>
+                <button id="btn-show-auth" onclick="toggleAuthModal(true, 'login')" class="btn-primary !py-2 text-sm">Sign In</button>
             </div>
         </div>
     </nav>
 
     <main class="max-w-7xl mx-auto p-6">
         
-        <!-- Auth View -->
-        <div id="auth-view" class="max-w-md mx-auto py-12 space-y-8 animate-fade-in">
-            <div class="text-center">
-                <h2 id="portal-headline" class="text-3xl font-black text-slate-900 dark:text-white">Join Our Talent Network</h2>
-                <p id="portal-about" class="text-slate-500 dark:text-slate-400 mt-2">Create an account to browse jobs and track applications.</p>
-            </div>
+        <!-- Auth Modal -->
+        <div id="auth-modal-overlay" class="hidden">
+            <div class="auth-modal-content">
+                <button onclick="toggleAuthModal(false)" class="absolute -top-12 right-0 md:-right-12 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+                
+                <div class="glass-card rounded-3xl p-8 shadow-2xl border border-white/20">
+                    <div class="text-center mb-8">
+                        <h2 id="portal-headline" class="text-3xl font-black text-slate-900 dark:text-white">Join Our Network</h2>
+                        <p class="text-slate-500 dark:text-slate-400 mt-2 text-sm">Sign in color create an account to get started.</p>
+                    </div>
 
-            <div class="glass-card rounded-2xl p-8 shadow-xl">
-                <!-- Registration Flow -->
-                <div id="register-form" class="space-y-4">
-                    <div class="space-y-1">
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Email Address</label>
-                        <input type="email" id="reg-email" placeholder="john@example.com" class="theme-input">
+                    <!-- Registration Flow -->
+                    <div id="register-form" class="space-y-4">
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Email Address</label>
+                            <input type="email" id="reg-email" placeholder="john@example.com" class="theme-input">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Password</label>
+                            <input type="password" id="reg-password" placeholder="••••••••" class="theme-input">
+                        </div>
+                        <button id="btn-register" class="btn-primary w-full mt-6">Create Account</button>
+                        <div class="flex items-center gap-3 my-2">
+                            <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">or</span>
+                            <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+                        </div>
+                        <button id="btn-google-register" class="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-400 hover:shadow-md transition-all font-bold text-sm text-slate-700 dark:text-slate-200">
+                            <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+                            Continue with Google
+                        </button>
+                        <p class="text-center text-sm text-slate-500 mt-4">
+                            Already have an account? <button onclick="toggleAuthMode('login')" class="text-blue-600 font-bold hover:underline">Sign In</button>
+                        </p>
                     </div>
-                    <div class="space-y-1">
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Password</label>
-                        <input type="password" id="reg-password" placeholder="••••••••" class="theme-input">
-                    </div>
-                    <button id="btn-register" class="btn-primary w-full mt-6">Create Account</button>
-                    <div class="flex items-center gap-3 my-1">
-                        <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">or</span>
-                        <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
-                    </div>
-                    <button id="btn-google-register" class="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-400 hover:shadow-md transition-all font-bold text-sm text-slate-700 dark:text-slate-200">
-                        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
-                        Continue with Google
-                    </button>
-                    <p class="text-center text-sm text-slate-500 mt-3">
-                        Already have an account? <button onclick="toggleAuthMode('login')" class="text-blue-600 font-bold hover:underline">Sign In</button>
-                    </p>
-                </div>
 
-                <!-- Login Flow -->
-                <div id="login-form" class="hidden space-y-4">
-                    <div class="space-y-1">
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Email Address</label>
-                        <input type="email" id="login-email" placeholder="john@example.com" class="theme-input">
+                    <!-- Login Flow -->
+                    <div id="login-form" class="hidden space-y-4">
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Email Address</label>
+                            <input type="email" id="login-email" placeholder="john@example.com" class="theme-input">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Password</label>
+                            <input type="password" id="login-password" placeholder="••••••••" class="theme-input">
+                        </div>
+                        <button id="btn-login-submit" class="btn-primary w-full mt-6">Sign In</button>
+                        <div class="flex items-center gap-3 my-2">
+                            <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">or</span>
+                            <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+                        </div>
+                        <button id="btn-google-login" class="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-400 hover:shadow-md transition-all font-bold text-sm text-slate-700 dark:text-slate-200">
+                            <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+                            Continue with Google
+                        </button>
+                        <p class="text-center text-sm text-slate-500 mt-4">
+                            New here? <button onclick="toggleAuthMode('register')" class="text-blue-600 font-bold hover:underline">Create Account</button>
+                        </p>
                     </div>
-                    <div class="space-y-1">
-                        <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Password</label>
-                        <input type="password" id="login-password" placeholder="••••••••" class="theme-input">
-                    </div>
-                    <button id="btn-login-submit" class="btn-primary w-full mt-6">Sign In</button>
-                    <div class="flex items-center gap-3 my-1">
-                        <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">or</span>
-                        <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
-                    </div>
-                    <button id="btn-google-login" class="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-400 hover:shadow-md transition-all font-bold text-sm text-slate-700 dark:text-slate-200">
-                        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
-                        Continue with Google
-                    </button>
-                    <p class="text-center text-sm text-slate-500 mt-3">
-                        New here? <button onclick="toggleAuthMode('register')" class="text-blue-600 font-bold hover:underline">Create Account</button>
-                    </p>
                 </div>
             </div>
         </div>
@@ -310,40 +344,40 @@
                     <h3 class="text-lg font-bold flex items-center gap-2"><i class="fas fa-user text-blue-500"></i> Personal Details</h3>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="space-y-1 col-span-2">
-                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Full Name</label>
-                             <input type="text" name="name" required class="theme-input">
+                             <label for="input-prof-name" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Full Name</label>
+                             <input type="text" id="input-prof-name" name="name" required class="theme-input" autocomplete="name">
                         </div>
                         <div class="space-y-1">
-                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Phone Number</label>
-                             <input type="tel" name="phone" required class="theme-input">
+                             <label for="input-prof-phone" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Phone Number</label>
+                             <input type="tel" id="input-prof-phone" name="phone" required class="theme-input" autocomplete="tel">
                         </div>
                         <div class="space-y-1 col-span-2">
-                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gender</label>
-                             <select name="gender" class="theme-input">
+                             <label for="prof-gender" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gender</label>
+                             <select id="prof-gender" name="gender" class="theme-input">
                                  <option value="Male">Male</option>
                                  <option value="Female">Female</option>
                                  <option value="Other">Other</option>
                              </select>
                         </div>
                         <div class="space-y-1 col-span-2">
-                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Street Address</label>
-                             <input type="text" name="addressLine1" placeholder="House No., Building, Street" class="theme-input">
+                             <label for="prof-address1" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Street Address</label>
+                             <input type="text" id="prof-address1" name="addressLine1" placeholder="House No., Building, Street" class="theme-input" autocomplete="address-line1">
                         </div>
                         <div class="space-y-1 col-span-2">
-                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Address Line 2 <span class="normal-case font-normal text-slate-300">(optional)</span></label>
-                             <input type="text" name="addressLine2" placeholder="Area, Colony, Landmark" class="theme-input">
+                             <label for="prof-address2" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Address Line 2 <span class="normal-case font-normal text-slate-300">(optional)</span></label>
+                             <input type="text" id="prof-address2" name="addressLine2" placeholder="Area, Colony, Landmark" class="theme-input" autocomplete="address-line2">
                         </div>
                         <div class="space-y-1">
-                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pincode</label>
-                             <input type="text" id="address-pincode" name="pincode" placeholder="6-digit pincode" maxlength="6" pattern="[0-9]{6}" class="theme-input">
+                             <label for="address-pincode" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pincode</label>
+                             <input type="text" id="address-pincode" name="pincode" placeholder="6-digit pincode" maxlength="6" pattern="[0-9]{6}" class="theme-input" autocomplete="postal-code">
                         </div>
                         <div class="space-y-1">
-                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">City</label>
-                             <input type="text" id="address-city" name="city" placeholder="e.g. Mumbai" class="theme-input">
+                             <label for="address-city" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">City</label>
+                             <input type="text" id="address-city" name="city" placeholder="e.g. Mumbai" class="theme-input" autocomplete="address-level2">
                         </div>
                         <div class="space-y-1 col-span-2">
-                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">State</label>
-                             <select id="address-state" name="state" class="theme-input">
+                             <label for="address-state" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">State</label>
+                             <select id="address-state" name="state" class="theme-input" autocomplete="address-level1">
                                  <option value="">Select State / UT</option>
                                  <option>Andhra Pradesh</option><option>Arunachal Pradesh</option><option>Assam</option><option>Bihar</option><option>Chhattisgarh</option><option>Goa</option><option>Gujarat</option><option>Haryana</option><option>Himachal Pradesh</option><option>Jharkhand</option><option>Karnataka</option><option>Kerala</option><option>Madhya Pradesh</option><option>Maharashtra</option><option>Manipur</option><option>Meghalaya</option><option>Mizoram</option><option>Nagaland</option><option>Odisha</option><option>Punjab</option><option>Rajasthan</option><option>Sikkim</option><option>Tamil Nadu</option><option>Telangana</option><option>Tripura</option><option>Uttar Pradesh</option><option>Uttarakhand</option><option>West Bengal</option><option>Andaman &amp; Nicobar Islands</option><option>Chandigarh</option><option>Dadra &amp; Nagar Haveli</option><option>Daman &amp; Diu</option><option>Delhi (NCT)</option><option>Jammu &amp; Kashmir</option><option>Ladakh</option><option>Lakshadweep</option><option>Puducherry</option>
                              </select>
@@ -356,24 +390,24 @@
                     <h3 class="text-lg font-bold flex items-center gap-2"><i class="fas fa-briefcase text-blue-500"></i> Professional Summary</h3>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="space-y-1 col-span-2">
-                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Current Company</label>
-                             <input type="text" name="currentCompany" class="theme-input">
+                             <label for="prof-curr-comp" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Current Company</label>
+                             <input type="text" id="prof-curr-comp" name="currentCompany" class="theme-input" autocomplete="organization">
                         </div>
                         <div class="space-y-1">
-                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Experience (Yrs)</label>
-                             <input type="number" name="experience" step="0.5" class="theme-input">
+                             <label for="prof-exp" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Experience (Yrs)</label>
+                             <input type="number" id="prof-exp" name="experience" step="0.5" class="theme-input">
                         </div>
                         <div class="space-y-1">
-                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Notice Period (Days)</label>
-                             <input type="number" name="noticePeriod" class="theme-input">
+                             <label for="prof-notice" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Notice Period (Days)</label>
+                             <input type="number" id="prof-notice" name="noticePeriod" class="theme-input">
                         </div>
                         <div class="space-y-1 col-span-2">
-                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Highest Qualification</label>
-                             <input type="text" name="qualification" class="theme-input">
+                             <label for="prof-qual" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Highest Qualification</label>
+                             <input type="text" id="prof-qual" name="qualification" class="theme-input" autocomplete="off">
                         </div>
                         <div class="space-y-1 col-span-2">
-                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Key Skills (Comma Separated)</label>
-                             <input type="text" name="skills" class="theme-input" placeholder="e.g. React, Node.js, Design">
+                             <label for="prof-skills" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Key Skills (Comma Separated)</label>
+                             <input type="text" id="prof-skills" name="skills" class="theme-input" placeholder="e.g. React, Node.js, Design" autocomplete="off">
                         </div>
                     </div>
                 </div>
@@ -383,17 +417,17 @@
                     <h3 class="text-lg font-bold flex items-center gap-2"><i class="fas fa-indian-rupee-sign text-blue-500"></i> Compensation & Documents</h3>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="space-y-1">
-                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Current Monthly CTC</label>
+                             <label for="prof-curr-ctc" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Current Monthly CTC</label>
                              <div class="relative">
                                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₹</span>
-                                 <input type="number" name="currentCTC" class="theme-input pl-8">
+                                 <input type="number" id="prof-curr-ctc" name="currentCTC" class="theme-input pl-8" autocomplete="off">
                              </div>
                         </div>
                         <div class="space-y-1">
-                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Expected Monthly CTC</label>
+                             <label for="prof-exp-ctc" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Expected Monthly CTC</label>
                              <div class="relative">
                                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₹</span>
-                                 <input type="number" name="expectedCTC" class="theme-input pl-8">
+                                 <input type="number" id="prof-exp-ctc" name="expectedCTC" class="theme-input pl-8" autocomplete="off">
                              </div>
                         </div>
                         <div class="space-y-1 md:col-span-3">
@@ -414,8 +448,8 @@
                              <input type="hidden" name="resumeUrl" id="resume-url-hidden">
                         </div>
                         <div class="space-y-1 md:col-span-3">
-                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cover Letter / Personal Note</label>
-                             <textarea name="notes" rows="4" class="theme-input resize-none" placeholder="Tell us why you're a great fit..."></textarea>
+                             <label for="prof-notes" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cover Letter / Personal Note</label>
+                             <textarea id="prof-notes" name="notes" rows="4" class="theme-input resize-none" placeholder="Tell us why you're a great fit..."></textarea>
                         </div>
                     </div>
                 </div>
@@ -667,6 +701,7 @@
         let openJobs = [];
         let myApplications = [];
         let portalSettings = null;
+        let pendingJobId = null;
         let uploadedResumeUrl = '';
         let activeFilters = { search: '', dept: '', location: '' };
 
@@ -675,20 +710,45 @@
         const CLOUDINARY_PRESET = 'resume_uploads';
 
         // Elements
-        const views = ['auth-view', 'profile-view', 'portal-view', 'candidate-profile-view', 'job-details-view'];
+        const views = ['profile-view', 'portal-view', 'candidate-profile-view', 'job-details-view'];
         const loader = document.getElementById('app-loader');
         
         // --- HELPERS ---
         window.showView = (viewId) => {
-            views.forEach(v => document.getElementById(v).classList.add('hidden'));
-            document.getElementById(viewId).classList.remove('hidden');
+            views.forEach(v => {
+                const el = document.getElementById(v);
+                if (el) el.classList.add('hidden');
+            });
+            const activeView = document.getElementById(viewId);
+            if (activeView) activeView.classList.remove('hidden');
             
-            // Toggle User Menu visibility
-            document.getElementById('user-menu').classList.toggle('hidden', viewId === 'auth-view');
+            // Toggle User Menu & Sign In visibility
+            const userMenu = document.getElementById('user-menu');
+            const signInBtn = document.getElementById('btn-show-auth');
+            
+            if (currentUser) {
+                userMenu.classList.remove('hidden');
+                if (signInBtn) signInBtn.classList.add('hidden');
+            } else {
+                userMenu.classList.add('hidden');
+                if (signInBtn) {
+                    signInBtn.classList.remove('hidden');
+                }
+            }
 
             // Re-apply settings when portal is visible so Exposure section elements exist
             if (viewId === 'portal-view' && portalSettings) {
                 applySettings();
+            }
+        };
+
+        window.toggleAuthModal = (show, mode = 'login') => {
+            const overlay = document.getElementById('auth-modal-overlay');
+            if (show) {
+                overlay.classList.remove('hidden');
+                toggleAuthMode(mode);
+            } else {
+                overlay.classList.add('hidden');
             }
         };
 
@@ -816,7 +876,8 @@
             } else {
                 currentUser = null;
                 currentProfile = null;
-                showView('auth-view');
+                showView('portal-view');
+                initPortal();
             }
         });
 
@@ -824,12 +885,23 @@
             showProcessing(true);
             try {
                 const profileSnap = await getDoc(doc(db, "candidateProfiles", currentUser.uid));
+                
+                // Hide auth modal if open
+                toggleAuthModal(false);
+
                 if (profileSnap.exists()) {
                     currentProfile = profileSnap.data();
                     document.getElementById('user-display-name').innerText = currentProfile.name;
                     document.getElementById('greeting').innerText = `Hello, ${currentProfile.name.split(' ')[0]}!`;
                     showView('portal-view');
                     initPortal();
+
+                    // Handle pending job application
+                    if (pendingJobId) {
+                        const jobId = pendingJobId;
+                        pendingJobId = null;
+                        applyToJob(jobId);
+                    }
                 } else {
                     // Pre-fill profile form with user data if available
                     document.querySelector('#form-profile [name="name"]').value = currentUser.displayName || '';
@@ -1020,7 +1092,18 @@
         // --- PORTAL FLOW ---
         const initPortal = () => {
             fetchJobs();
-            fetchApplications();
+            if (currentUser) {
+                fetchApplications();
+                document.getElementById('tab-apps').classList.remove('hidden');
+            } else {
+                document.getElementById('greeting').innerText = `Welcome to Career Portal!`;
+                document.getElementById('tab-apps').classList.add('hidden');
+                // Ensure we are on jobs tab
+                document.getElementById('jobs-pane').classList.remove('hidden');
+                document.getElementById('apps-pane').classList.add('hidden');
+                document.getElementById('tab-jobs').classList.add('bg-white', 'dark:bg-slate-800', 'shadow-sm', 'text-blue-600');
+                document.getElementById('tab-apps').classList.remove('bg-white', 'dark:bg-slate-800', 'shadow-sm', 'text-blue-600');
+            }
         };
 
         const fetchJobs = () => {
@@ -1384,7 +1467,17 @@
         };
 
         window.applyToJob = async (jobId) => {
-            if (!currentProfile) return alert("Please complete your profile first.");
+            if (!currentUser) {
+                pendingJobId = jobId;
+                toggleAuthModal(true, 'register');
+                return;
+            }
+            if (!currentProfile) {
+                pendingJobId = jobId;
+                alert("Please complete your profile first.");
+                showView('profile-view');
+                return;
+            }
             
             showProcessing(true);
             try {
