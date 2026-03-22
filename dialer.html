@@ -6,6 +6,9 @@
     <title>Remote Dialer - Recruitment Suite</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#3b82f6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Remote Dialer">
     <link rel="apple-touch-icon" href="icon-192.png">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -15,16 +18,21 @@
             --bg-deep: #0f172a;
             --accent: #3b82f6;
         }
-        body {
+        html, body {
+            height: 100%;
+            height: -webkit-fill-available;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
             background: var(--bg-deep);
+        }
+        body {
             color: #f1f5f9;
             font-family: 'Plus Jakarta Sans', sans-serif;
-            overflow: hidden;
-            min-height: 100vh;
-            min-height: 100dvh;
-            margin: 0;
             display: flex;
             flex-direction: column;
+            width: 100%;
+            -webkit-font-smoothing: antialiased;
         }
         .glass-card {
             background: rgba(30, 41, 59, 0.7);
@@ -82,7 +90,7 @@
         }
     </style>
 </head>
-<body class="items-center justify-center p-6 text-center">
+<body class="flex flex-col items-center justify-center p-6 text-center">
 
     <!-- Auth Layer -->
     <div id="auth-layer" class="fixed inset-0 z-50 bg-[#0f172a] flex items-center justify-center p-8">
