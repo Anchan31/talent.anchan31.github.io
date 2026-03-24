@@ -769,6 +769,11 @@
                             applyJobFilters();
                         }
                     }
+                }, (error) => {
+                    console.warn("Could not read portal settings (Permission Denied). Guest users might not see filtered jobs.", error.code);
+                    if (typeof applyJobFilters === 'function') {
+                        applyJobFilters(); // fallback to unfiltered jobs if blocked
+                    }
                 });
             } catch (err) {
                 console.error("Failed to fetch settings:", err);
