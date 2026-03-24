@@ -765,8 +765,8 @@
                     if (docSnap.exists()) {
                         portalSettings = docSnap.data();
                         applySettings();
-                        if (currentUser !== undefined) {
-                            fetchJobs();
+                        if (typeof applyJobFilters === 'function') {
+                            applyJobFilters();
                         }
                     }
                 });
@@ -1105,32 +1105,45 @@
             }
         };
 
-        const fetchJobs = () => {
+        let allJobsCache = [];
+        let jobsUnsubscribe = null;
+
+        const subscribeToJobs = () => {
+            if (jobsUnsubscribe) return; // Prevent multiple listeners
             const q = query(collection(db, "jobs"), where("status", "==", "Open"));
-            onSnapshot(q, (snapshot) => {
-                let fetchedJobs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
-                if (portalSettings) {
-                    if (portalSettings.jobsDisplayMode === 'Selected' && portalSettings.selectedJobsList) {
-                        fetchedJobs = fetchedJobs.filter(j => portalSettings.selectedJobsList.includes(j.id));
-                    } else if (portalSettings.jobsDisplayMode === 'Rules') {
-                        const allowedDepts = portalSettings.jobsFilterDepts || [];
-                        const allowedLocs = portalSettings.jobsFilterLocs || [];
-                        
-                        if (allowedDepts.length > 0 || allowedLocs.length > 0) {
-                            fetchedJobs = fetchedJobs.filter(j => {
-                                const deptMatch = allowedDepts.length === 0 || allowedDepts.includes(j.department);
-                                const locMatch = allowedLocs.length === 0 || allowedLocs.includes(j.location);
-                                return deptMatch && locMatch;
-                            });
-                        }
+            jobsUnsubscribe = onSnapshot(q, (snapshot) => {
+                allJobsCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                applyJobFilters();
+            });
+        };
+
+        const applyJobFilters = () => {
+            let fetchedJobs = [...allJobsCache];
+            
+            if (portalSettings) {
+                if (portalSettings.jobsDisplayMode === 'Selected' && portalSettings.selectedJobsList) {
+                    fetchedJobs = fetchedJobs.filter(j => portalSettings.selectedJobsList.includes(j.id));
+                } else if (portalSettings.jobsDisplayMode === 'Rules') {
+                    const allowedDepts = portalSettings.jobsFilterDepts || [];
+                    const allowedLocs = portalSettings.jobsFilterLocs || [];
+                    
+                    if (allowedDepts.length > 0 || allowedLocs.length > 0) {
+                        fetchedJobs = fetchedJobs.filter(j => {
+                            const deptMatch = allowedDepts.length === 0 || allowedDepts.includes(j.department);
+                            const locMatch = allowedLocs.length === 0 || allowedLocs.includes(j.location);
+                            return deptMatch && locMatch;
+                        });
                     }
                 }
-                
-                openJobs = fetchedJobs;
-                populateFilterDropdowns();
-                renderJobs();
-            });
+            }
+            
+            openJobs = fetchedJobs;
+            populateFilterDropdowns();
+            renderJobs();
+        };
+
+        const fetchJobs = () => {
+            subscribeToJobs();
         };
 
         const fetchApplications = () => {
