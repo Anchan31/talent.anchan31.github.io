@@ -342,7 +342,7 @@ const capsWarning = document.getElementById('caps-lock-warning');
 
 if (authPassInput && capsWarning) {
     authPassInput.addEventListener('keyup', (e) => {
-        if (e.getModifierState('CapsLock')) {
+        if (typeof e.getModifierState === 'function' && e.getModifierState('CapsLock')) {
             capsWarning.classList.remove('hidden');
         } else {
             capsWarning.classList.add('hidden');
@@ -351,7 +351,7 @@ if (authPassInput && capsWarning) {
 
     // Also check on focus/blur
     authPassInput.addEventListener('keydown', (e) => {
-        if (e.getModifierState('CapsLock')) {
+        if (typeof e.getModifierState === 'function' && e.getModifierState('CapsLock')) {
             capsWarning.classList.remove('hidden');
         } else {
             capsWarning.classList.add('hidden');
@@ -393,7 +393,7 @@ if (resetBtn) {
         } catch (err) {
             resetError.innerText = getFriendlyErrorMessage(err.message);
             resetError.classList.remove('hidden');
-        } finally {
+        
             resetBtn.innerText = orig;
             resetBtn.disabled = false;
         }
@@ -2614,7 +2614,7 @@ window.downloadResumeCurrent = async () => {
         console.error("Download failed:", e);
         // Fallback to opening in new tab if blob fetch fails
         window.open(url, '_blank');
-    } finally {
+    
         btn.innerHTML = orig;
         btn.disabled = false;
     }
@@ -3802,7 +3802,7 @@ window.showSection = async (sectionId) => {
         }
     } catch (error) {
         console.error("Error showing section:", error);
-    } finally {
+    
         // If initial Firestore loads are still running, let them decide when to hide the loader.
         if (pendingInitialLoads === 0) {
             hideLoader();
@@ -5790,3 +5790,193 @@ window.addEventListener('click', (e) => {
         panel.classList.add('hidden');
     }
 });
+
+// --- EXCEL REPORTS LOGIC (ExcelJS) ---
+
+async function downloadFormattedExcel(filename, sheetName, columns, rows) {
+    if (typeof ExcelJS === 'undefined') {
+        showError("Excel library not loaded. Please try again.");
+        return;
+    }
+    
+    showToast("Generating Excel file, please wait...");
+    try {
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = 'Recruitment Suite';
+        workbook.created = new Date();
+        
+        const sheet = workbook.addWorksheet(sheetName);
+        
+        // Define columns
+        sheet.columns = columns.map(c => ({ header: c.header, key: c.key }));
+        
+        // Add data
+        rows.forEach(r => sheet.addRow(r));
+        
+        // Format Header Row
+        const headerRow = sheet.getRow(1);
+        headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } }; // Tailwind Blue 600
+        headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+        
+        // Auto-fit Columns & Add Borders
+        sheet.columns.forEach((column, index) => {
+            let maxLength = column.header.length;
+            
+            // Calculate max width checking all cells in the column
+            sheet.getColumn(index + 1).eachCell({ includeEmpty: true }, function(cell) {
+                const columnLength = cell.value ? cell.value.toString().length : 0;
+                if (columnLength > maxLength) {
+                    maxLength = columnLength;
+                }
+                
+                // Add borders to all cells
+                cell.border = {
+                    top: {style:'thin', color: {argb:'FFD1D5DB'}},
+                    left: {style:'thin', color: {argb:'FFD1D5DB'}},
+                    bottom: {style:'thin', color: {argb:'FFD1D5DB'}},
+                    right: {style:'thin', color: {argb:'FFD1D5DB'}}
+                };
+            });
+            
+            column.width = Math.min(Math.max(maxLength + 2, 10), 100); // Between 10 and 100
+        });
+
+        // Generate file
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        
+        // Trigger download
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        
+        setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }, 100);
+        
+        showToast(sheetName + ' Exported Successfully!');
+    } catch (e) {
+        console.error("Excel Generation Error:", e);
+        showError("Failed to generate Excel report.");
+    
+        
+    }
+}
+
+window.exportCandidatesExcel = () => {
+    if (cachedCandidates.length === 0) return showToast("No candidates available to export.", "warning");
+    
+    const columns = [
+        { header: 'ID', key: 'id' },
+        { header: 'Full Name', key: 'name' },
+        { header: 'Email', key: 'email' },
+        { header: 'Phone', key: 'phone' },
+        { header: 'Current Stage', key: 'stage' },
+        { header: 'Source', key: 'source' },
+        { header: 'Resume URL', key: 'resumeUrl' },
+        { header: 'Added Date', key: 'createdAt' }
+    ];
+    
+    const rows = cachedCandidates.map(c => ({
+        id: c.id,
+        name: c.name || 'Unknown',
+        email: c.email || 'N/A',
+        phone: c.phone || 'N/A',
+        stage: c.stage || 'SOURCED',
+        source: c.source || 'Manual/Portal',
+        resumeUrl: c.resumeUrl || 'Not Uploaded',
+        createdAt: c.createdAt ? new Date(c.createdAt.seconds * 1000).toLocaleString() : 'N/A'
+    }));
+    
+    downloadFormattedExcel(`Candidates_Master_Report_${new Date().getTime()}.xlsx`, 'Candidates', columns, rows);
+};
+
+window.exportJobsExcel = () => {
+    if (cachedJobs.length === 0) return showToast("No jobs available to export.", "warning");
+    
+    const columns = [
+        { header: 'Job ID', key: 'id' },
+        { header: 'Title', key: 'title' },
+        { header: 'Department', key: 'department' },
+        { header: 'Location', key: 'location' },
+        { header: 'Status', key: 'status' },
+        { header: 'Type', key: 'type' },
+        { header: 'Created Date', key: 'createdAt' }
+    ];
+    
+    const rows = cachedJobs.map(j => ({
+        id: j.id,
+        title: j.title || 'Untitled',
+        department: j.department || 'General',
+        location: j.location || 'Remote',
+        status: j.status || 'Draft',
+        type: j.type || 'Full-time',
+        createdAt: j.createdAt ? new Date(j.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'
+    }));
+    
+    downloadFormattedExcel(`Job_Analytics_Report_${new Date().getTime()}.xlsx`, 'Jobs Analytics', columns, rows);
+};
+
+window.exportInterviewsExcel = () => {
+    if (cachedInterviews.length === 0) return showToast("No interviews available to export.", "warning");
+    
+    const columns = [
+        { header: 'Interview ID', key: 'id' },
+        { header: 'Candidate', key: 'candidateName' },
+        { header: 'Type', key: 'type' },
+        { header: 'Scheduled Date', key: 'date' },
+        { header: 'Time', key: 'time' },
+        { header: 'Interviewer', key: 'interviewer' },
+        { header: 'Status', key: 'status' }
+    ];
+    
+    const rows = cachedInterviews.map(i => {
+        const c = cachedCandidates.find(c => c.id === i.candidateId);
+        return {
+            id: i.id,
+            candidateName: c ? c.name : 'Unknown Candidate',
+            type: i.type || 'General',
+            date: i.date || 'To Be Decided',
+            time: i.time || 'TBD',
+            interviewer: i.interviewer || 'Unassigned',
+            status: i.status || 'Scheduled'
+        };
+    });
+    
+    downloadFormattedExcel(`Interview_Schedule_Report_${new Date().getTime()}.xlsx`, 'Interviews', columns, rows);
+};
+
+window.exportOffersExcel = () => {
+    const offerCandidates = cachedCandidates.filter(c => c.stage === 'OFFER' || c.stage === 'HIRED');
+    if (offerCandidates.length === 0) return showToast("No offer data available to export.", "warning");
+    
+    const columns = [
+        { header: 'Candidate', key: 'name' },
+        { header: 'Email', key: 'email' },
+        { header: 'Stage', key: 'stage' },
+        { header: 'Base Salary', key: 'salary' },
+        { header: 'Joining Date', key: 'joiningDate' },
+        { header: 'Position', key: 'position' },
+        { header: 'Offer Status', key: 'offerStatus' }
+    ];
+    
+    const rows = offerCandidates.map(c => {
+        const od = c.offerDetails || {};
+        return {
+            name: c.name || 'Unknown',
+            email: c.email || 'N/A',
+            stage: c.stage,
+            salary: od.salary || 'Not specified',
+            joiningDate: od.joiningDate || 'Not specified',
+            position: od.position || 'Not specified',
+            offerStatus: od.status || 'Pending'
+        };
+    });
+    
+    downloadFormattedExcel(`Offers_Hires_Report_${new Date().getTime()}.xlsx`, 'Offers & Hires', columns, rows);
+};
