@@ -14,6 +14,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
         integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <link rel="stylesheet" href="styles.css">
     <script>
         // Theme Initialization
@@ -440,6 +442,12 @@
                         id="btn-nav-offers" style="color: var(--text-secondary)">
                         <i class="fas fa-signature w-5 flex-shrink-0 text-center"></i> <span
                             class="sidebar-label whitespace-nowrap">Offer Letters</span>
+                    </a>
+                    <a href="#" onclick="showSection('pdffiller')"
+                        class="sidebar-btn flex items-center gap-3 p-3 rounded-lg transition-all duration-300 ease-out text-blue-500 hover-lift"
+                        id="btn-nav-pdffiller" style="color: var(--text-secondary)">
+                        <i class="fas fa-file-pdf w-5 flex-shrink-0 text-center"></i> <span
+                            class="sidebar-label whitespace-nowrap">PDF Filler</span>
                     </a>
                     <div class="h-px bg-slate-200 dark:bg-slate-800 mx-3 my-2 opacity-50"></div>
                     <a href="#" onclick="showSection('messaging')"
@@ -1179,6 +1187,53 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="offers-list">
                             <!-- Offers Injected Here -->
+                        </div>
+                    </div>
+
+
+                    <div id="section-pdffiller" class="hidden space-y-8 animate-fade-up">
+                        <div id="pdf-filler-manager" class="glass-card p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/50">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="text-sm font-black text-slate-700 dark:text-slate-200">PDF Document Templates</h4>
+                                <span class="text-[10px] text-slate-400">Upload, map & fill PDFs</span>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                                <label class="w-full flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl px-3 py-2 cursor-pointer">
+                                    <i class="fas fa-file-upload"></i> Upload PDF Template
+                                    <input id="offer-template-input" type="file" accept="application/pdf" class="hidden" onchange="handleOfferTemplateUpload(event)">
+                                </label>
+                                <div class="bg-slate-50 dark:bg-slate-800 rounded-xl px-3 py-2 text-xs text-slate-500 dark:text-slate-300">Selected template: <span id="selected-offer-template-name">None</span></div>
+                            </div>
+                            <div class="overflow-x-auto max-h-48 custom-scrollbar border border-slate-200 dark:border-slate-800 rounded-xl">
+                                <table class="w-full text-left text-xs" id="offer-template-list">
+                                    <thead>
+                                        <tr>
+                                            <th class="px-2 py-2 font-bold">Name</th>
+                                            <th class="px-2 py-2 font-bold">Type</th>
+                                            <th class="px-2 py-2 font-bold">Fields</th>
+                                            <th class="px-2 py-2 font-bold">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td colspan="4" class="text-center text-slate-400 py-4">No templates uploaded yet.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p id="offer-template-status" class="text-[10px] text-emerald-600 mt-2 hidden"></p>
+                        </div>
+
+                        <!-- PDF Fill with Candidate Data -->
+                        <div class="glass-card p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/50">
+                            <h4 class="text-sm font-black text-slate-700 dark:text-slate-200 mb-4">Fill PDF with Candidate Data</h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="text-xs font-bold uppercase">Select Candidate</label>
+                                    <select id="pdf-filler-candidate-select" class="theme-input w-full">
+                                        <option value="">-- Choose Candidate --</option>
+                                    </select>
+                                </div>
+                                <button type="button" onclick="generatePdfFromCandidate()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all">Generate PDF</button>
+                            </div>
                         </div>
                     </div>
 
@@ -3024,14 +3079,65 @@
                 </div>
 
                 <div class="workspace-actions">
-                    <div class="space-y-6">
+                    <div class="space-y-3">
                         <button type="submit"
-                            class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all">
-                            Generate & Send
+                            class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all">
+                            Save Offer in System
                         </button>
                     </div>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL: OFFER TEMPLATE MAPPER -->
+    <div id="offer-mapper-dialog" class="fixed inset-0 bg-black/70 z-[170] hidden flex items-center justify-center p-4">
+        <div class="immersive-workspace w-full max-w-6xl h-[90vh] rounded-2xl bg-white dark:bg-slate-950 overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-700">
+            <div class="workspace-header flex items-center justify-between p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
+                <div>
+                    <h3 class="font-black text-xl text-slate-900 dark:text-white">Map PDF Template Fields</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-300">Immersive field mapper. Use panel, click to place, then adjust coords.</p>
+                </div>
+                <button onclick="closeOfferTemplateMapper()" class="w-9 h-9 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="workspace-body flex flex-col lg:flex-row h-full">
+                <div class="w-full lg:w-3/5 border-r border-slate-200 dark:border-slate-800 relative overflow-hidden">
+                    <canvas id="offer-mapper-canvas" class="w-full h-full"></canvas>
+                    <div id="offer-mapper-markers-layer" class="absolute inset-0 pointer-events-none"></div>
+                    <div id="offer-mapper-click-layer" onclick="onOfferMapperClick(event)" class="absolute inset-0 bg-transparent cursor-crosshair"></div>
+                </div>
+                <div class="w-full lg:w-2/5 p-4 flex flex-col gap-3 overflow-y-auto bg-slate-50 dark:bg-slate-900">
+                    <div class="space-y-2">
+                        <div class="text-xs text-slate-500">Template:</div>
+                        <div id="offer-mapper-template-name" class="text-sm font-bold"></div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold uppercase">Field to place</label>
+                        <select id="offer-mapper-field-select" onchange="onOfferMapperFieldChoose(this.value)" class="theme-input text-xs w-full"></select>
+                    </div>
+                    <div class="space-y-2">
+                        <p class="text-xs text-slate-500">Mapped positions (PDF coordinates):</p>
+                        <p id="offer-mapper-status" class="text-xs text-blue-600">Select a field then click preview to set coordinates.</p>
+                        <div class="overflow-auto max-h-[36vh] custom-scrollbar">
+                            <table class="w-full text-xs text-left">
+                                <thead>
+                                    <tr>
+                                        <th class="p-2">Field</th>
+                                        <th class="p-2">X</th>
+                                        <th class="p-2">Y</th>
+                                        <th class="p-2">Size</th>
+                                        <th class="p-2">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="offer-mapper-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="pt-3">
+                        <button onclick="saveOfferTemplateMapping()" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold">Save Mapping</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -3256,8 +3362,9 @@
         </div>
     </div>
 
-    <script type="module" src="script.js"></script>
+    <script src="pdf_service.js"></script>
     <script type="module" src="firebase_config.js"></script>
+    <script type="module" src="script.js"></script>
 
 
     <!-- Floating Draggable Calculator -->

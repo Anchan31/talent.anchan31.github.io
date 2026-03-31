@@ -4,6 +4,9 @@ import {
 } from "./firebase_config.js";
 
 
+// PDF.js setup
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
 // --- STATE MANAGEMENT ---
 let currentUser = null;
 let cachedCompanies = [];
@@ -11,7 +14,17 @@ let cachedJobs = [];
 let cachedCandidates = [];
 let cachedInterviews = [];
 let cachedOffers = []; // added back
+let cachedOfferTemplates = [];
+let selectedOfferTemplateId = null;
 let currentOfferFilter = 'all';
+
+let currentOfferTemplateMapperId = null;
+let currentOfferTemplateMapperEntries = {}; // key -> {x,y,size}
+let currentMapperPageDim = { width: 0, height: 0 };
+let currentMapperDisplayDim = { width: 0, height: 0 };
+let currentMapperScale = 1;
+let currentMapperSelectedField = '';
+
 
 window.filterOffersByStatus = (status) => {
     currentOfferFilter = status;
@@ -26,6 +39,366 @@ window.filterOffersByStatus = (status) => {
     });
     renderOffers();
 };
+
+window.loadOfferTemplates = async () => {
+    const list = [];
+    try {
+        const q = query(collection(db, 'offerTemplates'), orderBy('createdAt', 'desc'));
+        const snapshot = await getDocs(q);
+        snapshot.forEach(docSnap => {
+            list.push({ id: docSnap.id, ...docSnap.data() });
+        });
+    } catch (e) {
+        console.error('Cannot load offer templates', e);
+        showToast('Template load failed');
+    }
+    cachedOfferTemplates = list;
+    renderOfferTemplates();
+};
+
+window.renderOfferTemplates = () => {
+    const tbody = document.querySelector('#offer-template-list tbody');
+    if (!tbody) return;
+    if (!cachedOfferTemplates || cachedOfferTemplates.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-slate-400 py-4">No templates uploaded yet.</td></tr>';
+        document.getElementById('selected-offer-template-name').innerText = 'None';
+        selectedOfferTemplateId = null;
+        return;
+    }
+
+    tbody.innerHTML = cachedOfferTemplates.map(template => {
+        const isActive = selectedOfferTemplateId === template.id;
+        const fieldsCount = template.fields ? template.fields.length : 0;
+        return `
+            <tr class="${isActive ? 'bg-blue-100 dark:bg-blue-900/40' : ''}">
+                <td class="px-2 py-2 text-[11px]">${escapeHtml(template.name || template.label || 'Untitled')}</td>
+                <td class="px-2 py-2 text-[11px]">${template.type || (fieldsCount ? 'AcroForm' : 'Static')}</td>
+                <td class="px-2 py-2 text-[11px]">${fieldsCount}</td>
+                <td class="px-2 py-2 text-[11px] flex gap-1 flex-wrap">
+                    <button class="px-2 py-1 bg-blue-600 text-white rounded-lg text-[10px]" onclick="selectOfferTemplate('${template.id}')">Select</button>
+                    <button class="px-2 py-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-100 rounded-lg text-[10px]" onclick="previewOfferTemplate('${template.url}')">Preview</button>
+                    <button class="px-2 py-1 bg-indigo-600 text-white rounded-lg text-[10px]" onclick="openOfferTemplateMapper('${template.id}')">Map</button>
+                    <button class="px-2 py-1 bg-red-500 text-white rounded-lg text-[10px]" onclick="deleteOfferTemplate('${template.id}')">Delete</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    const sel = cachedOfferTemplates.find(t => t.id === selectedOfferTemplateId);
+    document.getElementById('selected-offer-template-name').innerText = sel ? sel.name : 'None';
+};
+
+window.selectOfferTemplate = (id) => {
+    selectedOfferTemplateId = id;
+    renderOfferTemplates();
+};
+
+window.previewOfferTemplate = (url) => {
+    if (!url) return;
+    window.open(url, '_blank');
+};
+
+window.deleteOfferTemplate = async (id) => {
+    const confirmDelete = confirm('Delete this template permanently?');
+    if (!confirmDelete) return;
+    try {
+        await deleteDoc(doc(db, 'offerTemplates', id));
+        showToast('Template deleted.');
+        if (selectedOfferTemplateId === id) selectedOfferTemplateId = null;
+        loadOfferTemplates();
+    } catch (e) {
+        console.error('Template delete failed', e);
+        showToast('Template delete failed');
+    }
+};
+
+window.handleOfferTemplateUpload = async (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+        showToast('Only PDF templates are supported for this feature.');
+        return;
+    }
+
+    try {
+        const now = new Date();
+        const publicId = `offer_template_${now.getTime()}`;
+        const url = await uploadResumeToCloudinary(file, publicId);
+
+        const fields = await window.pdfService.getTemplateFields(url);
+        const type = fields.length > 0 ? 'AcroForm' : 'Static';
+
+        await addDoc(collection(db, 'offerTemplates'), {
+            name: file.name,
+            url,
+            createdAt: serverTimestamp(),
+            type,
+            fields,
+            updatedAt: serverTimestamp()
+        });
+
+        showToast(`Template uploaded (${type}).`);
+        loadOfferTemplates();
+        event.target.value = '';
+    } catch (e) {
+        console.error('Template upload error', e);
+        showToast('Template uploads failed.');
+    }
+};
+
+window.buildOfferData = (offer, candidate, job) => {
+    const base = {
+        candidate_name: candidate?.name || '',
+        candidate_email: candidate?.email || '',
+        candidate_phone: candidate?.phone || '',
+        candidate_current_company: candidate?.currentCompany || '',
+        candidate_designation: candidate?.designation || '',
+        candidate_experience: candidate?.experience || '',
+        candidate_notice_period: candidate?.noticePeriod || '',
+        candidate_expected_ctc: candidate?.expectedCTC || '',
+        candidate_current_ctc: candidate?.currentCTC || '',
+        job_title: job?.title || '',
+        job_department: job?.department || '',
+        job_location: job?.location || '',
+        offer_ctc: offer?.offeredCTC || '',
+        offer_monthly: offer?.monthlyInHand || '',
+        offer_joining_date: offer?.joiningDate || '',
+        offer_date: offer?.offerPreparedAt ? (offer.offerPreparedAt.toDate ? offer.offerPreparedAt.toDate().toLocaleDateString() : new Date(offer.offerPreparedAt).toLocaleDateString()) : new Date().toLocaleDateString()
+    };
+    return base;
+};
+
+window.generateOfferDocument = async (offerId) => {
+    if (!offerId) return showToast('Offer ID missing');
+    const offer = cachedOffers.find(o => o.id === offerId);
+    if (!offer) return showToast('Offer not found');
+    const candidate = cachedCandidates.find(c => c.id === offer.candidateId);
+    const job = cachedJobs.find(j => j.id === offer.jobId);
+    if (!candidate) return showToast('Candidate not loaded');
+
+    const templateId = selectedOfferTemplateId || (cachedOfferTemplates[0] && cachedOfferTemplates[0].id);
+    if (!templateId) return showToast('Please select or upload a template first.');
+
+    const template = cachedOfferTemplates.find(t => t.id === templateId);
+    if (!template || !template.url) return showToast('Template not available');
+
+    const fillData = window.buildOfferData(offer, candidate, job);
+
+    try {
+        const options = { coordMap: template.coordinateMap || {} };
+        const pdfBlob = await window.pdfService.fillPdfForm(template.url, fillData, options);
+        window.pdfService.downloadBlob(pdfBlob, `${candidate.name || 'offer'}_${offerId}.pdf`);
+        showToast('Offer letter generated!');
+    } catch (e) {
+        console.error('PDF generation failed', e);
+        showToast('Failed to generate PDF.');
+    }
+};
+
+window.generatePdfFromCandidate = async () => {
+    const templateId = selectedOfferTemplateId;
+    if (!templateId) return showToast('Please select a template first.');
+
+    const template = cachedOfferTemplates.find(t => t.id === templateId);
+    if (!template) return showToast('Template not available');
+
+    const candidateId = document.getElementById('pdf-filler-candidate-select').value;
+    if (!candidateId) return showToast('Please select a candidate.');
+
+    const candidate = cachedCandidates.find(c => c.id === candidateId);
+    if (!candidate) return showToast('Candidate not found.');
+
+    const job = cachedJobs.find(j => j.id === candidate.jobId) || {};
+    const fillData = window.buildOfferData({}, candidate, job); // empty offer, since no offer data
+
+    try {
+        const options = { coordMap: template.coordinateMap || {} };
+        const pdfBlob = await window.pdfService.fillPdfForm(template.url, fillData, options);
+        window.pdfService.downloadBlob(pdfBlob, `${candidate.name}_document.pdf`);
+        showToast('PDF generated successfully!');
+    } catch (e) {
+        console.error('PDF generation failed', e);
+        showToast('Failed to generate PDF.');
+    }
+};
+
+window.openOfferTemplateMapper = async (templateId) => {
+    const template = cachedOfferTemplates.find(t => t.id === templateId);
+    if (!template) return showToast('Template not found for mapping.');
+
+    currentOfferTemplateMapperId = templateId;
+    currentOfferTemplateMapperEntries = template.coordinateMap || {};
+
+    const fields = ['candidate_name', 'candidate_email', 'candidate_phone', 'candidate_current_company', 'candidate_designation', 'candidate_experience', 'candidate_notice_period', 'candidate_expected_ctc', 'candidate_current_ctc', 'job_title', 'job_department', 'job_location', 'offer_ctc', 'offer_monthly', 'offer_joining_date'];
+
+    document.getElementById('offer-mapper-template-name').innerText = template.name || 'Untitled';
+    const fieldSelect = document.getElementById('offer-mapper-field-select');
+    fieldSelect.innerHTML = `<option value="">-- Select field --</option>${fields.map(k => `<option value="${k}">${k}</option>`).join('')}`;
+
+    renderOfferTemplateMapperEntries();
+
+    // Show dialog before measuring layout
+    const mapperDialog = document.getElementById('offer-mapper-dialog');
+    if (mapperDialog && mapperDialog.classList.contains('hidden')) {
+        mapperDialog.classList.remove('hidden');
+    }
+    await new Promise(resolve => requestAnimationFrame(resolve));
+
+    // Load PDF with PDF.js
+    const canvas = document.getElementById('offer-mapper-canvas');
+    const loadingTask = pdfjsLib.getDocument(template.url);
+    const pdf = await loadingTask.promise;
+    const page = await pdf.getPage(1);
+    const originalViewport = page.getViewport({ scale: 1.0 });
+    currentMapperPageDim = { width: originalViewport.width, height: originalViewport.height };
+
+    // Scale to fit container, preserve aspect ratio
+    const container = document.getElementById('offer-mapper-click-layer');
+    const rect = container.getBoundingClientRect();
+    const cssScale = Math.min(rect.width / originalViewport.width, rect.height / originalViewport.height);
+    const displayWidth = originalViewport.width * cssScale;
+    const displayHeight = originalViewport.height * cssScale;
+
+    // High DPI support
+    const outputScale = window.devicePixelRatio || 1;
+    const renderScale = cssScale * outputScale;
+
+    const renderViewport = page.getViewport({ scale: renderScale });
+    canvas.width = Math.round(renderViewport.width);
+    canvas.height = Math.round(renderViewport.height);
+    canvas.style.width = `${Math.round(displayWidth)}px`;
+    canvas.style.height = `${Math.round(displayHeight)}px`;
+
+    const context = canvas.getContext('2d');
+    context.setTransform(outputScale, 0, 0, outputScale, 0, 0);
+
+    await page.render({ canvasContext: context, viewport: renderViewport }).promise;
+
+    currentMapperScale = cssScale;
+    currentMapperDisplayDim = { width: displayWidth, height: displayHeight };
+
+    renderOfferMapperMarkers();
+    document.getElementById('offer-mapper-dialog').classList.remove('hidden');
+};
+
+window.closeOfferTemplateMapper = () => {
+    document.getElementById('offer-mapper-dialog').classList.add('hidden');
+    currentOfferTemplateMapperId = null;
+    currentMapperSelectedField = '';
+};
+
+window.onOfferMapperFieldChoose = (sel) => {
+    currentMapperSelectedField = sel;
+    showToast(`Click on the PDF preview to place field: ${sel}`);
+};
+
+window.updateOfferMapperStatus = (message) => {
+    const el = document.getElementById('offer-mapper-status');
+    if (el) el.textContent = message;
+};
+
+window.renderOfferTemplateMapperEntries = () => {
+    const mapperTable = document.getElementById('offer-mapper-table-body');
+    if (!mapperTable) return;
+    mapperTable.innerHTML = '';
+
+    for (const [key, coords] of Object.entries(currentOfferTemplateMapperEntries)) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="px-2 py-2 text-[11px]">${escapeHtml(key)}</td>
+            <td class="px-2 py-2 text-[11px]"><input type="number" step="0.1" value="${coords.x.toFixed(1)}" class="theme-input text-[10px] w-full" onchange="updateOfferMapperCoordinate('${key}', 'x', this.value)"></td>
+            <td class="px-2 py-2 text-[11px]"><input type="number" step="0.1" value="${coords.y.toFixed(1)}" class="theme-input text-[10px] w-full" onchange="updateOfferMapperCoordinate('${key}', 'y', this.value)"></td>
+            <td class="px-2 py-2 text-[11px]"><input type="number" step="0.5" value="${coords.size || 11}" class="theme-input text-[10px] w-full" onchange="updateOfferMapperCoordinate('${key}', 'size', this.value)"></td>
+            <td class="px-2 py-2 text-[11px]"><button class="px-2 py-0.5 bg-red-500 text-white rounded" onclick="removeOfferMapperField('${key}')">Remove</button></td>
+        `;
+        mapperTable.appendChild(row);
+    }
+};
+
+window.renderOfferMapperMarkers = () => {
+    const markersLayer = document.getElementById('offer-mapper-markers-layer');
+    if (!markersLayer) return;
+
+    markersLayer.innerHTML = '';
+    if (!currentMapperPageDim.width || !currentMapperPageDim.height) return;
+
+    const canvas = document.getElementById('offer-mapper-canvas');
+    if (!canvas) return;
+
+    const displayWidth = currentMapperDisplayDim.width || canvas.clientWidth;
+    const displayHeight = currentMapperDisplayDim.height || canvas.clientHeight;
+
+    for (const [fieldKey, coords] of Object.entries(currentOfferTemplateMapperEntries)) {
+        if (coords.x == null || coords.y == null) continue;
+        const sx = (coords.x / currentMapperPageDim.width) * displayWidth;
+        const sy = displayHeight - (coords.y / currentMapperPageDim.height) * displayHeight; // display coordinates in top-left
+
+        const dot = document.createElement('span');
+        dot.className = 'absolute w-2.5 h-2.5 rounded-full border border-white bg-rose-500 shadow-lg';
+        dot.title = `${fieldKey} (${coords.x.toFixed(1)}, ${coords.y.toFixed(1)})`;
+        dot.style.left = `${Math.min(Math.max(sx - 4, 0), canvas.width - 8)}px`;
+        dot.style.top = `${Math.min(Math.max(sy - 4, 0), canvas.height - 8)}px`;
+        markersLayer.appendChild(dot);
+    }
+};
+
+window.onOfferMapperClick = async (event) => {
+    if (!currentMapperSelectedField) {
+        showToast('First select a field name to map.');
+        return;
+    }
+
+    const canvas = document.getElementById('offer-mapper-canvas');
+    const rect = canvas.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
+
+    if (!currentMapperPageDim.width || !currentMapperPageDim.height || !currentMapperDisplayDim.width || !currentMapperDisplayDim.height) {
+        showToast('Unable to map; preview is not ready.');
+        return;
+    }
+
+    // Convert to PDF coordinates from displayed canvas coordinates
+    const mappedX = (clickX / rect.width) * currentMapperPageDim.width;
+    const mappedY = currentMapperPageDim.height - ((clickY / rect.height) * currentMapperPageDim.height); // PDF origin bottom-left
+
+    currentOfferTemplateMapperEntries[currentMapperSelectedField] = { x: mappedX, y: mappedY, size: 11 };
+    updateOfferMapperStatus(`Placed ${currentMapperSelectedField} at ${mappedX.toFixed(1)}, ${mappedY.toFixed(1)}`);
+    renderOfferTemplateMapperEntries();
+    renderOfferMapperMarkers();
+};
+
+window.saveOfferTemplateMapping = async () => {
+    if (!currentOfferTemplateMapperId) return showToast('No template loaded.');
+    try {
+        await updateDoc(doc(db, 'offerTemplates', currentOfferTemplateMapperId), {
+            coordinateMap: currentOfferTemplateMapperEntries,
+            updatedAt: serverTimestamp()
+        });
+        showToast('Template mapping saved');
+        loadOfferTemplates();
+        closeOfferTemplateMapper();
+    } catch (e) {
+        console.error('Error saving template mapping', e);
+        showToast('Could not save mapping.');
+    }
+};
+
+window.removeOfferMapperField = (fieldKey) => {
+    delete currentOfferTemplateMapperEntries[fieldKey];
+    renderOfferTemplateMapperEntries();
+    renderOfferMapperMarkers();
+};
+
+window.updateOfferMapperCoordinate = (fieldKey, axis, value) => {
+    if (!currentOfferTemplateMapperEntries[fieldKey]) return;
+    const parsed = parseFloat(value);
+    if (Number.isNaN(parsed)) return;
+    currentOfferTemplateMapperEntries[fieldKey][axis] = parsed;
+    updateOfferMapperStatus(`Updated ${fieldKey} ${axis} to ${parsed.toFixed(1)}`);
+    renderOfferMapperMarkers();
+};
+
 let cachedWaTemplates = []; // added back
 
 let cachedTalentPool = [];
@@ -490,6 +863,7 @@ async function initApp() {
     pendingInitialLoads = 6; // companies, jobs, candidates, interviews, offers, waTemplates
     showLoader();
     setupRealtimeListeners();
+    attachFormHandlers();
     showSection('dashboard');
 
     // Safety Fallback: Hide loader after 5 seconds even if some snapshots fail to load
@@ -1972,33 +2346,50 @@ function renderUpcomingInterviews() {
 
 
 // --- FORMS & ACTIONS ---
-document.getElementById('form-company').onsubmit = async (e) => {
-    e.preventDefault();
-    const btn = e.target.querySelector('button[type="submit"]');
-    const orig = btn.innerText; btn.innerText = "Saving..."; btn.disabled = true;
-    try {
-        const formData = new FormData(e.target);
-        const data = Object.fromEntries(formData.entries());
+// Safely attach form handlers with DOM-ready check
+const attachFormHandlers = () => {
+    const formCompany = document.getElementById('form-company');
+    if (formCompany && !formCompany.__handlerAttached) {
+        formCompany.onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            const orig = btn.innerText; btn.innerText = "Saving..."; btn.disabled = true;
+            try {
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData.entries());
 
-        const editId = data.id;
-        delete data.id;
+                const editId = data.id;
+                delete data.id;
 
-        if (editId) {
-            await updateDoc(doc(db, "companies", editId), data);
-            showToast("Company Updated!");
-        } else {
-            data.createdAt = serverTimestamp();
-            await addDoc(collection(db, "companies"), data);
-            showToast("Company Added!");
-        }
+                if (editId) {
+                    await updateDoc(doc(db, "companies", editId), data);
+                    showToast("Company Updated!");
+                } else {
+                    data.createdAt = serverTimestamp();
+                    await addDoc(collection(db, "companies"), data);
+                    showToast("Company Added!");
+                }
 
-        document.getElementById('modal-company').classList.add('hidden');
+                document.getElementById('modal-company').classList.add('hidden');
 
-        e.target.reset();
-        document.getElementById('form-company-id').value = '';
-    } catch (e) { alert("Error: " + e.message); }
-    finally { btn.innerText = orig; btn.disabled = false; }
+                e.target.reset();
+                document.getElementById('form-company-id').value = '';
+            } catch (e) { 
+                console.error("Form submission error:", e);
+                showToast("Error: " + e.message); 
+            }
+            finally { btn.innerText = orig; btn.disabled = false; }
+        };
+        formCompany.__handlerAttached = true;
+    }
 };
+
+// Attach form handlers when document is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attachFormHandlers);
+} else {
+    attachFormHandlers();
+}
 
 window.editCompany = (id) => {
     const current = cachedCompanies.find(c => c.id === id);
@@ -2292,7 +2683,7 @@ async function uploadResumeToCloudinary(file, publicId) {
     let dynamicUrl = CLOUDINARY_URL;
     let dynamicPreset = CLOUDINARY_PRESET;
     try {
-        const portalDoc = await window.getDoc(window.doc(window.db, "settings", "publicPortal"));
+        const portalDoc = await getDoc(doc(db, "settings", "publicPortal"));
         if (portalDoc.exists()) {
             const pData = portalDoc.data();
             if (pData.cloudinaryUrl) dynamicUrl = pData.cloudinaryUrl;
@@ -4129,6 +4520,18 @@ window.hideLoader = () => {
     }
 };
 
+window.populatePdfFillerCandidates = () => {
+    const select = document.getElementById('pdf-filler-candidate-select');
+    if (!select) return;
+    select.innerHTML = '<option value="">-- Choose Candidate --</option>';
+    cachedCandidates.forEach(candidate => {
+        const option = document.createElement('option');
+        option.value = candidate.id;
+        option.textContent = `${candidate.name} - ${candidate.email}`;
+        select.appendChild(option);
+    });
+};
+
 window.showSection = async (sectionId) => {
     // For normal navigation, only show the quick loader if initial data is already loaded.
     if (pendingInitialLoads === 0) {
@@ -4201,6 +4604,13 @@ window.showSection = async (sectionId) => {
             'offers': {
                 title: 'Offer Management',
                 subtitle: 'Track and manage the final lifecycle of selection',
+                actions: [
+                    { label: 'Calculator', icon: 'fa-calculator', color: 'bg-slate-700', onclick: "toggleCalculator()" }
+                ]
+            },
+            'pdffiller': {
+                title: 'PDF Filler',
+                subtitle: 'Upload templates and fill PDFs with custom data',
                 actions: [
                     { label: 'Calculator', icon: 'fa-calculator', color: 'bg-slate-700', onclick: "toggleCalculator()" }
                 ]
@@ -4283,6 +4693,11 @@ window.showSection = async (sectionId) => {
                 break;
             case 'offers':
                 renderOffers();
+                loadOfferTemplates();
+                break;
+            case 'pdffiller':
+                loadOfferTemplates();
+                populatePdfFillerCandidates();
                 break;
             case 'messaging':
                 renderWaCandidatesChecklist();
@@ -4569,6 +4984,7 @@ window.renderOffers = () => {
                             <i class="fas fa-envelope"></i> Email
                         </button>
                     </div>
+                    <button onclick="generateOfferDocument('${o.id}')" class="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold uppercase tracking-widest transition-all">Generate Offer PDF</button>
                     
                     ${status === 'Pending' ? `
                         <button onclick="updateOfferStatus('${o.id}', 'Sent')" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20 transition-all transform active:scale-95 flex items-center justify-center gap-2">
@@ -5296,45 +5712,90 @@ window.showCompanyProfile = (id) => {
     if (!c) return;
 
     window.openProfileView('Company Profile', c.name, 'fa-building');
-    const grid = document.getElementById('profile-detailed-grid');
 
-    grid.innerHTML = `
-                <div class="profile-data-card">
-                    <p class="profile-label">Entity Details</p>
-                    <div class="space-y-3 mt-2">
-                        <div class="flex items-center gap-3 text-sm">
-                            <i class="fas fa-tag text-blue-500 w-4"></i>
-                            <span class="text-slate-700 dark:text-slate-300 font-bold">${c.industry || 'General Industry'}</span>
+    // Identity Update
+    document.getElementById('profile-name').innerText = c.name || 'Company Name';
+    document.getElementById('profile-type').innerText = c.industry || 'Industry Unassigned';
+    const avatarBox = document.getElementById('profile-avatar-box');
+    if (avatarBox) {
+        avatarBox.innerHTML = c.name ? c.name.charAt(0).toUpperCase() : 'C';
+        avatarBox.classList.add('bg-indigo-600', 'text-white', 'font-black');
+    }
+
+    // Header Metrics
+    const headerMetrics = document.getElementById('profile-header-metrics');
+    if (headerMetrics) {
+        const jobCount = cachedJobs.filter(j => j.companyId === id).length;
+        headerMetrics.innerHTML = `
+            <span class="rounded-lg bg-white/90 dark:bg-slate-800/90 px-3 py-1 text-[10px] font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">Active Jobs: ${jobCount}</span>
+            <span class="rounded-lg bg-white/90 dark:bg-slate-800/90 px-3 py-1 text-[10px] font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">Location: ${c.location || 'N/A'}</span>
+        `;
+    }
+
+    // Sidebar Actions
+    const sidebarActions = document.getElementById('profile-sidebar-actions');
+    if (sidebarActions) {
+        sidebarActions.innerHTML = `
+            ${c.website ? `<button onclick="window.open('${c.website}', '_blank')" class="w-full py-3 bg-blue-100 text-blue-700 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
+                <i class="fas fa-globe"></i> Visit Website
+            </button>` : ''}
+            
+        `;
+    }
+
+    // Main Content
+    const content = document.getElementById('profile-view-content');
+    if (content) {
+        content.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Entity Details Card -->
+                <div class="form-group-card">
+                    <h5 class="field-label">Company Information</h5>
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-[10px] text-slate-400 uppercase font-black">Industry Vertical</p>
+                            <p class="text-lg font-black text-slate-800 dark:text-white">${c.industry || 'General Industry'}</p>
                         </div>
-                        <div class="flex items-center gap-3 text-sm">
-                            <i class="fas fa-globe text-emerald-500 w-4"></i>
-                            <a href="${c.website}" target="_blank" class="text-blue-500 hover:underline">${c.website || 'N/A'}</a>
+                        <div>
+                            <p class="text-[10px] text-slate-400 uppercase font-black">Headquarters</p>
+                            <p class="text-sm text-slate-700 dark:text-slate-300">${c.location || 'N/A'}</p>
                         </div>
-                        <div class="flex items-center gap-3 text-sm">
-                            <i class="fas fa-map-pin text-red-400 w-4"></i>
-                            <span class="text-slate-700 dark:text-slate-300">${c.location || 'N/A'}</span>
+                        <div>
+                            <p class="text-[10px] text-slate-400 uppercase font-black">Website</p>
+                            ${c.website ? `<a href="${c.website}" target="_blank" class="text-sm text-blue-600 hover:underline">${c.website}</a>` : `<p class="text-sm text-slate-500">N/A</p>`}
                         </div>
                     </div>
                 </div>
-                <div class="profile-data-card">
-                    <p class="profile-label">Headquarters Address</p>
-                    <div class="mt-2 text-sm text-slate-600 dark:text-slate-300 italic leading-snug">
-                        ${c.address || 'Address details not specified.'}
+
+                <!-- Active Positions Card -->
+                <div class="form-group-card">
+                    <h5 class="field-label">Active Opportunities</h5>
+                    <div class="space-y-2 max-h-48 overflow-y-auto">
+                        ${cachedJobs.filter(j => j.companyId === id).length > 0
+                            ? cachedJobs.filter(j => j.companyId === id).map(j => `
+                                <div class="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition" onclick="showJobDetails('${j.id}')">
+                                    <p class="text-sm font-bold text-slate-800 dark:text-white">${j.title}</p>
+                                    <p class="text-xs text-slate-500">${j.department || 'Department'} • ${j.location || 'Location'}</p>
+                                </div>
+                            `).join('')
+                            : `<p class="text-sm text-slate-500 italic">No active job openings</p>`}
                     </div>
                 </div>
-                <div class="profile-data-card md:col-span-2">
-                    <p class="profile-label">About the Company</p>
-                    <div class="mt-3 text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">${c.about || 'No description provided.'}</div>
+
+                <!-- Registered Address Card -->
+                <div class="col-span-full form-group-card">
+                    <h5 class="field-label">Registered Address</h5>
+                    <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">${c.address || 'Address details not specified.'}</p>
                 </div>
-                <div class="profile-data-card md:col-span-2 bg-slate-100/50 dark:bg-slate-800/50">
-                    <p class="profile-label">Active Openings</p>
-                    <div class="flex flex-wrap gap-2 mt-3">
-                         ${cachedJobs.filter(j => j.companyId === id).length > 0
-            ? cachedJobs.filter(j => j.companyId === id).map(j => `<span class="px-3 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-semibold">${j.title}</span>`).join('')
-            : '<p class="text-xs text-slate-400 italic">No active job openings for this entity.</p>'}
-                    </div>
+
+                <!-- About Company Card -->
+                <div class="col-span-full form-group-card">
+                    <h5 class="field-label">About the Company</h5>
+                    <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">${c.about || 'No description provided.'}</p>
                 </div>
-            `;
+            </div>
+        `;
+    }
 };
 
 
