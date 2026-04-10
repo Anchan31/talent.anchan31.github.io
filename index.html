@@ -29,44 +29,6 @@
         })();
     </script>
     <style>
-        .calc-btn {
-            padding: 0.75rem;
-            border-radius: 0.75rem;
-            font-weight: 700;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.875rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: inherit;
-        }
-
-        .dark .calc-btn {
-            background: rgba(15, 23, 42, 0.3);
-            border-color: rgba(255, 255, 255, 0.05);
-        }
-
-        .calc-btn:hover {
-            background: rgba(59, 130, 246, 0.1);
-            transform: translateY(-1px);
-        }
-
-        .calc-btn:active {
-            transform: scale(0.95);
-        }
-
-        #calc-display {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 0.75rem;
-            text-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
-        }
-
-        .dark #calc-display {
-            background: rgba(0, 0, 0, 0.2);
-        }
-
         /* FAB Styles */
         .fab-container {
             position: fixed;
@@ -464,6 +426,12 @@
                         <i class="fas fa-sliders w-5 flex-shrink-0 text-center"></i> <span
                             class="sidebar-label whitespace-nowrap">Portal Settings</span>
                     </a>
+                    <a href="#" onclick="showSection('masters')"
+                        class="sidebar-btn flex items-center gap-3 p-3 rounded-lg transition-all duration-300 ease-out text-indigo-500 hover-lift"
+                        id="btn-nav-masters" style="color: var(--text-secondary)">
+                        <i class="fas fa-database w-5 flex-shrink-0 text-center"></i> <span
+                            class="sidebar-label whitespace-nowrap">Masters</span>
+                    </a>
                 </nav>
             </aside>
 
@@ -570,7 +538,8 @@
                         <!-- Primary Stats Grid: Row 1 -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                             <div
-                                class="glass-card p-6 rounded-2xl border-l-4 border-l-blue-500 hover-lift animate-fade-up stagger-1">
+                                class="glass-card p-6 rounded-2xl border-l-4 border-l-blue-500 hover-lift animate-fade-up stagger-1 cursor-pointer"
+                                onclick="showSection('candidates')">
                                 <div class="flex justify-between items-start">
                                     <div>
                                         <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total
@@ -584,7 +553,8 @@
                                 </div>
                             </div>
                             <div
-                                class="glass-card p-6 rounded-2xl border-l-4 border-l-purple-500 hover-lift animate-fade-up stagger-2">
+                                class="glass-card p-6 rounded-2xl border-l-4 border-l-purple-500 hover-lift animate-fade-up stagger-2 cursor-pointer"
+                                onclick="showSection('jobs')">
                                 <div class="flex justify-between items-start">
                                     <div>
                                         <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Active
@@ -599,7 +569,8 @@
                                 </div>
                             </div>
                             <div
-                                class="glass-card p-6 rounded-2xl border-l-4 border-l-orange-500 hover-lift animate-fade-up stagger-3">
+                                class="glass-card p-6 rounded-2xl border-l-4 border-l-orange-500 hover-lift animate-fade-up stagger-3 cursor-pointer"
+                                onclick="showSection('interviews')">
                                 <div class="flex justify-between items-start">
                                     <div>
                                         <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Today's
@@ -613,7 +584,8 @@
                                 </div>
                             </div>
                             <div
-                                class="glass-card p-6 rounded-2xl border-l-4 border-l-indigo-500 hover-lift animate-fade-up stagger-4">
+                                class="glass-card p-6 rounded-2xl border-l-4 border-l-indigo-500 hover-lift animate-fade-up stagger-4 cursor-pointer"
+                                onclick="showSection('talent-pool')">
                                 <div class="flex justify-between items-start">
                                     <div>
                                         <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Talent
@@ -632,7 +604,8 @@
                         <!-- Primary Stats Grid: Row 2 -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                             <div
-                                class="glass-card p-6 rounded-2xl border-l-4 border-l-emerald-500 hover-lift animate-fade-up stagger-5">
+                                class="glass-card p-6 rounded-2xl border-l-4 border-l-emerald-500 hover-lift animate-fade-up stagger-5 cursor-pointer"
+                                onclick="showSection('archive')">
                                 <div class="flex justify-between items-start">
                                     <div>
                                         <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total
@@ -662,7 +635,8 @@
                                 </div>
                             </div>
                             <div
-                                class="glass-card p-6 rounded-2xl border-l-4 border-l-rose-500 hover-lift animate-fade-up stagger-7">
+                                class="glass-card p-6 rounded-2xl border-l-4 border-l-rose-500 hover-lift animate-fade-up stagger-7 cursor-pointer"
+                                onclick="showSection('candidates')">
                                 <div class="flex justify-between items-start">
                                     <div>
                                         <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">
@@ -676,7 +650,8 @@
                                 </div>
                             </div>
                             <div
-                                class="glass-card p-6 rounded-2xl border-l-4 border-l-cyan-500 hover-lift animate-fade-up stagger-8">
+                                class="glass-card p-6 rounded-2xl border-l-4 border-l-cyan-500 hover-lift animate-fade-up stagger-8 cursor-pointer"
+                                onclick="showSection('jobs')">
                                 <div class="flex justify-between items-start">
                                     <div>
                                         <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Closed
@@ -931,15 +906,6 @@
 
                             <!-- Right: View / Export / Bulk message actions -->
                             <div class="flex flex-wrap md:flex-nowrap gap-2 items-center justify-end flex-shrink-0">
-                                <button onclick="openCandidateModal()"
-                                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all hover-lift">
-                                    <i class="fas fa-plus"></i> Add Candidate
-                                </button>
-                                <button onclick="toggleCandidateView()" id="btn-toggle-candidates-view"
-                                    class="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-sm transition-colors border border-slate-200 dark:border-slate-700 hover-lift"
-                                    title="Toggle List/Cards">
-                                    <i class="fas fa-table"></i>
-                                </button>
                                 <button onclick="exportCandidatesCSV()"
                                     class="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg text-sm transition-colors border border-blue-200 dark:border-blue-800 hover-lift"
                                     title="Export shown candidates to CSV">
@@ -952,8 +918,6 @@
                             </div>
                         </div>
                         <div class="glass-card rounded-xl overflow-visible min-h-[450px]">
-                            <div id="candidates-cards"
-                                class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 hidden"></div>
                             <table class="w-full text-left" id="candidates-table">
                                 <thead class="theme-thead">
                                     <tr>
@@ -996,11 +960,22 @@
                             </div>
 
                             <div class="flex gap-2">
+                                <div class="relative">
+                                    <input type="text" id="archive-search" placeholder="Search archive..." 
+                                        oninput="filterArchive()" 
+                                        class="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all pr-10">
+                                    <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                                </div>
                                 <button onclick="exportArchiveCSV()"
                                     class="px-5 py-2.5 bg-blue-600 text-white rounded-2xl text-xs font-bold shadow-lg shadow-blue-500/20 hover:brightness-110 transition-all">
                                     <i class="fas fa-file-export mr-2"></i>Data Export
                                 </button>
                             </div>
+                        </div>
+
+                        <!-- Archive Statistics -->
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="archive-stats">
+                            <!-- Stats will be populated by JavaScript -->
                         </div>
 
                         <div id="archive-list" class="flex flex-col gap-4">
@@ -1014,6 +989,12 @@
                         <div id="talentpool-overview-level" class="space-y-6">
                             <div class="flex flex-col md:flex-row justify-end items-center gap-4 px-2">
                                 <div class="flex items-center gap-3 w-full md:w-auto">
+                                    <div class="relative">
+                                        <input type="text" id="talentpool-search" placeholder="Search jobs..." 
+                                            oninput="renderTalentPool()" 
+                                            class="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all pr-10">
+                                        <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                                    </div>
 
                                     <select id="talentpool-filter-status" onchange="renderTalentPool()"
                                         class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all">
@@ -1031,6 +1012,46 @@
                                         title="Refresh">
                                         <i class="fas fa-sync-alt text-slate-600 dark:text-slate-300"></i>
                                     </button>
+                                </div>
+                            </div>
+
+                            <!-- Talent Pool Analytics -->
+                            <div id="talentpool-stats" class="grid grid-cols-1 md:grid-cols-4 gap-4 px-2">
+                                <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-xs font-medium text-blue-600 dark:text-blue-400">Total Jobs</p>
+                                            <p class="text-2xl font-bold text-blue-900 dark:text-blue-100" id="talentpool-total-jobs">0</p>
+                                        </div>
+                                        <i class="fas fa-briefcase text-blue-500 text-xl"></i>
+                                    </div>
+                                </div>
+                                <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-xs font-medium text-green-600 dark:text-green-400">Active Jobs</p>
+                                            <p class="text-2xl font-bold text-green-900 dark:text-green-100" id="talentpool-active-jobs">0</p>
+                                        </div>
+                                        <i class="fas fa-play-circle text-green-500 text-xl"></i>
+                                    </div>
+                                </div>
+                                <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-xs font-medium text-purple-600 dark:text-purple-400">Total Responses</p>
+                                            <p class="text-2xl font-bold text-purple-900 dark:text-purple-100" id="talentpool-total-responses">0</p>
+                                        </div>
+                                        <i class="fas fa-users text-purple-500 text-xl"></i>
+                                    </div>
+                                </div>
+                                <div class="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-xl p-4 border border-orange-200 dark:border-orange-800">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-xs font-medium text-orange-600 dark:text-orange-400">Avg Response Rate</p>
+                                            <p class="text-2xl font-bold text-orange-900 dark:text-orange-100" id="talentpool-avg-response-rate">0%</p>
+                                        </div>
+                                        <i class="fas fa-chart-line text-orange-500 text-xl"></i>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1114,6 +1135,33 @@
                                             </div>
                                         </div>
                                         <div class="flex items-center gap-3">
+                                            <div class="relative">
+                                                <input type="text" id="inbox-search" placeholder="Search candidates..." 
+                                                    oninput="renderInbox()" 
+                                                    class="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 transition-all pr-10">
+                                                <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                                            </div>
+
+                                            <select id="inbox-filter-source" onchange="renderInbox()"
+                                                class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all">
+                                                <option value="all">All Sources</option>
+                                            </select>
+
+                                            <select id="inbox-sort" onchange="renderInbox()"
+                                                class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all">
+                                                <option value="newest">Newest First</option>
+                                                <option value="oldest">Oldest First</option>
+                                                <option value="match-high">Match Score: High to Low</option>
+                                                <option value="match-low">Match Score: Low to High</option>
+                                                <option value="name-asc">Name: A to Z</option>
+                                                <option value="name-desc">Name: Z to A</option>
+                                            </select>
+
+                                            <button onclick="renderInbox()"
+                                                class="p-2.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition shadow-sm"
+                                                title="Refresh">
+                                                <i class="fas fa-sync-alt text-slate-600 dark:text-slate-300"></i>
+                                            </button>
                                         </div>
                                     </div>
 
@@ -1133,7 +1181,7 @@
 
 
                         <!-- Summary Stats Row -->
-                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
                             <div class="glass-card p-4 rounded-2xl border-l-4 border-blue-500">
                                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                     Total Offers</p>
@@ -1151,6 +1199,11 @@
                                     Sent to Candidate
                                 </p>
                                 <h4 class="text-2xl font-black text-indigo-500 mt-1" id="offer-stat-sent">0</h4>
+                            </div>
+                            <div class="glass-card p-4 rounded-2xl border-l-4 border-red-500">
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                    Rejected</p>
+                                <h4 class="text-2xl font-black text-red-500 mt-1" id="offer-stat-rejected">0</h4>
                             </div>
                             <div class="glass-card p-4 rounded-2xl border-l-4 border-emerald-500">
                                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -1173,11 +1226,35 @@
                                 <button onclick="filterOffersByStatus('Sent')"
                                     class="offer-filter-btn px-6 py-2 rounded-lg text-xs font-bold transition-all text-slate-500"
                                     data-status="Sent">Sent</button>
+                                <button onclick="filterOffersByStatus('Rejected')"
+                                    class="offer-filter-btn px-6 py-2 rounded-lg text-xs font-bold transition-all text-slate-500"
+                                    data-status="Rejected">Rejected</button>
                                 <button onclick="filterOffersByStatus('Signed')"
                                     class="offer-filter-btn px-6 py-2 rounded-lg text-xs font-bold transition-all text-slate-500"
                                     data-status="Signed">Signed</button>
                             </div>
 
+                            <!-- Template Selector -->
+                            <div class="flex items-center gap-3">
+                                <label class="text-xs font-bold text-slate-600 dark:text-slate-300">Template:</label>
+                                <select id="offer-template-selector" onchange="selectOfferTemplate(this.value)" 
+                                    class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all">
+                                    <option value="">Select Template</option>
+                                </select>
+                            </div>
+
+                            <!-- Bulk Actions Bar -->
+                            <div id="offer-bulk-bar" class="hidden animate-in fade-in zoom-in-95 duration-200 flex items-center gap-3 bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-200 dark:border-red-800">
+                                <span class="text-xs font-bold text-red-600 dark:text-red-400">
+                                    <span id="offer-selected-count">0</span> selected
+                                </span>
+                                <button onclick="bulkDeleteOffers()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-all">
+                                    <i class="fas fa-trash mr-1"></i> Delete Selected
+                                </button>
+                                <button onclick="clearOfferSelection()" class="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-lg transition-all">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
 
                         </div>
 
@@ -1259,6 +1336,47 @@
                                 </button>
                             </div>
                         </div>
+
+                        <!-- Interview Analytics -->
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                            <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xs font-medium text-blue-600 dark:text-blue-400">Total Interviews</p>
+                                        <p class="text-2xl font-bold text-blue-900 dark:text-blue-100" id="interview-total">0</p>
+                                    </div>
+                                    <i class="fas fa-calendar-check text-blue-500 text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xs font-medium text-green-600 dark:text-green-400">This Week</p>
+                                        <p class="text-2xl font-bold text-green-900 dark:text-green-100" id="interview-this-week">0</p>
+                                    </div>
+                                    <i class="fas fa-calendar-week text-green-500 text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xs font-medium text-purple-600 dark:text-purple-400">Selected</p>
+                                        <p class="text-2xl font-bold text-purple-900 dark:text-purple-100" id="interview-selected">0</p>
+                                    </div>
+                                    <i class="fas fa-user-check text-purple-500 text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-xl p-4 border border-orange-200 dark:border-orange-800">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xs font-medium text-orange-600 dark:text-orange-400">Success Rate</p>
+                                        <p class="text-2xl font-bold text-orange-900 dark:text-orange-100" id="interview-success-rate">0%</p>
+                                    </div>
+                                    <i class="fas fa-chart-line text-orange-500 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="flex items-center justify-between mt-4">
                             <h3 class="font-black text-slate-800 dark:text-white flex items-center gap-2">
                                 <i class="fas fa-calendar-day text-blue-500"></i> Active Schedules
@@ -1647,8 +1765,113 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- MASTERS VIEW -->
+                    <div id="section-masters" class="hidden space-y-6 animate-fade-up">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Masters</h2>
+                        <p class="text-sm text-slate-500">Manage master data for departments and other system references</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="refreshMastersData()"
+                            class="px-5 py-2.5 bg-blue-600 text-white rounded-2xl text-xs font-bold shadow-lg shadow-blue-500/20 hover:brightness-110 transition-all">
+                            <i class="fas fa-sync-alt mr-2"></i>Refresh Data
+                        </button>
+                    </div>
                 </div>
-            </main> <!-- MODAL: ADD/EDIT COMPANY (Immersive Overhaul) -->
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Departments Master -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                                    <i class="fas fa-sitemap text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-slate-800 dark:text-white">Departments</h3>
+                                    <p class="text-xs text-slate-500">Manage organizational departments</p>
+                                </div>
+                            </div>
+                            <button onclick="openAddDepartmentModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors">
+                                <i class="fas fa-plus mr-2"></i>Add Department
+                            </button>
+                        </div>
+                        <div class="space-y-3" id="departments-list">
+                            <!-- Departments will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Designations Master -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                    <i class="fas fa-user-tie text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-slate-800 dark:text-white">Designations</h3>
+                                    <p class="text-xs text-slate-500">Manage job titles and roles</p>
+                                </div>
+                            </div>
+                            <button onclick="openAddDesignationModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors">
+                                <i class="fas fa-plus mr-2"></i>Add Designation
+                            </button>
+                        </div>
+                        <div class="space-y-3" id="designations-list">
+                            <!-- Designations will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Industries Master -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                                    <i class="fas fa-industry text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-slate-800 dark:text-white">Industries</h3>
+                                    <p class="text-xs text-slate-500">Manage industry categories</p>
+                                </div>
+                            </div>
+                            <button onclick="openAddIndustryModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors">
+                                <i class="fas fa-plus mr-2"></i>Add Industry
+                            </button>
+                        </div>
+                        <div class="space-y-3" id="industries-list">
+                            <!-- Industries will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Sources Master -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+                                    <i class="fas fa-bullhorn text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-slate-800 dark:text-white">Sources</h3>
+                                    <p class="text-xs text-slate-500">Manage candidate sourcing channels</p>
+                                </div>
+                            </div>
+                            <button onclick="openAddSourceModal()" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors">
+                                <i class="fas fa-plus mr-2"></i>Add Source
+                            </button>
+                        </div>
+                        <div class="space-y-3" id="sources-list">
+                            <!-- Sources will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+                <!-- END MASTERS VIEW -->
+
+                </div>
+            </main>
+
+            <!-- MODAL: ADD/EDIT COMPANY (Immersive Overhaul) -->
             <div id="modal-company"
                 class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-0 sm:p-4">
                 <div class="immersive-workspace">
@@ -1698,9 +1921,11 @@
                                     </div>
                                     <div>
                                         <label class="field-label">Industry Vertical</label>
-                                        <input type="text" id="comp-industry" name="industry" class="theme-input"
-                                            placeholder="e.g. FinTech / SaaS"
-                                            oninput="document.getElementById('comp-industry-display').innerText = this.value || 'Sector Unassigned';">
+                                        <select id="comp-industry" name="industry" class="theme-input"
+                                            onchange="document.getElementById('comp-industry-display').innerText = this.value || 'Sector Unassigned';">
+                                            <option value="">Select Industry</option>
+                                            <!-- Will be populated by JavaScript -->
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -1716,7 +1941,7 @@
                                         <span
                                             class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center"><i
                                                 class="fas fa-globe"></i></span>
-                                        Digital Presence & HQ
+                                        Digital Presence & Branches
                                     </h5>
                                     <div class="grid grid-cols-2 gap-6">
                                         <div class="col-span-full">
@@ -1725,9 +1950,19 @@
                                                 placeholder="https://www.example.com">
                                         </div>
                                         <div class="col-span-full">
-                                            <label class="field-label">Primary Location / Headquarters</label>
+                                            <label class="field-label">Headquarters Location</label>
                                             <input type="text" id="comp-location" name="location" class="theme-input"
                                                 placeholder="e.g. San Francisco, CA">
+                                        </div>
+                                        <div class="col-span-full">
+                                            <label class="field-label">Branch Locations</label>
+                                            <div id="branches-container" class="space-y-3">
+                                                <!-- Branches will be added here dynamically -->
+                                            </div>
+                                            <button type="button" onclick="addBranch()" 
+                                                class="mt-3 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg text-sm transition-colors flex items-center gap-2">
+                                                <i class="fas fa-plus"></i> Add Branch Location
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -1828,8 +2063,10 @@
                                 </div>
                                 <div>
                                     <label class="field-label">Official Designation</label>
-                                    <input type="text" id="job-designation" name="designation" required
-                                        class="theme-input" placeholder="e.g. Lead Designer">
+                                    <select id="job-designation" name="designation" required class="theme-input">
+                                        <option value="">Select Designation</option>
+                                        <!-- Will be populated by JavaScript -->
+                                    </select>
                                 </div>
                                 <div>
                                     <label class="field-label">Hiring Priority</label>
@@ -1868,17 +2105,36 @@
                                     <div class="col-span-1">
                                         <label class="field-label">Hiring Company</label>
                                         <select name="companyId" id="job-company-select" required
-                                            class="theme-input"></select>
+                                            class="theme-input" onchange="populateJobBranches()"></select>
                                     </div>
                                     <div class="col-span-1">
-                                        <label class="field-label">Department / Unit</label>
-                                        <input type="text" id="job-department" name="department" required
-                                            class="theme-input" placeholder="e.g. Engineering">
+                                        <label class="field-label">Branch Location</label>
+                                        <select name="branchId" id="job-branch-select" required
+                                            class="theme-input" onchange="updateJobLocation()"></select>
                                     </div>
                                     <div class="col-span-full">
                                         <label class="field-label">Required Qualification</label>
-                                        <input type="text" id="job-qualification" name="qualification" required
-                                            class="theme-input" placeholder="e.g. B.Tech in Computer Science">
+                                        <select id="job-qualification" name="qualification" required class="theme-input">
+                                            <option value="">Select Qualification</option>
+                                            <option value="B.Tech/B.E">B.Tech/B.E</option>
+                                            <option value="M.Tech/M.E">M.Tech/M.E</option>
+                                            <option value="MCA">MCA</option>
+                                            <option value="BCA">BCA</option>
+                                            <option value="B.Sc Computer Science">B.Sc Computer Science</option>
+                                            <option value="M.Sc Computer Science">M.Sc Computer Science</option>
+                                            <option value="MBA">MBA</option>
+                                            <option value="BBA">BBA</option>
+                                            <option value="B.Com">B.Com</option>
+                                            <option value="M.Com">M.Com</option>
+                                            <option value="CA">CA</option>
+                                            <option value="ICWA">ICWA</option>
+                                            <option value="PhD">PhD</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-span-1">
+                                        <label class="field-label">Job Posting Date</label>
+                                        <input type="date" id="job-posting-date" name="postingDate" required class="theme-input">
                                     </div>
                                 </div>
                             </div>
@@ -1893,9 +2149,16 @@
                                 </h5>
                                 <div class="grid grid-cols-2 gap-6">
                                     <div class="col-span-1">
+                                        <label class="field-label">Department / Unit</label>
+                                        <select id="job-department" name="department" required class="theme-input">
+                                            <option value="">Select Department</option>
+                                            <!-- Will be populated by JavaScript -->
+                                        </select>
+                                    </div>
+                                    <div class="col-span-1">
                                         <label class="field-label">Workspace Location</label>
-                                        <input type="text" id="job-location" name="location" required
-                                            class="theme-input" placeholder="e.g. Mumbai, India">
+                                        <input type="text" id="job-location" name="location" readonly
+                                            class="theme-input bg-slate-50 dark:bg-slate-800/50" placeholder="Auto-filled from branch selection">
                                     </div>
                                     <div class="col-span-1">
                                         <label class="field-label">Employment Type</label>
@@ -2256,14 +2519,8 @@
                                 <div>
                                     <label class="field-label">Sourcing Channel</label>
                                     <select id="cand-source" name="source" class="theme-input">
-                                        <option value="LinkedIn">LinkedIn</option>
-                                        <option value="Naukri.com">Naukri.com</option>
-                                        <option value="Indeed">Indeed</option>
-                                        <option value="WhatsApp Groups">WhatsApp Groups</option>
-                                        <option value="Referral">Referral</option>
-                                        <option value="Job Portal">Job Portal</option>
-                                        <option value="Walk-in">Walk-in</option>
-                                        <option value="Company Career Page">Company Career Page</option>
+                                        <option value="">Select Source</option>
+                                        <!-- Will be populated by JavaScript -->
                                     </select>
                                 </div>
                             </div>
@@ -2547,9 +2804,12 @@
                                     <select id="interview-status" name="status" class="theme-input">
                                         <option value="Scheduled">Scheduled</option>
                                         <option value="Done/Interviewed">Done/Interviewed</option>
-                                        <option value="Selected">Selected</option>
+                                        <option value="Selected">Selected - Move to Next Round</option>
                                         <option value="Rejected">Rejected</option>
                                         <option value="No Show">No Show</option>
+                                        <option value="Backed Out">Backed Out</option>
+                                        <option value="Not Interested">Not Interested</option>
+                                        <option value="On Hold">On Hold</option>
                                     </select>
                                 </div>
                             </div>
@@ -3223,58 +3483,77 @@
         </div>
     </div>
 
+    <!-- MODAL: IMMERSIVE COMPANY PROFILE VIEW -->
+    <div id="modal-company-profile-view"
+        class="fixed inset-0 bg-black/80 backdrop-blur-md z-[160] hidden flex items-center justify-center p-0 sm:p-4">
+        <div class="immersive-workspace">
+            <div class="workspace-header">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20"
+                        id="company-profile-icon-box">
+                        <i class="fas fa-building text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-black text-slate-800 dark:text-white tracking-tight" id="company-profile-title">
+                            Company Profile</h3>
+                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest" id="company-profile-subtitle">
+                            Workspace / Intelligence</p>
+                    </div>
+                </div>
+                <div id="company-profile-header-metrics" class="flex flex-wrap gap-3 ml-auto"></div>
+                <div class="flex items-center gap-3">
+                    <div id="company-profile-nav-container"></div>
+                    <button type="button" onclick="closeModal('modal-company-profile-view')"
+                        class="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-500/30 transition-all">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="workspace-body">
+                <!-- Left Sidebar: Company Identity -->
+                <div class="workspace-sidebar">
+                    <div class="space-y-8">
+                        <div class="flex flex-col items-center text-center px-4">
+                            <div class="w-24 h-24 rounded-3xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-4xl mb-4 border-4 border-white dark:border-slate-900 shadow-xl"
+                                id="company-profile-avatar-box">
+                                <i class="fas fa-building"></i>
+                            </div>
+                            <h4 class="font-bold text-xl text-slate-800 dark:text-white" id="company-profile-name">Company Name</h4>
+                            <p class="text-xs text-blue-500 font-bold uppercase tracking-widest" id="company-profile-industry">
+                                Industry</p>
+                            <div id="company-profile-status-badge" class="mt-4"></div>
+                        </div>
+
+                        <div class="space-y-2" id="company-profile-sidebar-actions">
+                            <!-- Website, Contact buttons here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Center Area: Company Insights -->
+                <div class="workspace-content">
+                    <div class="max-w-4xl mx-auto space-y-6" id="company-profile-view-content">
+                        <!-- Dynamic Content Injected Here -->
+                    </div>
+                </div>
+
+                <!-- Right Sidebar: Contextual Actions & Workflow -->
+                <div class="workspace-actions">
+                    <div class="space-y-6" id="company-profile-view-actions">
+                        <!-- Workflow buttons, share link, etc. -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="pdf_service.js"></script>
     <script type="module" src="firebase_config.js"></script>
     <script type="module" src="script.js"></script>
 
 
     <!-- Floating Draggable Calculator -->
-    <div id="floating-calculator" class="fixed z-[999] w-72 glass-card rounded-2xl shadow-2xl overflow-hidden hidden"
-        style="top: 100px; right: 20px;">
-        <div id="calc-header"
-            class="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 flex justify-between items-center text-white cursor-move select-none">
-            <span class="text-xs font-bold flex items-center gap-2">
-                <i class="fas fa-calculator"></i> Quick Calc
-            </span>
-            <div class="flex gap-2">
-                <button onclick="minimizeCalculator()" title="Minimize" class="hover:opacity-75 transition-opacity"><i
-                        class="fas fa-minus text-[10px]"></i></button>
-                <button onclick="toggleCalculator()" title="Close" class="hover:opacity-75 transition-opacity"><i
-                        class="fas fa-times text-[10px]"></i></button>
-            </div>
-        </div>
-        <div id="calc-body" class="p-4 bg-white/10 dark:bg-slate-900/40 backdrop-blur-md transition-all duration-300">
-            <input type="text" id="calc-display" readonly
-                class="w-full border-none text-right text-2xl font-mono text-slate-800 dark:text-white mb-4 p-3 focus:ring-0 outline-none"
-                value="0">
-            <div class="grid grid-cols-4 gap-2">
-                <button onclick="calcClear()"
-                    class="calc-btn col-span-2 bg-red-400/10 text-red-500 hover:bg-red-500/20">AC</button>
-                <button onclick="calcOp('/')" class="calc-btn text-blue-500 bg-blue-500/10">/</button>
-                <button onclick="calcOp('*')" class="calc-btn text-blue-500 bg-blue-500/10">×</button>
-
-                <button onclick="calcNum('7')" class="calc-btn">7</button>
-                <button onclick="calcNum('8')" class="calc-btn">8</button>
-                <button onclick="calcNum('9')" class="calc-btn">9</button>
-                <button onclick="calcOp('-')" class="calc-btn text-blue-500 bg-blue-500/10">-</button>
-
-                <button onclick="calcNum('4')" class="calc-btn">4</button>
-                <button onclick="calcNum('5')" class="calc-btn">5</button>
-                <button onclick="calcNum('6')" class="calc-btn">6</button>
-                <button onclick="calcOp('+')" class="calc-btn text-blue-500 bg-blue-500/10">+</button>
-
-                <button onclick="calcNum('1')" class="calc-btn">1</button>
-                <button onclick="calcNum('2')" class="calc-btn">2</button>
-                <button onclick="calcNum('3')" class="calc-btn">3</button>
-                <button onclick="calcEqual()"
-                    class="calc-btn row-span-2 bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30">=</button>
-
-                <button onclick="calcNum('0')" class="calc-btn col-span-2">0</button>
-                <button onclick="calcNum('.')" class="calc-btn">.</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Floating Bulk Action Bar for Offers -->
     <div id="offer-bulk-bar"
         class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-5 rounded-3xl shadow-2xl flex items-center gap-8 z-[1000] transition-all transform translate-y-32 opacity-0 pointer-events-none border border-slate-700/50 backdrop-blur-xl">
@@ -3309,6 +3588,186 @@
         </button>
         <div class="fab-menu" id="fab-menu">
             <!-- Dynamic items will be injected here -->
+        </div>
+    </div>
+
+    <!-- MASTERS MODALS -->
+
+    <!-- DEPARTMENT MODAL -->
+    <div id="modal-department" class="fixed inset-0 bg-black/60 z-[150] hidden flex items-center justify-center p-4 animate-fade-in">
+        <div class="modal-box w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+            <div class="p-6 border-b border-slate-100 dark:border-slate-700">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-black text-slate-800 dark:text-white" id="department-modal-title">Add Department</h3>
+                    <button type="button" onclick="closeModal('modal-department')" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-full transition-all">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <form id="department-form" class="p-6 space-y-4" onsubmit="event.preventDefault(); saveDepartment();">
+                <input type="hidden" id="department-id" name="id">
+
+                <div class="form-group">
+                    <label class="field-label">Department Name *</label>
+                    <input type="text" id="department-name" name="name" class="theme-input" placeholder="e.g. Engineering, Sales, HR" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="field-label">Description</label>
+                    <textarea id="department-description" name="description" rows="3" class="theme-input" placeholder="Brief description of the department"></textarea>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeModal('modal-department')" class="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl font-bold transition-all hover:bg-slate-200 dark:hover:bg-slate-600">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all active:scale-95">
+                        Save Department
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- DESIGNATION MODAL -->
+    <div id="modal-designation" class="fixed inset-0 bg-black/60 z-[150] hidden flex items-center justify-center p-4 animate-fade-in">
+        <div class="modal-box w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+            <div class="p-6 border-b border-slate-100 dark:border-slate-700">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-black text-slate-800 dark:text-white" id="designation-modal-title">Add Designation</h3>
+                    <button type="button" onclick="closeModal('modal-designation')" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-full transition-all">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <form id="designation-form" class="p-6 space-y-4" onsubmit="event.preventDefault(); saveDesignation();">
+                <input type="hidden" id="designation-id" name="id">
+
+                <div class="form-group">
+                    <label class="field-label">Designation Name *</label>
+                    <input type="text" id="designation-name" name="name" class="theme-input" placeholder="e.g. Software Engineer, Manager, Director" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="field-label">Level/Category</label>
+                    <select id="designation-level" name="level" class="theme-input">
+                        <option value="">Select Level</option>
+                        <option value="Entry Level">Entry Level</option>
+                        <option value="Mid Level">Mid Level</option>
+                        <option value="Senior Level">Senior Level</option>
+                        <option value="Lead">Lead</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Director">Director</option>
+                        <option value="Executive">Executive</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeModal('modal-designation')" class="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl font-bold transition-all hover:bg-slate-200 dark:hover:bg-slate-600">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-all active:scale-95">
+                        Save Designation
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- INDUSTRY MODAL -->
+    <div id="modal-industry" class="fixed inset-0 bg-black/60 z-[150] hidden flex items-center justify-center p-4 animate-fade-in">
+        <div class="modal-box w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+            <div class="p-6 border-b border-slate-100 dark:border-slate-700">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-black text-slate-800 dark:text-white" id="industry-modal-title">Add Industry</h3>
+                    <button type="button" onclick="closeModal('modal-industry')" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-full transition-all">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <form id="industry-form" class="p-6 space-y-4" onsubmit="event.preventDefault(); saveIndustry();">
+                <input type="hidden" id="industry-id" name="id">
+
+                <div class="form-group">
+                    <label class="field-label">Industry Name *</label>
+                    <input type="text" id="industry-name" name="name" class="theme-input" placeholder="e.g. Technology, Healthcare, Finance" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="field-label">Sector</label>
+                    <select id="industry-sector" name="sector" class="theme-input">
+                        <option value="">Select Sector</option>
+                        <option value="Technology">Technology</option>
+                        <option value="Healthcare">Healthcare</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Manufacturing">Manufacturing</option>
+                        <option value="Retail">Retail</option>
+                        <option value="Education">Education</option>
+                        <option value="Consulting">Consulting</option>
+                        <option value="Government">Government</option>
+                        <option value="Non-Profit">Non-Profit</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeModal('modal-industry')" class="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl font-bold transition-all hover:bg-slate-200 dark:hover:bg-slate-600">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition-all active:scale-95">
+                        Save Industry
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SOURCE MODAL -->
+    <div id="modal-source" class="fixed inset-0 bg-black/60 z-[150] hidden flex items-center justify-center p-4 animate-fade-in">
+        <div class="modal-box w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+            <div class="p-6 border-b border-slate-100 dark:border-slate-700">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-black text-slate-800 dark:text-white" id="source-modal-title">Add Source</h3>
+                    <button type="button" onclick="closeModal('modal-source')" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-full transition-all">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <form id="source-form" class="p-6 space-y-4" onsubmit="event.preventDefault(); saveSource();">
+                <input type="hidden" id="source-id" name="id">
+
+                <div class="form-group">
+                    <label class="field-label">Source Name *</label>
+                    <input type="text" id="source-name" name="name" class="theme-input" placeholder="e.g. Naukri, LinkedIn, Referral" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="field-label">Type</label>
+                    <select id="source-type" name="type" class="theme-input">
+                        <option value="">Select Type</option>
+                        <option value="Job Portal">Job Portal</option>
+                        <option value="Social Media">Social Media</option>
+                        <option value="Referral">Referral</option>
+                        <option value="Campus">Campus</option>
+                        <option value="Direct">Direct</option>
+                        <option value="Agency">Agency</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeModal('modal-source')" class="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl font-bold transition-all hover:bg-slate-200 dark:hover:bg-slate-600">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold transition-all active:scale-95">
+                        Save Source
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 

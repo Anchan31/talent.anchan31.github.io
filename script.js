@@ -1,6 +1,6 @@
 import {
     auth, db, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail,
-    collection, addDoc, getDocs, getDoc, doc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, setDoc, query, where, orderBy, writeBatch
+    collection, addDoc, getDocs, getDoc, doc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, setDoc, query, where, orderBy, writeBatch, limit
 } from "./firebase_config.js";
 
 
@@ -54,6 +54,23 @@ window.loadOfferTemplates = async () => {
     }
     cachedOfferTemplates = list;
     renderOfferTemplates();
+    populateOfferTemplateSelector();
+};
+
+window.populateOfferTemplateSelector = () => {
+    const selector = document.getElementById('offer-template-selector');
+    if (!selector) return;
+
+    selector.innerHTML = '<option value="">Select Template</option>';
+    cachedOfferTemplates.forEach(template => {
+        const option = document.createElement('option');
+        option.value = template.id;
+        option.textContent = template.name || 'Untitled Template';
+        if (template.id === selectedOfferTemplateId) {
+            option.selected = true;
+        }
+        selector.appendChild(option);
+    });
 };
 
 window.renderOfferTemplates = () => {
@@ -147,23 +164,58 @@ window.handleOfferTemplateUpload = async (event) => {
 };
 
 window.buildOfferData = (offer, candidate, job) => {
+    // Format dates
+    const formatDate = (date) => {
+        if (!date) return '';
+        if (date.toDate) date = date.toDate();
+        if (date instanceof Date) {
+            return date.toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+        }
+        return date;
+    };
+
+    // Format currency
+    const formatCurrency = (amount) => {
+        if (!amount) return '';
+        const num = parseFloat(amount);
+        if (isNaN(num)) return amount;
+        return new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+            minimumFractionDigits: 0
+        }).format(num);
+    };
+
     const base = {
         candidate_name: candidate?.name || '',
         candidate_email: candidate?.email || '',
         candidate_phone: candidate?.phone || '',
         candidate_current_company: candidate?.currentCompany || '',
-        candidate_designation: candidate?.designation || '',
-        candidate_experience: candidate?.experience || '',
-        candidate_notice_period: candidate?.noticePeriod || '',
-        candidate_expected_ctc: candidate?.expectedCTC || '',
-        candidate_current_ctc: candidate?.currentCTC || '',
+        candidate_designation: candidate?.currentDesignation || candidate?.designation || '',
+        candidate_experience: candidate?.experience ? `${candidate.experience} years` : '',
+        candidate_notice_period: candidate?.noticePeriod ? `${candidate.noticePeriod} days` : '',
+        candidate_expected_ctc: formatCurrency(candidate?.expectedCTC),
+        candidate_current_ctc: formatCurrency(candidate?.currentCTC),
         job_title: job?.title || '',
         job_department: job?.department || '',
         job_location: job?.location || '',
-        offer_ctc: offer?.offeredCTC || '',
-        offer_monthly: offer?.monthlyInHand || '',
-        offer_joining_date: offer?.joiningDate || '',
-        offer_date: offer?.offerPreparedAt ? (offer.offerPreparedAt.toDate ? offer.offerPreparedAt.toDate().toLocaleDateString() : new Date(offer.offerPreparedAt).toLocaleDateString()) : new Date().toLocaleDateString()
+        offer_ctc: formatCurrency(offer?.offeredCTC),
+        offer_monthly: formatCurrency(offer?.monthlyInHand),
+        offer_joining_date: formatDate(offer?.joiningDate),
+        offer_date: formatDate(offer?.offerPreparedAt || new Date()),
+
+        // Additional fields
+        company_name: job?.companyName || 'Our Company',
+        candidate_qualification: candidate?.qualification || '',
+        candidate_skills: candidate?.skills || '',
+        job_description: job?.description || '',
+        offer_probation_period: '3 months',
+        offer_work_hours: '9 AM - 6 PM',
+        offer_reporting_to: job?.reportingTo || 'Manager'
     };
     return base;
 };
@@ -192,6 +244,66 @@ window.generateOfferDocument = async (offerId) => {
     } catch (e) {
         console.error('PDF generation failed', e);
         showToast('Failed to generate PDF.');
+    }
+};
+
+window.previewOfferDocument = async (offerId) => {
+    if (!offerId) return showToast('Offer ID missing');
+    const offer = cachedOffers.find(o => o.id === offerId);
+    if (!offer) return showToast('Offer not found');
+    const candidate = cachedCandidates.find(c => c.id === offer.candidateId);
+    const job = cachedJobs.find(j => j.id === offer.jobId);
+    if (!candidate) return showToast('Candidate not loaded');
+
+    const templateId = selectedOfferTemplateId || (cachedOfferTemplates[0] && cachedOfferTemplates[0].id);
+    if (!templateId) return showToast('Please select or upload a template first.');
+
+    const template = cachedOfferTemplates.find(t => t.id === templateId);
+    if (!template || !template.url) return showToast('Template not available');
+
+    const fillData = window.buildOfferData(offer, candidate, job);
+
+    try {
+        showToast('Generating preview...');
+        const options = { coordMap: template.coordinateMap || {} };
+        const pdfBlob = await window.pdfService.fillPdfForm(template.url, fillData, options);
+
+        // Create a temporary URL for preview
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+
+        // Open in resume preview modal
+        const iframe = document.getElementById('resume-preview-iframe');
+        const loader = document.getElementById('resume-preview-loader');
+        const modal = document.getElementById('modal-resume-preview');
+
+        if (iframe && loader && modal) {
+            loader.classList.remove('hidden');
+            iframe.src = 'about:blank';
+
+            iframe.onload = () => {
+                loader.classList.add('hidden');
+            };
+
+            iframe.src = pdfUrl;
+            openModal('modal-resume-preview');
+
+            // Update download button to use this PDF
+            const downloadBtn = document.getElementById('resume-download-btn-forced');
+            if (downloadBtn) {
+                downloadBtn.onclick = () => {
+                    window.pdfService.downloadBlob(pdfBlob, `${candidate.name || 'offer'}_${offerId}.pdf`);
+                    showToast('Offer letter downloaded!');
+                };
+            }
+        } else {
+            // Fallback: open in new tab
+            window.open(pdfUrl, '_blank');
+        }
+
+        showToast('Preview generated successfully!');
+    } catch (e) {
+        console.error('PDF preview failed', e);
+        showToast('Failed to generate preview.');
     }
 };
 
@@ -404,7 +516,6 @@ let cachedWaTemplates = []; // added back
 let cachedTalentPool = [];
 let whatsappSelectedCandidates = new Set();
 let globalSearchQuery = '';
-let candidateView = 'table'; // 'table' or 'cards'
 let currentArchiveTab = 'candidates'; // 'candidates' or 'jobs'
 
 window.switchArchiveTab = (tab) => {
@@ -418,6 +529,10 @@ window.switchArchiveTab = (tab) => {
             btn.classList.add('text-slate-500');
         }
     });
+    renderArchive();
+};
+
+window.filterArchive = () => {
     renderArchive();
 };
 // Track initial Firestore loads so loader stays visible until data is ready
@@ -614,13 +729,6 @@ function renderCurrentSection() {
     if (typeof renderOffers === 'function') renderOffers();
 }
 
-function toggleCandidateView() {
-    candidateView = candidateView === 'table' ? 'cards' : 'table';
-    const btn = document.getElementById('btn-toggle-candidates-view');
-    if (btn) btn.innerHTML = candidateView === 'table' ? '<i class="fas fa-table"></i>' : '<i class="fas fa-th-large"></i>';
-    renderCandidates();
-}
-
 function exportCandidatesCSV() {
     const rows = [];
     const list = (function () {
@@ -657,6 +765,7 @@ function exportCandidatesCSV() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'candidates_export.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
+
 
 function bulkSelectAndMessage() {
     // select all filtered candidates and go to messaging view
@@ -892,7 +1001,7 @@ function setupRealtimeListeners() {
     };
 
     // Listen for Companies
-    const compQuery = collection(db, "companies");
+    const compQuery = query(collection(db, "companies"), orderBy("createdAt", "desc"), limit(50));
     onSnapshot(compQuery, (snapshot) => {
         logSource("Companies", snapshot);
         cachedCompanies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -905,7 +1014,7 @@ function setupRealtimeListeners() {
     }, (error) => handleError("Companies", error));
 
     // Listen for Jobs
-    const jobsQuery = collection(db, "jobs");
+    const jobsQuery = query(collection(db, "jobs"), orderBy("createdAt", "desc"), limit(200));
     onSnapshot(jobsQuery, (snapshot) => {
         logSource("Jobs", snapshot);
         cachedJobs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -918,8 +1027,8 @@ function setupRealtimeListeners() {
         }
     }, (error) => handleError("Jobs", error));
 
-    // Listen for Candidates (Unified)
-    const candidateQuery = collection(db, "candidates");
+    // Listen for Candidates (Unified) - with pagination for performance
+    const candidateQuery = query(collection(db, "candidates"), orderBy("createdAt", "desc"), limit(500));
     onSnapshot(candidateQuery, (snapshot) => {
         logSource("Candidates", snapshot);
         cachedCandidates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -935,7 +1044,7 @@ function setupRealtimeListeners() {
     }, (error) => handleError("Candidates", error));
 
     // Listen for Interviews
-    const interviewQuery = collection(db, "interviews");
+    const interviewQuery = query(collection(db, "interviews"), orderBy("createdAt", "desc"), limit(300));
     onSnapshot(interviewQuery, (snapshot) => {
         logSource("Interviews", snapshot);
         cachedInterviews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -951,7 +1060,7 @@ function setupRealtimeListeners() {
     }, (error) => handleError("Interviews", error));
 
     // Listen for Offers
-    const offersQuery = query(collection(db, "offers"), orderBy("createdAt", "desc"));
+    const offersQuery = query(collection(db, "offers"), orderBy("createdAt", "desc"), limit(200));
     onSnapshot(offersQuery, (snapshot) => {
         logSource("Offers", snapshot);
         cachedOffers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -963,7 +1072,7 @@ function setupRealtimeListeners() {
     }, (error) => handleError("Offers", error));
 
     // Listen for WhatsApp Templates
-    const waQuery = collection(db, "whatsappTemplates");
+    const waQuery = query(collection(db, "whatsappTemplates"), orderBy("createdAt", "desc"), limit(50));
     onSnapshot(waQuery, (snapshot) => {
         logSource("WhatsApp Templates", snapshot);
         cachedWaTemplates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1384,6 +1493,10 @@ function renderJobs() {
                                     <span class="truncate">${j.department || 'N/A'}</span>
                                 </div>
                                 <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/50 px-2 py-1 rounded-md">
+                                    <i class="fas fa-map-marker-alt text-slate-400"></i>
+                                    <span class="truncate">${j.branchName && j.branchLocation ? `${j.branchName} (${j.branchLocation})` : (j.location || 'N/A')}</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/50 px-2 py-1 rounded-md">
                                     <i class="fas fa-indian-rupee-sign text-slate-400"></i>
                                     <span>₹${j.budget ? (j.budget / 100000).toFixed(1) + 'L' : 'N/A'} <span class="text-[10px] text-blue-500 font-semibold ml-1">${j.budget ? '(₹' + Math.round(j.budget / 12).toLocaleString() + '/mo)' : ''}</span></span>
                                 </div>
@@ -1462,8 +1575,15 @@ function renderCompanies() {
                             <div class="flex items-start gap-3">
                                 <i class="fas fa-map-location-dot mt-1 text-slate-400 dark:text-slate-500 text-xs"></i>
                                 <div class="flex-1 min-w-0">
-                                    <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-tighter mb-0.5">Address</p>
-                                    <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed line-clamp-2">${highlight(c.address || c.location || 'No address provided', q)}</p>
+                                    <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-tighter mb-0.5">Headquarters</p>
+                                    <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed line-clamp-2">${highlight(c.location || 'No location provided', q)}</p>
+                                    ${c.branches && c.branches.length > 0 ? `
+                                        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-tighter mb-0.5 mt-2">Branches (${c.branches.length})</p>
+                                        <div class="flex flex-wrap gap-1 mt-1">
+                                            ${c.branches.slice(0, 3).map(branch => `<span class="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[10px] rounded-md border border-blue-200 dark:border-blue-800">${branch.name}</span>`).join('')}
+                                            ${c.branches.length > 3 ? `<span class="px-2 py-0.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] rounded-md">+${c.branches.length - 3} more</span>` : ''}
+                                        </div>
+                                    ` : ''}
                                 </div>
                             </div>
                             
@@ -1492,7 +1612,6 @@ function renderCandidates() {
     const filterSource = document.getElementById('filter-candidate-source') ? document.getElementById('filter-candidate-source').value : 'all';
 
     const tableBody = document.getElementById('candidates-table-body');
-    const cardsContainer = document.getElementById('candidates-cards');
     const q = getEffectiveQuery('candidates');
 
     // shared filter logic
@@ -1564,7 +1683,6 @@ function renderCandidates() {
     // quick empty state
     if (list.length === 0) {
         tableBody.innerHTML = `<tr > <td colspan="7" class="p-6 text-center text-slate-500">No candidates found.</td></tr> `;
-        cardsContainer.innerHTML = `<div class="col-span-1 p-6 text-center text-slate-500" > No candidates found.</div> `;
         return;
     }
 
@@ -1655,86 +1773,159 @@ function renderCandidates() {
             `;
     }).join('');
 
-    // render card view
-    cardsContainer.innerHTML = list.map(c => {
-        const job = cachedJobs.find(j => j.id === c.jobId);
-        const initials = (c.name || '').split(' ').map(s => s[0]).join('').substring(0, 2).toUpperCase();
-        let jobBudget = job ? (job.budget ? Number(job.budget) : (job.budgetMax ? Number(job.budgetMax) : 0)) : 0;
-        let monthlyJobBudget = Math.round(jobBudget / 12);
-        let budgetStatus = { label: 'Unknown', color: 'badge badge-gray' };
-        if (job && jobBudget > 0) {
-            const CandidateMonthlyCTC = Number(c.offeredCTC || c.expectedCTC || c.expectedSalary || 0);
-            const annualCandCTC = CandidateMonthlyCTC * 12;
-            const diffMonthly = CandidateMonthlyCTC - monthlyJobBudget;
-            let diffText = '';
-            if (diffMonthly > 0) {
-                diffText = `(+₹${diffMonthly.toLocaleString()} / mo)`;
-            } else if (diffMonthly < 0) {
-                diffText = `(-₹${Math.abs(diffMonthly).toLocaleString()} / mo)`;
-            }
-
-            if (annualCandCTC <= jobBudget) budgetStatus = { label: 'Within Budget', subText: diffText, color: 'badge badge-green' };
-            else if (annualCandCTC <= jobBudget * 1.1) budgetStatus = { label: 'Slightly Above', subText: diffText, color: 'badge badge-orange' };
-            else budgetStatus = { label: 'Over Budget', subText: diffText, color: 'badge badge-red' };
-        }
-        return `
-            <div class="glass-card p-4 rounded-xl">
-                    <div class="flex items-start justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-700">${initials}</div>
-                            <div>
-                                <div class="font-bold text-slate-800 dark:text-white">${highlight(c.name, q)}</div>
-                                <div class="text-sm text-slate-500">${job ? job.title : 'No Job'}</div>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-sm font-semibold">₹${c.expectedCTC ? parseInt(c.expectedCTC).toLocaleString() : '0'}${c.offeredCTC ? ' <span class="text-[9px] text-green-500 font-bold">(Final)</span>' : ''}</div>
-                            <div class="text-[10px] text-blue-500 font-medium">Budget: ${monthlyJobBudget > 0 ? '₹' + monthlyJobBudget.toLocaleString() + '/mo' : 'N/A'}</div>
-                            <div class="text-xs text-slate-500 mt-1">${c.experience ? c.experience + ' Yrs' : 'N/A'}</div>
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between mt-3">
-                        <div class="flex items-center gap-2">
-                            <button onclick="showCandidateProfile('${c.id}')" class="px-3 py-1 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center gap-1 text-xs"><i class="fas fa-eye text-[10px]"></i> View</button>
-                            <button onclick="editCandidate('${c.id}')" class="px-3 py-1 rounded bg-slate-100 hover:bg-slate-200 text-xs text-slate-600">Edit</button>
-                            <button onclick="deleteDocById('candidates', '${c.id}')" class="px-3 py-1 rounded bg-red-50 hover:bg-red-100 text-red-600 text-xs">Delete</button>
-                        </div>
-                        <div class="flex flex-col items-end">
-                            <div class="text-[10px] uppercase font-bold tracking-wider ${budgetStatus.color.includes('green') ? 'text-green-500' : (budgetStatus.color.includes('orange') ? 'text-orange-500' : (budgetStatus.color.includes('red') ? 'text-red-500' : 'text-slate-400'))}">${budgetStatus.label}</div>
-                            ${budgetStatus.subText ? `<div class="text-[8px] font-bold text-slate-500 uppercase tracking-tight mt-0.5">${budgetStatus.subText}</div>` : ''}
-                        </div>
-                    </div>
-                </div>
-            `;
-    }).join('');
-
-    // toggle view visibility
-    const cardsEl = document.getElementById('candidates-cards');
-    const tableEl = document.getElementById('candidates-table');
-    if (candidateView === 'cards') {
-        cardsEl.classList.remove('hidden');
-        tableEl.classList.add('hidden');
-    } else {
-        cardsEl.classList.add('hidden');
-        tableEl.classList.remove('hidden');
-    }
     // Ensure any newly created select elements are converted to custom selects
     try { initCustomSelects(); } catch (e) { console.warn('initCustomSelects after renderCandidates failed', e); }
 }
 
 function renderArchive() {
     const container = document.getElementById('archive-list');
+    const statsContainer = document.getElementById('archive-stats');
     if (!container) return;
 
+    // Get search term
+    const searchTerm = (document.getElementById('archive-search')?.value || '').toLowerCase().trim();
+
     if (currentArchiveTab === 'candidates') {
-        renderArchivedCandidates(container);
+        renderArchivedCandidates(container, searchTerm);
+        renderArchiveStats(statsContainer, 'candidates');
     } else {
-        renderArchivedJobs(container);
+        renderArchivedJobs(container, searchTerm);
+        renderArchiveStats(statsContainer, 'jobs');
     }
 }
 
-function renderArchivedCandidates(container) {
-    const list = cachedCandidates.filter(c => c.stage === 'Hired');
+function renderArchiveStats(container, type) {
+    if (!container) return;
+
+    if (type === 'candidates') {
+        const hiredCandidates = cachedCandidates.filter(c => c.stage === 'Hired');
+        const totalHired = hiredCandidates.length;
+        const totalCTC = hiredCandidates.reduce((sum, c) => sum + (parseInt(c.offeredCTC) || 0), 0);
+        const avgCTC = totalHired > 0 ? Math.round(totalCTC / totalHired) : 0;
+        const thisMonth = hiredCandidates.filter(c => {
+            if (!c.hiredAt) return false;
+            const hiredDate = new Date(c.hiredAt.seconds * 1000);
+            const now = new Date();
+            return hiredDate.getMonth() === now.getMonth() && hiredDate.getFullYear() === now.getFullYear();
+        }).length;
+
+        container.innerHTML = `
+            <div class="glass-card p-4 rounded-xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                        <i class="fas fa-users text-emerald-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase">Total Placements</p>
+                        <p class="text-lg font-black text-slate-800 dark:text-white">${totalHired}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="glass-card p-4 rounded-xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                        <i class="fas fa-calendar text-blue-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase">This Month</p>
+                        <p class="text-lg font-black text-slate-800 dark:text-white">${thisMonth}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="glass-card p-4 rounded-xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                        <i class="fas fa-rupee-sign text-purple-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase">Avg CTC</p>
+                        <p class="text-lg font-black text-slate-800 dark:text-white">₹${avgCTC.toLocaleString()}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="glass-card p-4 rounded-xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                        <i class="fas fa-trophy text-amber-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase">Total Value</p>
+                        <p class="text-lg font-black text-slate-800 dark:text-white">₹${(totalCTC / 100000).toFixed(1)}L</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        const closedJobs = cachedJobs.filter(j => j.status === 'Closed');
+        const totalJobs = closedJobs.length;
+        const totalBudget = closedJobs.reduce((sum, j) => sum + (parseInt(j.budget) || 0), 0);
+        const avgBudget = totalJobs > 0 ? Math.round(totalBudget / totalJobs) : 0;
+        const totalPlacements = closedJobs.reduce((sum, j) => {
+            return sum + cachedCandidates.filter(c => c.jobId === j.id && c.stage === 'Hired').length;
+        }, 0);
+
+        container.innerHTML = `
+            <div class="glass-card p-4 rounded-xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                        <i class="fas fa-briefcase text-red-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase">Closed Jobs</p>
+                        <p class="text-lg font-black text-slate-800 dark:text-white">${totalJobs}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="glass-card p-4 rounded-xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                        <i class="fas fa-check-circle text-green-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase">Total Placements</p>
+                        <p class="text-lg font-black text-slate-800 dark:text-white">${totalPlacements}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="glass-card p-4 rounded-xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                        <i class="fas fa-rupee-sign text-indigo-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase">Avg Budget</p>
+                        <p class="text-lg font-black text-slate-800 dark:text-white">₹${(avgBudget / 100000).toFixed(1)}L</p>
+                    </div>
+                </div>
+            </div>
+            <div class="glass-card p-4 rounded-xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
+                        <i class="fas fa-percentage text-teal-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase">Success Rate</p>
+                        <p class="text-lg font-black text-slate-800 dark:text-white">${totalJobs > 0 ? Math.round((totalPlacements / totalJobs) * 100) : 0}%</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+}
+
+function renderArchivedCandidates(container, searchTerm = '') {
+    let list = cachedCandidates.filter(c => c.stage === 'Hired');
+
+    // Apply search filter
+    if (searchTerm) {
+        list = list.filter(c => {
+            const job = cachedJobs.find(j => j.id === c.jobId);
+            return (c.name || '').toLowerCase().includes(searchTerm) ||
+                (c.email || '').toLowerCase().includes(searchTerm) ||
+                (job?.title || '').toLowerCase().includes(searchTerm) ||
+                (job?.department || '').toLowerCase().includes(searchTerm);
+        });
+    }
     if (list.length === 0) {
         container.innerHTML = `
             <div class="col-span-full py-20 flex flex-col items-center justify-center text-slate-400 bg-slate-50/50 dark:bg-slate-900/20 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800">
@@ -1789,8 +1980,18 @@ function renderArchivedCandidates(container) {
     }).join('');
 }
 
-function renderArchivedJobs(container) {
-    const list = cachedJobs.filter(j => j.status === 'Closed');
+function renderArchivedJobs(container, searchTerm = '') {
+    let list = cachedJobs.filter(j => j.status === 'Closed');
+
+    // Apply search filter
+    if (searchTerm) {
+        list = list.filter(j => {
+            const company = cachedCompanies.find(c => c.id === j.companyId);
+            return (j.title || '').toLowerCase().includes(searchTerm) ||
+                (j.department || '').toLowerCase().includes(searchTerm) ||
+                (company?.name || '').toLowerCase().includes(searchTerm);
+        });
+    }
     if (list.length === 0) {
         container.innerHTML = `
             <div class="col-span-full py-20 flex flex-col items-center justify-center text-slate-400 bg-slate-50/50 dark:bg-slate-900/20 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800">
@@ -1841,35 +2042,87 @@ function renderArchivedJobs(container) {
 }
 
 function exportArchiveCSV() {
-    const list = cachedCandidates.filter(c => c.stage === 'Hired');
-    if (list.length === 0) { showToast("No archived candidates to export."); return; }
+    let list = [];
+    let filename = '';
+    let headers = [];
+
+    if (currentArchiveTab === 'candidates') {
+        list = cachedCandidates.filter(c => c.stage === 'Hired');
+        filename = 'placement_archive';
+        headers = ['Name', 'Email', 'Phone', 'Position', 'Department', 'Company', 'Hired Date', 'Monthly CTC', 'Annual CTC', 'Source', 'Experience'];
+    } else {
+        list = cachedJobs.filter(j => j.status === 'Closed');
+        filename = 'closed_jobs_archive';
+        headers = ['Job Title', 'Department', 'Company', 'Budget (LPA)', 'Posted Date', 'Closed Date', 'Total Candidates', 'Placements', 'Success Rate'];
+    }
+
+    if (list.length === 0) {
+        showToast("No archived data to export.");
+        return;
+    }
 
     const rows = [];
-    const headers = ['Name', 'Email', 'Phone', 'Position', 'Hired Date', 'Monthly CTC', 'Annual CTC'];
     rows.push(headers.join(','));
 
-    list.forEach(c => {
-        const job = cachedJobs.find(j => j.id === c.jobId);
-        const hiredDate = c.hiredAt ? new Date(c.hiredAt.seconds * 1000).toLocaleDateString() : 'N/A';
-        const monthly = c.offeredCTC || 0;
-        const annual = monthly * 12;
+    if (currentArchiveTab === 'candidates') {
+        list.forEach(c => {
+            const job = cachedJobs.find(j => j.id === c.jobId);
+            const company = job ? cachedCompanies.find(co => co.id === job.companyId) : null;
+            const hiredDate = c.hiredAt ? new Date(c.hiredAt.seconds * 1000).toLocaleDateString() : 'N/A';
+            const monthly = c.offeredCTC || 0;
+            const annual = monthly * 12;
 
-        const vals = [
-            c.name || '',
-            c.email || '',
-            c.phone || '',
-            job ? job.title : '',
-            hiredDate,
-            monthly,
-            annual
-        ];
-        rows.push(vals.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(','));
-    });
+            const vals = [
+                c.name || '',
+                c.email || '',
+                c.phone || '',
+                job ? job.title : '',
+                job ? job.department : '',
+                company ? company.name : '',
+                hiredDate,
+                monthly,
+                annual,
+                c.source || '',
+                c.experience || ''
+            ];
+            rows.push(vals.map(v => `"${v}"`).join(','));
+        });
+    } else {
+        list.forEach(j => {
+            const company = cachedCompanies.find(c => c.id === j.companyId);
+            const candidatesForJob = cachedCandidates.filter(c => c.jobId === j.id);
+            const hiredCount = candidatesForJob.filter(c => c.stage === 'Hired').length;
+            const successRate = candidatesForJob.length > 0 ? Math.round((hiredCount / candidatesForJob.length) * 100) : 0;
+            const postedDate = j.createdAt ? new Date(j.createdAt.seconds * 1000).toLocaleDateString() : 'N/A';
+            const closedDate = j.updatedAt ? new Date(j.updatedAt.seconds * 1000).toLocaleDateString() : 'N/A';
 
-    const csv = rows.join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const vals = [
+                j.title || '',
+                j.department || '',
+                company ? company.name : '',
+                (j.budget / 100000) || 0,
+                postedDate,
+                closedDate,
+                candidatesForJob.length,
+                hiredCount,
+                `${successRate}%`
+            ];
+            rows.push(vals.map(v => `"${v}"`).join(','));
+        });
+    }
+
+    const csvContent = rows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'hired_archive_export.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showToast(`Exported ${list.length} records to CSV`);
 }
 
 function renderInterviews() {
@@ -1888,6 +2141,26 @@ function renderInterviews() {
             (job && job.title.toLowerCase().includes(qnorm)) ||
             (cand.phone && cand.phone.replace(/[^0-9]/g, '').includes(qnorm.replace(/[^0-9]/g, '')));
     });
+
+    // Calculate analytics
+    const totalInterviews = cachedInterviews.length;
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - 7);
+    const thisWeekInterviews = cachedInterviews.filter(i => {
+        if (!i.dateTime) return false;
+        const interviewDate = new Date(i.dateTime);
+        return interviewDate >= weekStart && interviewDate <= now;
+    }).length;
+
+    const selectedInterviews = cachedInterviews.filter(i => i.status === 'Selected').length;
+    const successRate = totalInterviews > 0 ? Math.round((selectedInterviews / totalInterviews) * 100) : 0;
+
+    // Update analytics display
+    document.getElementById('interview-total').innerText = totalInterviews;
+    document.getElementById('interview-this-week').innerText = thisWeekInterviews;
+    document.getElementById('interview-selected').innerText = selectedInterviews;
+    document.getElementById('interview-success-rate').innerText = `${successRate}%`;
 
     if (filtered.length === 0) {
         container.innerHTML = `
@@ -1911,7 +2184,6 @@ function renderInterviews() {
 
     // 4. Render
     let html = '';
-    const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split('T')[0];
@@ -1984,6 +2256,10 @@ function renderInterviews() {
                         <a href="${i.meetingLink}" target="_blank" class="btn-action-round text-emerald-500 hover:text-white" title="Join Meeting">
                             <i class="fas fa-video"></i>
                         </a>` : ''}
+                        
+                        <button onclick="rescheduleInterview('${i.id}')" class="btn-action-round hover:bg-blue-500" title="Reschedule">
+                            <i class="fas fa-calendar-alt"></i>
+                        </button>
                         
                         <button onclick="previewResume('${cand ? cand.resumeUrl : ''}')" class="btn-action-round" title="View Resume">
                             <i class="fas fa-file-pdf text-blue-500"></i>
@@ -2346,7 +2622,43 @@ const attachFormHandlers = () => {
             const orig = btn.innerText; btn.innerText = "Saving..."; btn.disabled = true;
             try {
                 const formData = new FormData(e.target);
-                const data = Object.fromEntries(formData.entries());
+                const data = {};
+
+                // Process regular fields
+                for (let [key, value] of formData.entries()) {
+                    if (!key.startsWith('branches[')) {
+                        data[key] = value;
+                    }
+                }
+
+                // Process branches
+                const branches = [];
+                const branchData = {};
+                for (let [key, value] of formData.entries()) {
+                    if (key.startsWith('branches[')) {
+                        const matches = key.match(/branches\[(\d+)\]\[(\w+)\]/);
+                        if (matches) {
+                            const index = matches[1];
+                            const field = matches[2];
+                            if (!branchData[index]) branchData[index] = {};
+                            branchData[index][field] = value;
+                        }
+                    }
+                }
+
+                // Convert branchData to array
+                Object.keys(branchData).forEach(index => {
+                    if (branchData[index].name && branchData[index].location) {
+                        branches.push({
+                            name: branchData[index].name,
+                            location: branchData[index].location
+                        });
+                    }
+                });
+
+                if (branches.length > 0) {
+                    data.branches = branches;
+                }
 
                 const editId = data.id;
                 delete data.id;
@@ -2364,9 +2676,9 @@ const attachFormHandlers = () => {
 
                 e.target.reset();
                 document.getElementById('form-company-id').value = '';
-            } catch (e) { 
+            } catch (e) {
                 console.error("Form submission error:", e);
-                showToast("Error: " + e.message); 
+                showToast("Error: " + e.message);
             }
             finally { btn.innerText = orig; btn.disabled = false; }
         };
@@ -2387,7 +2699,25 @@ window.editCompany = (id) => {
     const form = document.getElementById('form-company');
     form.reset();
     for (const key in current) {
-        if (form.elements[key]) form.elements[key].value = current[key];
+        if (key !== 'branches' && form.elements[key]) form.elements[key].value = current[key];
+    }
+
+    // Populate branches
+    const branchesContainer = document.getElementById('branches-container');
+    branchesContainer.innerHTML = '';
+    if (current.branches && Array.isArray(current.branches)) {
+        current.branches.forEach((branch, index) => {
+            const branchDiv = document.createElement('div');
+            branchDiv.className = 'flex items-center gap-3 branch-item';
+            branchDiv.innerHTML = `
+                <input type="text" name="branches[${index}][name]" class="theme-input flex-1" placeholder="Branch name" value="${branch.name || ''}" required>
+                <input type="text" name="branches[${index}][location]" class="theme-input flex-1" placeholder="Location" value="${branch.location || ''}" required>
+                <button type="button" onclick="removeBranch(this)" class="px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+            branchesContainer.appendChild(branchDiv);
+        });
     }
 
     // Update Workspace UI
@@ -2400,6 +2730,242 @@ window.editCompany = (id) => {
     openModal('modal-company');
 };
 
+window.showCompanyProfile = (companyId) => {
+    const company = cachedCompanies.find(c => c.id === companyId);
+    if (!company) {
+        showToast('Company not found');
+        return;
+    }
+
+    // Update header
+    document.getElementById('company-profile-title').innerText = company.name || 'Company Profile';
+    document.getElementById('company-profile-subtitle').innerText = 'Workspace / Intelligence';
+    document.getElementById('company-profile-icon-box').innerHTML = `<i class="fas fa-building text-xl"></i>`;
+    document.getElementById('company-profile-avatar-box').innerHTML = `<i class="fas fa-building"></i>`;
+    document.getElementById('company-profile-name').innerText = company.name || 'Unknown Company';
+    document.getElementById('company-profile-industry').innerText = company.industry || 'Industry';
+
+    // Header metrics
+    const jobsCount = cachedJobs.filter(j => j.companyId === companyId).length;
+    const candidatesCount = cachedCandidates.filter(c => {
+        const job = cachedJobs.find(j => j.id === c.jobId);
+        return job && job.companyId === companyId;
+    }).length;
+    const activeJobsCount = cachedJobs.filter(j => j.companyId === companyId && j.status === 'Open').length;
+
+    document.getElementById('company-profile-header-metrics').innerHTML = `
+        <div class="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-bold">
+            <i class="fas fa-briefcase"></i>
+            <span>${jobsCount} Jobs</span>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-xs font-bold">
+            <i class="fas fa-users"></i>
+            <span>${candidatesCount} Candidates</span>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-lg text-xs font-bold">
+            <i class="fas fa-clock"></i>
+            <span>${activeJobsCount} Active</span>
+        </div>
+    `;
+
+    // Sidebar actions
+    let sidebarActions = '';
+    if (company.website) {
+        sidebarActions += `
+            <button onclick="window.open('${company.website}', '_blank')" class="w-full flex items-center gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+                <i class="fas fa-globe"></i>
+                <span class="text-sm font-medium">Visit Website</span>
+            </button>
+        `;
+    }
+    sidebarActions += `
+        <button onclick="editCompany('${companyId}')" class="w-full flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+            <i class="fas fa-edit"></i>
+            <span class="text-sm font-medium">Edit Company</span>
+        </button>
+    `;
+    document.getElementById('company-profile-sidebar-actions').innerHTML = sidebarActions;
+
+    // Main content
+    let contentHtml = '';
+
+    // Overview section
+    contentHtml += `
+        <div class="workspace-card">
+            <div class="card-header">
+                <h3 class="card-title">Company Overview</h3>
+            </div>
+            <div class="card-content space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-building mt-1 text-slate-400"></i>
+                        <div>
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Company Name</p>
+                            <p class="text-sm text-slate-800 dark:text-white font-medium">${company.name || 'N/A'}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-industry mt-1 text-slate-400"></i>
+                        <div>
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Industry</p>
+                            <p class="text-sm text-slate-800 dark:text-white font-medium">${company.industry || 'N/A'}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-map-marker-alt mt-1 text-slate-400"></i>
+                        <div>
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Headquarters</p>
+                            <p class="text-sm text-slate-800 dark:text-white font-medium">${company.location || 'N/A'}</p>
+                        </div>
+                    </div>
+                    ${company.website ? `
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-globe mt-1 text-slate-400"></i>
+                        <div>
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Website</p>
+                            <a href="${company.website}" target="_blank" class="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium">${company.website}</a>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Branches section
+    if (company.branches && company.branches.length > 0) {
+        contentHtml += `
+            <div class="workspace-card">
+                <div class="card-header">
+                    <h3 class="card-title">Branches & Locations</h3>
+                </div>
+                <div class="card-content">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        ${company.branches.map(branch => `
+                            <div class="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                                <div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                                    <i class="fas fa-map-marker-alt text-xs"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-slate-800 dark:text-white">${branch.name}</p>
+                                    <p class="text-xs text-slate-500">${branch.location}</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Jobs section
+    const companyJobs = cachedJobs.filter(j => j.companyId === companyId);
+    if (companyJobs.length > 0) {
+        contentHtml += `
+            <div class="workspace-card">
+                <div class="card-header">
+                    <h3 class="card-title">Active Job Openings</h3>
+                    <span class="badge badge-blue">${companyJobs.length}</span>
+                </div>
+                <div class="card-content">
+                    <div class="space-y-3">
+                        ${companyJobs.slice(0, 5).map(job => {
+            const candidatesForJob = cachedCandidates.filter(c => c.jobId === job.id);
+            const activeCandidates = candidatesForJob.filter(c => ['Screening', 'Interview', 'Selected'].includes(c.stage)).length;
+            const hiredCandidates = candidatesForJob.filter(c => c.stage === 'Hired').length;
+
+            return `
+                                <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:border-blue-500/30 transition-colors">
+                                    <div class="flex-1">
+                                        <h4 class="text-sm font-medium text-slate-800 dark:text-white">${job.title}</h4>
+                                        <p class="text-xs text-slate-500">${job.department || 'N/A'} • ${job.branchName && job.branchLocation ? `${job.branchName} (${job.branchLocation})` : (job.location || 'N/A')}</p>
+                                    </div>
+                                    <div class="flex items-center gap-4 text-xs">
+                                        <div class="text-center">
+                                            <p class="font-bold text-slate-700 dark:text-slate-300">${candidatesForJob.length}</p>
+                                            <p class="text-slate-500">Total</p>
+                                        </div>
+                                        <div class="text-center">
+                                            <p class="font-bold text-blue-600">${activeCandidates}</p>
+                                            <p class="text-slate-500">Active</p>
+                                        </div>
+                                        <div class="text-center">
+                                            <p class="font-bold text-emerald-600">${hiredCandidates}</p>
+                                            <p class="text-slate-500">Hired</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+        }).join('')}
+                        ${companyJobs.length > 5 ? `
+                            <p class="text-xs text-slate-500 text-center pt-2">And ${companyJobs.length - 5} more jobs...</p>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Candidates pipeline
+    const companyCandidates = cachedCandidates.filter(c => {
+        const job = cachedJobs.find(j => j.id === c.jobId);
+        return job && job.companyId === companyId;
+    });
+    if (companyCandidates.length > 0) {
+        const stages = ['Applied', 'Screening', 'Interview', 'Selected', 'Hired'];
+        const stageCounts = stages.map(stage => ({
+            stage,
+            count: companyCandidates.filter(c => c.stage === stage).length
+        }));
+
+        contentHtml += `
+            <div class="workspace-card">
+                <div class="card-header">
+                    <h3 class="card-title">Recruitment Pipeline</h3>
+                    <span class="badge badge-emerald">${companyCandidates.length} Candidates</span>
+                </div>
+                <div class="card-content">
+                    <div class="space-y-3">
+                        ${stageCounts.map(({ stage, count }) => `
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-slate-600 dark:text-slate-400">${stage}</span>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-24 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                        <div class="h-full bg-blue-500 rounded-full transition-all duration-500" style="width: ${companyCandidates.length > 0 ? (count / companyCandidates.length) * 100 : 0}%"></div>
+                                    </div>
+                                    <span class="text-sm font-bold text-slate-700 dark:text-slate-300 w-8 text-right">${count}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    document.getElementById('company-profile-view-content').innerHTML = contentHtml;
+
+    // Actions sidebar
+    document.getElementById('company-profile-view-actions').innerHTML = `
+        <div class="space-y-3">
+            <button onclick="showSection('jobs'); document.getElementById('global-search').value='${company.name}'; globalSearchQuery='${company.name.toLowerCase()}'; renderJobs();" class="w-full flex items-center gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+                <i class="fas fa-briefcase"></i>
+                <span class="text-sm font-medium">View All Jobs</span>
+            </button>
+            <button onclick="showSection('candidates'); document.getElementById('global-search').value='${company.name}'; globalSearchQuery='${company.name.toLowerCase()}'; renderCandidates();" class="w-full flex items-center gap-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors">
+                <i class="fas fa-users"></i>
+                <span class="text-sm font-medium">View Candidates</span>
+            </button>
+            <button onclick="editCompany('${companyId}')" class="w-full flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <i class="fas fa-edit"></i>
+                <span class="text-sm font-medium">Edit Profile</span>
+            </button>
+        </div>
+    `;
+
+    openModal('modal-company-profile-view');
+};
+
 document.getElementById('form-job').onsubmit = async (e) => {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
@@ -2410,6 +2976,24 @@ document.getElementById('form-job').onsubmit = async (e) => {
 
         // Keep budget numeric and convert LPA to Full INR for Firestore compatibility
         data.budget = Number(data.budget) * 100000;
+
+        // Handle branch selection
+        if (data.branchId) {
+            const company = cachedCompanies.find(c => c.id === data.companyId);
+            if (company) {
+                if (data.branchId === 'headquarters') {
+                    data.branchName = 'Headquarters';
+                    data.branchLocation = company.location;
+                } else if (data.branchId.startsWith('branch-')) {
+                    const branchIndex = parseInt(data.branchId.replace('branch-', ''));
+                    if (company.branches && company.branches[branchIndex]) {
+                        data.branchName = company.branches[branchIndex].name;
+                        data.branchLocation = company.branches[branchIndex].location;
+                    }
+                }
+            }
+            delete data.branchId; // Remove the temporary field
+        }
 
         // Parse multi-line fields into arrays
         if (data.requirements) {
@@ -2633,10 +3217,34 @@ window.editJob = (id) => {
         budgetMonthly.innerText = '≈ ₹' + Math.round(job.budget / 12).toLocaleString() + '/mo';
     }
 
+    // Populate company select and masters data
+    populateJobCompanySelect();
+    populateJobMastersData();
+
+    // Populate branch selection after company is set
+    setTimeout(() => {
+        populateJobBranches();
+        // Set the branch selection based on stored data
+        const branchSelect = document.getElementById('job-branch-select');
+        if (job.branchName && job.branchLocation) {
+            const company = cachedCompanies.find(c => c.id === job.companyId);
+            if (company) {
+                if (job.branchName === 'Headquarters') {
+                    branchSelect.value = 'headquarters';
+                } else {
+                    // Find matching branch
+                    const branchIndex = company.branches ? company.branches.findIndex(b => b.name === job.branchName && b.location === job.branchLocation) : -1;
+                    if (branchIndex >= 0) {
+                        branchSelect.value = `branch-${branchIndex}`;
+                    }
+                }
+                updateJobLocation();
+            }
+        }
+    }, 100);
+
     // Refresh custom select UI to reflect populated values
     try { initCustomSelects(); } catch (e) { console.warn('initCustomSelects in editJob failed', e); }
-    // Ensure location is set according to company after population (override intentionally)
-    try { prefillJobLocationFromCompany(); } catch (e) { /* ignore */ }
     document.getElementById('form-job-id').value = id;
     document.getElementById('modal-job-title').innerText = "Edit Job Configuration";
     openModal('modal-job');
@@ -2970,6 +3578,15 @@ document.getElementById('form-interview').onsubmit = async (e) => {
         const editId = data.id;
         delete data.id;
 
+        // Check for scheduling conflicts
+        if (data.dateTime && !editId) {
+            const conflict = checkInterviewConflict(data.dateTime, data.interviewer, candidateId);
+            if (conflict) {
+                showToast(`Scheduling conflict detected: ${conflict}`, "error");
+                return;
+            }
+        }
+
         if (editId) {
             await updateDoc(doc(db, "interviews", editId), data);
             showToast("Interview Updated!");
@@ -2985,11 +3602,17 @@ document.getElementById('form-interview').onsubmit = async (e) => {
             let newStage = currentStage;
 
             // Map interview status to candidate stage
-            if (data.status === "Selected") newStage = "Selected";
-            else if (data.status === "Rejected") newStage = "Rejected";
+            if (data.status === "Selected") {
+                newStage = "Interview";
+                // Automatically schedule next round if "Selected - Move to Next Round"
+                if (data.status.includes("Move to Next Round")) {
+                    await scheduleNextInterviewRound(candidateId, data.round);
+                }
+            } else if (data.status === "Rejected") newStage = "Rejected";
             else if (data.status === "Backed Out") newStage = "Backed Out";
             else if (data.status === "Not Interested") newStage = "Not Interested";
-            else if (data.status === "Scheduled" || data.status === "Interviewed" || data.status === "On Hold") newStage = "Interview";
+            else if (data.status === "No Show") newStage = "Rejected";
+            else if (data.status === "Scheduled" || data.status === "Done/Interviewed" || data.status === "On Hold") newStage = "Interview";
 
             // Use the centralized update function to trigger side effects (Offers, Job Closing, etc.)
             if (newStage !== currentStage) {
@@ -3004,6 +3627,91 @@ document.getElementById('form-interview').onsubmit = async (e) => {
         document.getElementById('interview-candidate-id-hidden').value = '';
     } catch (e) { alert("Error: " + e.message); }
     finally { btn.innerText = orig; btn.disabled = false; }
+};
+
+window.checkInterviewConflict = (dateTimeStr, interviewer, candidateId) => {
+    if (!dateTimeStr || !interviewer) return null;
+
+    const interviewDate = new Date(dateTimeStr);
+    const interviewEnd = new Date(interviewDate.getTime() + (60 * 60 * 1000)); // Assume 1 hour interviews
+
+    // Check interviewer conflicts
+    const interviewerConflict = cachedInterviews.find(i => {
+        if (!i.dateTime || i.status === 'Rejected' || i.status === 'Backed Out') return false;
+        const existingDate = new Date(i.dateTime);
+        const existingEnd = new Date(existingDate.getTime() + (60 * 60 * 1000));
+
+        return i.interviewer === interviewer &&
+            ((interviewDate >= existingDate && interviewDate < existingEnd) ||
+                (interviewEnd > existingDate && interviewEnd <= existingEnd) ||
+                (interviewDate <= existingDate && interviewEnd >= existingEnd));
+    });
+
+    if (interviewerConflict) {
+        const cand = cachedCandidates.find(c => c.id === interviewerConflict.candidateId);
+        return `Interviewer ${interviewer} has a conflicting interview with ${cand ? cand.name : 'another candidate'} at ${new Date(interviewerConflict.dateTime).toLocaleString()}`;
+    }
+
+    // Check candidate conflicts
+    const candidateConflict = cachedInterviews.find(i => {
+        if (!i.dateTime || i.status === 'Rejected' || i.status === 'Backed Out' || i.candidateId === candidateId) return false;
+        const existingDate = new Date(i.dateTime);
+        const existingEnd = new Date(existingDate.getTime() + (60 * 60 * 1000));
+
+        return i.candidateId === candidateId &&
+            ((interviewDate >= existingDate && interviewDate < existingEnd) ||
+                (interviewEnd > existingDate && interviewEnd <= existingEnd) ||
+                (interviewDate <= existingDate && interviewEnd >= existingEnd));
+    });
+
+    if (candidateConflict) {
+        return `Candidate has a conflicting interview scheduled at ${new Date(candidateConflict.dateTime).toLocaleString()}`;
+    }
+
+    return null;
+};
+
+window.scheduleNextInterviewRound = async (candidateId, currentRound) => {
+    const cand = cachedCandidates.find(c => c.id === candidateId);
+    if (!cand) return;
+
+    const rounds = [
+        'Round 1 - Technical',
+        'Round 2 - Advanced',
+        'Management Round',
+        'HR Round',
+        'Final Client Round'
+    ];
+
+    const currentIndex = rounds.indexOf(currentRound);
+    if (currentIndex === -1 || currentIndex >= rounds.length - 1) return; // Already at final round
+
+    const nextRound = rounds[currentIndex + 1];
+
+    // Auto-schedule next round 3-7 days later
+    const nextDate = new Date();
+    nextDate.setDate(nextDate.getDate() + Math.floor(Math.random() * 5) + 3); // 3-7 days
+    nextDate.setHours(10, 0, 0, 0); // 10 AM
+
+    const nextInterviewData = {
+        candidateId: candidateId,
+        interviewer: '', // To be assigned
+        dateTime: nextDate.toISOString().slice(0, 16), // YYYY-MM-DDTHH:MM format
+        mode: 'Online - Video Call',
+        meetingLink: '',
+        round: nextRound,
+        status: 'Scheduled',
+        feedback: '',
+        previousStage: cand.stage
+    };
+
+    try {
+        await addDoc(collection(db, "interviews"), nextInterviewData);
+        showToast(`Next round (${nextRound}) auto-scheduled for ${nextDate.toLocaleDateString()}`);
+    } catch (error) {
+        console.error("Error scheduling next round:", error);
+        showToast("Failed to auto-schedule next round", "error");
+    }
 };
 
 window.handleInterviewCandidateSearch = (val) => {
@@ -3079,6 +3787,34 @@ window.editInterview = (id) => {
 
     document.getElementById('form-interview-id').value = id;
     document.getElementById('modal-interview-title').innerText = "Manage Interview & Feedback";
+    openModal('modal-interview');
+};
+
+window.rescheduleInterview = (id) => {
+    const current = cachedInterviews.find(i => i.id === id);
+    if (!current) return;
+
+    // Pre-fill the form with current data
+    const form = document.getElementById('form-interview');
+    form.reset();
+    for (const key in current) {
+        if (form.elements[key]) form.elements[key].value = current[key];
+    }
+
+    // Populate searchable candidate input
+    const cand = cachedCandidates.find(c => c.id === current.candidateId);
+    if (cand) {
+        document.getElementById('interview-candidate-search').value = `${cand.name} | ${cand.phone || ''} | ${cand.email}`;
+        document.getElementById('interview-candidate-id-hidden').value = cand.id;
+
+        // Update Workspace UI
+        document.getElementById('interview-cand-name-display').innerText = cand.name;
+        document.getElementById('interview-cand-initials').innerHTML = cand.name.charAt(0).toUpperCase();
+    }
+
+    document.getElementById('interview-round-display').innerText = current.round || 'Technical Round';
+    document.getElementById('form-interview-id').value = id;
+    document.getElementById('modal-interview-title').innerText = "Reschedule Interview";
     openModal('modal-interview');
 };
 
@@ -4059,7 +4795,7 @@ window.populateCandidateJobs = function (department, includeJobId = null) {
         placeholderJob.text = '-- Select Job --';
         jobSelect.appendChild(placeholderJob);
         // Sync with custom UI
-        try { initCustomSelects(); } catch (e) {}
+        try { initCustomSelects(); } catch (e) { }
         return;
     }
 
@@ -4548,9 +5284,7 @@ window.showSection = async (sectionId) => {
                 subtitle: 'Quick overview of your recruitment activities',
                 actions: [
                     { label: 'Add Candidate', icon: 'fa-user-plus', color: 'bg-blue-600', onclick: "openCandidateModal()" },
-                    { label: 'Schedule Interview', icon: 'fa-calendar-plus', color: 'bg-purple-600', onclick: "openInterviewModal()" },
-
-                    { label: 'Calculator', icon: 'fa-calculator', color: 'bg-slate-700', onclick: "toggleCalculator()" }
+                    { label: 'Schedule Interview', icon: 'fa-calendar-plus', color: 'bg-purple-600', onclick: "openInterviewModal()" }
                 ]
             },
 
@@ -4558,93 +5292,87 @@ window.showSection = async (sectionId) => {
                 title: 'Companies',
                 subtitle: 'Manage partner companies and organizational info',
                 actions: [
-                    { label: 'Add Company', icon: 'fa-plus', color: 'bg-blue-600', onclick: "openCompanyModal()" },
-                    { label: 'Calculator', icon: 'fa-calculator', color: 'bg-slate-700', onclick: "toggleCalculator()" }
+                    { label: 'Add Company', icon: 'fa-plus', color: 'bg-blue-600', onclick: "openCompanyModal()" }
                 ]
             },
             'jobs': {
                 title: 'Job Management',
                 subtitle: 'Manage job openings and active listings',
                 actions: [
-                    { label: 'Create Job', icon: 'fa-plus', color: 'bg-blue-600', onclick: "openJobModal()" },
-                    { label: 'Calculator', icon: 'fa-calculator', color: 'bg-slate-700', onclick: "toggleCalculator()" }
+                    { label: 'Create Job', icon: 'fa-plus', color: 'bg-blue-600', onclick: "openJobModal()" }
                 ]
             },
             'candidates': {
                 title: 'Candidate Database',
                 subtitle: 'Unified view of all candidate profiles',
                 actions: [
-                    { label: 'Add Candidate', icon: 'fa-user-plus', color: 'bg-blue-600', onclick: "openCandidateModal()" },
-                    { label: 'Calculator', icon: 'fa-calculator', color: 'bg-slate-700', onclick: "toggleCalculator()" }
+                    { label: 'Add Candidate', icon: 'fa-user-plus', color: 'bg-blue-600', onclick: "openCandidateModal()" }
                 ]
             },
             'talentpool': {
                 title: 'Manage Responses',
                 subtitle: 'Track candidate responses across open positions',
                 actions: [
-                    { label: 'Post Job', icon: 'fa-plus', color: 'bg-blue-600', onclick: "showSection('jobs')" },
-                    { label: 'Calculator', icon: 'fa-calculator', color: 'bg-slate-700', onclick: "toggleCalculator()" }
+                    { label: 'Post Job', icon: 'fa-plus', color: 'bg-blue-600', onclick: "showSection('jobs')" }
                 ]
             },
             'interviews': {
                 title: 'Interview Scheduler',
                 subtitle: 'Coordinate and track candidate interviews',
                 actions: [
-                    { label: 'Schedule Interview', icon: 'fa-plus', color: 'bg-blue-600', onclick: "openInterviewModal()" },
-                    { label: 'Calculator', icon: 'fa-calculator', color: 'bg-slate-700', onclick: "toggleCalculator()" }
+                    { label: 'Schedule Interview', icon: 'fa-plus', color: 'bg-blue-600', onclick: "openInterviewModal()" }
                 ]
             },
             'offers': {
                 title: 'Offer Management',
                 subtitle: 'Track and manage the final lifecycle of selection',
-                actions: [
-                    { label: 'Calculator', icon: 'fa-calculator', color: 'bg-slate-700', onclick: "toggleCalculator()" }
-                ]
+                actions: []
             },
             'pdffiller': {
                 title: 'PDF Filler',
                 subtitle: 'Upload templates and fill PDFs with custom data',
-                actions: [
-                    { label: 'Calculator', icon: 'fa-calculator', color: 'bg-slate-700', onclick: "toggleCalculator()" }
-                ]
+                actions: []
             },
             'messaging': {
                 title: 'Communications',
                 subtitle: 'Automate candidate messaging and templates',
                 actions: [
-                    { label: 'New Template', icon: 'fa-plus', color: 'bg-blue-600', onclick: "document.getElementById('form-wa-template').reset(); document.getElementById('form-wa-template-id').value = ''; document.getElementById('modal-wa-template-title').innerText = 'Create Messaging Template'; openModal('modal-wa-template')" },
-                    { label: 'Calculator', icon: 'fa-calculator', color: 'bg-slate-700', onclick: "toggleCalculator()" }
+                    { label: 'New Template', icon: 'fa-plus', color: 'bg-blue-600', onclick: "document.getElementById('form-wa-template').reset(); document.getElementById('form-wa-template-id').value = ''; document.getElementById('modal-wa-template-title').innerText = 'Create Messaging Template'; openModal('modal-wa-template')" }
                 ]
             },
             'archive': {
                 title: 'Success Archive',
                 subtitle: 'Historical records for placements and positions',
                 actions: [
-                    { label: 'Export Archive', icon: 'fa-file-export', color: 'bg-blue-600', onclick: 'exportArchiveCSV()' },
-                    { label: 'Calculator', icon: 'fa-calculator', color: 'bg-slate-700', onclick: "toggleCalculator()" }
+                    { label: 'Export Archive', icon: 'fa-file-export', color: 'bg-blue-600', onclick: 'exportArchiveCSV()' }
                 ]
             },
             'reports': {
                 title: 'Reports & Data Export',
                 subtitle: 'Analyze recruitment performance and export data',
-                actions: [
-                    { label: 'Calculator', icon: 'fa-calculator', color: 'bg-slate-700', onclick: "toggleCalculator()" }
-                ]
+                actions: []
             },
             'contacts': {
                 title: 'Contacts & Dialer',
                 subtitle: 'Manage talent network and initiate remote calls',
                 actions: [
-                    { label: 'Import Contacts', icon: 'fa-file-import', color: 'bg-indigo-600', onclick: "showToast('Importing contacts...')" },
-                    { label: 'Calculator', icon: 'fa-calculator', color: 'bg-slate-700', onclick: "toggleCalculator()" }
+                    { label: 'Import Contacts', icon: 'fa-file-import', color: 'bg-indigo-600', onclick: "showToast('Importing contacts...')" }
+                ]
+            },
+            'masters': {
+                title: 'Masters Management',
+                subtitle: 'Configure departments, designations, industries, and sources',
+                actions: [
+                    { label: 'Add Department', icon: 'fa-plus', color: 'bg-blue-600', onclick: "openAddDepartmentModal()" },
+                    { label: 'Add Designation', icon: 'fa-plus', color: 'bg-emerald-600', onclick: "openAddDesignationModal()" },
+                    { label: 'Add Industry', icon: 'fa-plus', color: 'bg-purple-600', onclick: "openAddIndustryModal()" },
+                    { label: 'Add Source', icon: 'fa-plus', color: 'bg-amber-600', onclick: "openAddSourceModal()" }
                 ]
             },
             'portalsettings': {
                 title: 'Public Portal Settings',
                 subtitle: 'Configure how candidates see your career page',
-                actions: [
-                    { label: 'Calculator', icon: 'fa-calculator', color: 'bg-slate-700', onclick: "toggleCalculator()" }
-                ]
+                actions: []
             }
         };
 
@@ -4833,7 +5561,6 @@ window.renderWaTemplates = renderWaTemplates;
 window.renderWaCandidatesChecklist = renderWaCandidatesChecklist;
 window.updateWaDropdowns = updateWaDropdowns;
 // expose new candidate utilities for inline handlers
-window.toggleCandidateView = toggleCandidateView;
 window.exportCandidatesCSV = exportCandidatesCSV;
 window.bulkSelectAndMessage = bulkSelectAndMessage;
 
@@ -4872,10 +5599,12 @@ window.renderOffers = () => {
     const pendingOffers = cachedOffers.filter(o => (o.status || 'Pending') === 'Pending').length;
     const sentOffers = cachedOffers.filter(o => o.status === 'Sent').length;
     const signedOffers = cachedOffers.filter(o => o.status === 'Signed').length;
+    const rejectedOffers = cachedOffers.filter(o => o.status === 'Rejected').length;
 
     if (document.getElementById('offer-stat-total')) document.getElementById('offer-stat-total').innerText = totalOffers;
     if (document.getElementById('offer-stat-pending')) document.getElementById('offer-stat-pending').innerText = pendingOffers;
     if (document.getElementById('offer-stat-sent')) document.getElementById('offer-stat-sent').innerText = sentOffers;
+    if (document.getElementById('offer-stat-rejected')) document.getElementById('offer-stat-rejected').innerText = rejectedOffers;
     if (document.getElementById('offer-stat-signed')) document.getElementById('offer-stat-signed').innerText = signedOffers;
 
     const searchTerm = getEffectiveQuery('offers');
@@ -4911,7 +5640,8 @@ window.renderOffers = () => {
 
         const statusConfig = {
             'Pending': { icon: 'fa-clock', color: 'orange', label: 'Preparation' },
-            'Sent': { icon: 'fa-paper-plane', color: 'indigo', label: 'Offer Sent' },
+            'Sent': { icon: 'fa-paper-plane', color: 'indigo', label: 'Awaiting Response' },
+            'Rejected': { icon: 'fa-times-circle', color: 'red', label: 'Offer Rejected' },
             'Signed': { icon: 'fa-file-signature', color: 'emerald', label: 'Completed' }
         }[status] || { icon: 'fa-circle', color: 'slate', label: status };
 
@@ -4962,8 +5692,8 @@ window.renderOffers = () => {
                 <div class="px-2 mb-6">
                     <div class="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full flex gap-1.5 p-0.5">
                         <div class="flex-1 rounded-full ${status === 'Pending' ? 'bg-orange-400 animate-pulse' : 'bg-emerald-500'}"></div>
-                        <div class="flex-1 rounded-full ${status === 'Sent' ? 'bg-indigo-500 animate-pulse' : (status === 'Signed' ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700')}"></div>
-                        <div class="flex-1 rounded-full ${status === 'Signed' ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}"></div>
+                        <div class="flex-1 rounded-full ${status === 'Sent' ? 'bg-indigo-500 animate-pulse' : (status === 'Rejected' || status === 'Signed' ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700')}"></div>
+                        <div class="flex-1 rounded-full ${status === 'Signed' ? 'bg-emerald-500' : (status === 'Rejected' ? 'bg-red-500' : 'bg-slate-200 dark:bg-slate-700')}"></div>
                     </div>
                 </div>
 
@@ -4977,7 +5707,11 @@ window.renderOffers = () => {
                             <i class="fas fa-envelope"></i> Email
                         </button>
                     </div>
-                    <button onclick="generateOfferDocument('${o.id}')" class="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold uppercase tracking-widest transition-all">Generate Offer PDF</button>
+                    <div class="flex gap-2">
+                        <button onclick="deleteOffer('${o.id}')" class="flex-1 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold uppercase transition-all" title="Delete Offer">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
                     
                     ${status === 'Pending' ? `
                         <button onclick="updateOfferStatus('${o.id}', 'Sent')" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20 transition-all transform active:scale-95 flex items-center justify-center gap-2">
@@ -4985,13 +5719,23 @@ window.renderOffers = () => {
                         </button>
                     ` : ''}
                     ${status === 'Sent' ? `
-                        <button onclick="updateOfferStatus('${o.id}', 'Signed')" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-emerald-500/20 transition-all transform active:scale-95 flex items-center justify-center gap-2">
-                            Candidate Signed <i class="fas fa-check-double"></i>
-                        </button>
+                        <div class="flex gap-2">
+                            <button onclick="updateOfferStatus('${o.id}', 'Signed')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-emerald-500/20 transition-all transform active:scale-95 flex items-center justify-center gap-1">
+                                <i class="fas fa-check"></i> Accept
+                            </button>
+                            <button onclick="rejectOffer('${o.id}')" class="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-red-500/20 transition-all transform active:scale-95 flex items-center justify-center gap-1">
+                                <i class="fas fa-times"></i> Reject
+                            </button>
+                        </div>
                     ` : ''}
                     ${status === 'Signed' ? `
                         <div class="w-full py-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 text-[11px] font-black uppercase tracking-widest rounded-xl flex items-center justify-center border border-emerald-100 dark:border-emerald-800/50">
                             Offer Completed <i class="fas fa-check-circle ml-2"></i>
+                        </div>
+                    ` : ''}
+                    ${status === 'Rejected' ? `
+                        <div class="w-full py-3 bg-red-50 dark:bg-red-900/20 text-red-600 text-[11px] font-black uppercase tracking-widest rounded-xl flex items-center justify-center border border-red-100 dark:border-red-800/50">
+                            Offer Rejected <i class="fas fa-times-circle ml-2"></i>
                         </div>
                     ` : ''}
                 </div>
@@ -5009,15 +5753,65 @@ window.sendOfferWhatsApp = (id) => {
     window.open(url, '_blank');
 };
 
-window.sendOfferEmail = (id) => {
+window.sendOfferEmail = async (id) => {
     const o = cachedOffers.find(x => x.id === id);
     const cand = cachedCandidates.find(c => c.id === o?.candidateId);
     if (!cand || !cand.email) return showToast("No email registered", "error");
 
-    const subject = `Offer Letter - ${o.jobTitle} | Recruitment Team`;
-    const body = `Dear ${cand.name},\n\nWe are excited to share your offer letter for the position of ${o.jobTitle}. Please find the details attached.\n\nBest Regards,\nRecruitment Team`;
-    const url = `mailto:${cand.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(url, '_blank');
+    // Generate the PDF first
+    try {
+        showToast("Preparing offer letter...");
+        const offer = cachedOffers.find(offer => offer.id === id);
+        const candidate = cand;
+        const job = cachedJobs.find(j => j.id === offer.jobId);
+
+        const templateId = selectedOfferTemplateId || (cachedOfferTemplates[0] && cachedOfferTemplates[0].id);
+        if (!templateId) {
+            showToast('Please select or upload a template first.', "error");
+            return;
+        }
+
+        const template = cachedOfferTemplates.find(t => t.id === templateId);
+        if (!template || !template.url) {
+            showToast('Template not available', "error");
+            return;
+        }
+
+        const fillData = window.buildOfferData(offer, candidate, job);
+        const options = { coordMap: template.coordinateMap || {} };
+        const pdfBlob = await window.pdfService.fillPdfForm(template.url, fillData, options);
+
+        // Create download link for the PDF
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        const pdfFileName = `${candidate.name || 'offer'}_${id}.pdf`;
+
+        const subject = `Offer Letter - ${offer.jobTitle || 'Position'} | ${job?.companyName || 'Our Company'}`;
+        const body = `Dear ${candidate.name},
+
+We are pleased to extend an offer for the position of ${offer.jobTitle || 'the role'} at ${job?.companyName || 'our company'}.
+
+Please find your offer letter attached to this email. The key details of your offer are:
+- Annual CTC: ₹${offer.offeredCTC || 'TBD'}
+- Monthly In-hand: ₹${offer.monthlyInHand || 'TBD'}
+- Joining Date: ${offer.joiningDate || 'TBD'}
+
+Please review the attached offer letter and let us know your acceptance by replying to this email or contacting your recruiter.
+
+To download your offer letter: ${pdfUrl}
+
+Best Regards,
+Recruitment Team
+${job?.companyName || 'Our Company'}`;
+
+        const mailtoUrl = `mailto:${candidate.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.open(mailtoUrl, '_blank');
+
+        showToast("Email client opened with offer letter details");
+
+    } catch (e) {
+        console.error('Email preparation failed', e);
+        showToast('Failed to prepare offer letter for email', "error");
+    }
 };
 
 window.updateOfferStatus = async (id, status) => {
@@ -5046,6 +5840,96 @@ window.updateOfferStatus = async (id, status) => {
         showError("Failed");
     }
 };
+
+window.rejectOffer = async (id) => {
+    const reason = prompt("Please provide a reason for rejection (optional):");
+    try {
+        await updateDoc(doc(db, "offers", id), {
+            status: 'Rejected',
+            rejectionReason: reason || '',
+            rejectedAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        });
+
+        // Update candidate stage back to Interview or previous stage
+        const offer = cachedOffers.find(o => o.id === id);
+        if (offer && offer.candidateId) {
+            await updateDoc(doc(db, "candidates", offer.candidateId), {
+                stage: 'Interview', // Or keep as is, depending on workflow
+                updatedAt: serverTimestamp()
+            });
+        }
+
+        showToast("Offer rejected");
+        renderOffers();
+    } catch (e) {
+        showError("Failed to reject offer");
+    }
+};
+
+window.deleteOffer = async (id) => {
+    if (!confirm("Are you sure you want to delete this offer? This action cannot be undone.")) {
+        return;
+    }
+
+    try {
+        await deleteDoc(doc(db, "offers", id));
+        showToast("Offer deleted successfully");
+        renderOffers();
+    } catch (e) {
+        showError("Failed to delete offer");
+        console.error("Delete offer error:", e);
+    }
+};
+
+window.bulkDeleteOffers = async () => {
+    const selected = Array.from(document.querySelectorAll('input[name="offer-check"]:checked')).map(i => i.value);
+    if (selected.length === 0) return;
+
+    if (!confirm(`Are you sure you want to delete ${selected.length} offer(s)? This action cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        showToast(`Deleting ${selected.length} offer(s)...`);
+        const promises = selected.map(id => deleteDoc(doc(db, "offers", id)));
+        await Promise.all(promises);
+        showToast(`Successfully deleted ${selected.length} offer(s)`);
+        clearOfferSelection();
+        renderOffers();
+    } catch (e) {
+        showError("Failed to delete some offers");
+        console.error("Bulk delete error:", e);
+    }
+};
+
+window.clearOfferSelection = () => {
+    document.querySelectorAll('input[name="offer-check"]').forEach(cb => cb.checked = false);
+    toggleOfferBulkBar();
+};
+
+window.toggleOfferBulkBar = () => {
+    const selected = document.querySelectorAll('input[name="offer-check"]:checked').length;
+    const bar = document.getElementById('offer-bulk-bar');
+    const countEl = document.getElementById('offer-selected-count');
+    if (bar) {
+        if (selected > 0) {
+            bar.classList.remove('hidden');
+            bar.classList.add('flex');
+            if (countEl) countEl.innerText = selected;
+        } else {
+            bar.classList.add('hidden');
+            bar.classList.remove('flex');
+        }
+    }
+};
+
+// Add event listeners for offer checkboxes
+document.addEventListener('change', (e) => {
+    if (e.target.name === 'offer-check') {
+        toggleOfferBulkBar();
+    }
+});
 
 window.loadPortalSettings = async () => {
     const container = document.getElementById('portal-settings-container');
@@ -5541,27 +6425,27 @@ window.showCandidateProfile = (id) => {
                 </div>
 
                 <!-- Resume Card -->
-                ${c.resumeUrl ? (function() {
-                    const lUrl = c.resumeUrl.toLowerCase().split('?')[0];
-                    const isViewable = lUrl.endsWith('.pdf') || lUrl.endsWith('.jpg') || lUrl.endsWith('.jpeg') || lUrl.endsWith('.png') || lUrl.endsWith('.webp') || lUrl.includes('/raw/upload/') || lUrl.includes('application/pdf');
-                    if (!isViewable) {
-                         return `<div class="col-span-full form-group-card border-dashed border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                ${c.resumeUrl ? (function () {
+                const lUrl = c.resumeUrl.toLowerCase().split('?')[0];
+                const isViewable = lUrl.endsWith('.pdf') || lUrl.endsWith('.jpg') || lUrl.endsWith('.jpeg') || lUrl.endsWith('.png') || lUrl.endsWith('.webp') || lUrl.includes('/raw/upload/') || lUrl.includes('application/pdf');
+                if (!isViewable) {
+                    return `<div class="col-span-full form-group-card border-dashed border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                              <div class="flex flex-col items-center justify-center py-6">
                                 <i class="fas fa-file-circle-exclamation text-3xl text-slate-400 mb-3"></i>
                                 <p class="text-sm font-bold text-slate-600 dark:text-slate-300">Preview not available for this format</p>
                                 <a href="${c.resumeUrl}" target="_blank" class="mt-3 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition">Download Resume</a>
                              </div>
                          </div>`;
-                    }
-                    const viewerSrc = lUrl.endsWith('.pdf') ? `https://docs.google.com/gview?url=${encodeURIComponent(c.resumeUrl)}&embedded=true` : c.resumeUrl;
-                    return `<div class="col-span-full form-group-card !p-0 overflow-hidden border-slate-200 dark:border-slate-700 shadow-sm">
+                }
+                const viewerSrc = lUrl.endsWith('.pdf') ? `https://docs.google.com/gview?url=${encodeURIComponent(c.resumeUrl)}&embedded=true` : c.resumeUrl;
+                return `<div class="col-span-full form-group-card !p-0 overflow-hidden border-slate-200 dark:border-slate-700 shadow-sm">
                         <div class="bg-slate-50 dark:bg-slate-800/80 p-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-700">
                             <div class="flex items-center gap-2 font-bold text-sm text-slate-800 dark:text-slate-200"><i class="fas fa-file-lines text-blue-500"></i> Resume Preview</div>
                             <a href="${c.resumeUrl}" target="_blank" class="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg font-bold text-xs transition inline-flex items-center gap-1.5"><i class="fas fa-external-link-alt"></i> Open Original</a>
                         </div>
                         <iframe src="${viewerSrc}" class="w-full h-[600px] border-none bg-slate-100 dark:bg-slate-900" allowfullscreen></iframe>
                     </div>`;
-                })() : ''}
+            })() : ''}
             </div>
         `;
     }
@@ -5768,13 +6652,13 @@ window.showCompanyProfile = (id) => {
                     <h5 class="field-label">Active Opportunities</h5>
                     <div class="space-y-2 max-h-48 overflow-y-auto">
                         ${cachedJobs.filter(j => j.companyId === id).length > 0
-                            ? cachedJobs.filter(j => j.companyId === id).map(j => `
+                ? cachedJobs.filter(j => j.companyId === id).map(j => `
                                 <div class="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition" onclick="showJobDetails('${j.id}')">
                                     <p class="text-sm font-bold text-slate-800 dark:text-white">${j.title}</p>
                                     <p class="text-xs text-slate-500">${j.department || 'Department'} • ${j.location || 'Location'}</p>
                                 </div>
                             `).join('')
-                            : `<p class="text-sm text-slate-500 italic">No active job openings</p>`}
+                : `<p class="text-sm text-slate-500 italic">No active job openings</p>`}
                     </div>
                 </div>
 
@@ -5822,7 +6706,7 @@ window.renderTalentPool = () => {
         if (fab) fab.classList.add('hidden');
 
         // Render the candidates for this job
-        if (typeof renderInboxCandidates === 'function') renderInboxCandidates();
+        if (typeof renderInbox === 'function') renderInbox();
 
         // Always render the job list in the background so it's ready for toggle back
     } else {
@@ -5835,7 +6719,7 @@ window.renderTalentPool = () => {
         if (fab) fab.classList.remove('hidden');
     }
 
-    const searchTerm = getEffectiveQuery('talentpool');
+    const searchTerm = document.getElementById('talentpool-search')?.value?.toLowerCase() || '';
     const statusFilter = document.getElementById('talentpool-filter-status')?.value || 'all';
 
     const candidates = cachedTalentPool;
@@ -5844,14 +6728,28 @@ window.renderTalentPool = () => {
     let jobs = cachedJobs;
     if (statusFilter !== 'all') {
         jobs = jobs.filter(j => j.status === statusFilter);
-    } else {
-        // Default 'all' often means Active/Open in context of management
-        // But let's show everything if specifically requested 'all'
     }
 
     if (searchTerm) {
-        jobs = jobs.filter(j => j.title.toLowerCase().includes(searchTerm) || j.department.toLowerCase().includes(searchTerm));
+        jobs = jobs.filter(j =>
+            j.title.toLowerCase().includes(searchTerm) ||
+            j.department.toLowerCase().includes(searchTerm) ||
+            j.location.toLowerCase().includes(searchTerm) ||
+            j.companyName?.toLowerCase().includes(searchTerm)
+        );
     }
+
+    // Calculate stats
+    const totalJobs = jobs.length;
+    const activeJobs = jobs.filter(j => j.status === 'Open' || j.status === 'Active').length;
+    const totalResponses = jobs.reduce((sum, j) => sum + candidates.filter(c => c.jobId === j.id).length, 0);
+    const avgResponseRate = totalJobs > 0 ? Math.round((totalResponses / totalJobs) * 100) / 100 : 0;
+
+    // Update stats display
+    document.getElementById('talentpool-total-jobs').innerText = totalJobs;
+    document.getElementById('talentpool-active-jobs').innerText = activeJobs;
+    document.getElementById('talentpool-total-responses').innerText = totalResponses;
+    document.getElementById('talentpool-avg-response-rate').innerText = `${avgResponseRate}%`;
 
     if (jobs.length === 0) {
         jobList.innerHTML = `
@@ -5939,6 +6837,89 @@ window.exitJobInbox = async () => {
 
 window.filterInbox = (type) => {
     currentInboxFilter = type;
+    renderInbox();
+};
+
+window.renderInbox = () => {
+    // Populate source filter options
+    populateInboxSourceFilter();
+
+    // Call the existing renderInboxCandidates function
+    if (typeof renderInboxCandidates === 'function') {
+        renderInboxCandidates();
+    }
+};
+
+window.populateInboxSourceFilter = () => {
+    const sourceFilter = document.getElementById('inbox-filter-source');
+    if (!sourceFilter || !window.currentInboxJobId) return;
+
+    const candidates = cachedTalentPool.filter(c => c.jobId === window.currentInboxJobId);
+    const sources = [...new Set(candidates.map(c => c.source).filter(s => s))];
+
+    sourceFilter.innerHTML = '<option value="all">All Sources</option>';
+    sources.forEach(source => {
+        const option = document.createElement('option');
+        option.value = source;
+        option.textContent = source;
+        sourceFilter.appendChild(option);
+    });
+};
+
+window.renderInboxCandidates = () => {
+    const searchTerm = document.getElementById('inbox-search')?.value?.toLowerCase() || '';
+    const sourceFilter = document.getElementById('inbox-filter-source')?.value || 'all';
+    const sortOption = document.getElementById('inbox-sort')?.value || 'newest';
+    const listContainer = document.getElementById('inbox-candidate-list');
+    if (!listContainer || !window.currentInboxJobId) return;
+
+    const job = cachedJobs.find(j => j.id === window.currentInboxJobId);
+    let candidates = cachedTalentPool.filter(c => c.jobId === window.currentInboxJobId);
+    const rejectedStages = ['REJECTED', 'Rejected', 'Backed Out', 'Not Interested'];
+    const shortlistedCandidates = cachedCandidates.filter(c => c.jobId === window.currentInboxJobId && !rejectedStages.includes(c.stage));
+    const rejectedCandidates = cachedCandidates.filter(c => c.jobId === window.currentInboxJobId && rejectedStages.includes(c.stage));
+
+    // Apply Folder Filter
+    if (currentInboxFilter === 'all') candidates = candidates; // now just refers to talentpool candidates
+    else if (currentInboxFilter === 'new') candidates = candidates.filter(c => c.isNew);
+    else if (currentInboxFilter === 'shortlisted') candidates = shortlistedCandidates;
+    else if (currentInboxFilter === 'rejected') candidates = rejectedCandidates;
+
+    // Apply Source Filter
+    if (sourceFilter !== 'all') {
+        candidates = candidates.filter(c => c.source === sourceFilter);
+    }
+
+    // Apply Search Filter
+    if (searchTerm) {
+        candidates = candidates.filter(c =>
+            (c.name || "").toLowerCase().includes(searchTerm) ||
+            (c.email || "").toLowerCase().includes(searchTerm) ||
+            ((c.skills || "") && c.skills.toLowerCase().includes(searchTerm)) ||
+            ((c.currentDesignation || "") && c.currentDesignation.toLowerCase().includes(searchTerm)) ||
+            ((c.phone || "") && c.phone.includes(searchTerm))
+        );
+    }
+
+    // Apply Sorting
+    candidates.sort((a, b) => {
+        switch (sortOption) {
+            case 'newest':
+                return (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0);
+            case 'oldest':
+                return (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0);
+            case 'match-high':
+                return calculateMatchScore(b, job) - calculateMatchScore(a, job);
+            case 'match-low':
+                return calculateMatchScore(a, job) - calculateMatchScore(b, job);
+            case 'name-asc':
+                return (a.name || '').localeCompare(b.name || '');
+            case 'name-desc':
+                return (b.name || '').localeCompare(a.name || '');
+            default:
+                return 0;
+        }
+    });
 
     // Update UI state for folders
     ['all', 'new', 'shortlisted', 'rejected'].forEach(f => {
@@ -6223,203 +7204,56 @@ window.updateTalentPoolBadge = () => {
 
 
 function calculateMatchScore(candidate, job) {
-    // Simulated AI match logic
     if (!job) return 70;
-    let base = 65;
-    if (candidate.experience && parseInt(candidate.experience) >= 2) base += 10;
-    if (candidate.city && job.location && candidate.city.toLowerCase() === job.location.toLowerCase()) base += 15;
-    if (candidate.isNew) base += 5;
-    return Math.min(98, base);
+
+    let score = 60; // Base score
+
+    // Experience match (30% weight)
+    const candidateExp = parseInt(candidate.experience) || 0;
+    const jobExp = parseInt(job.experience) || 0;
+    if (candidateExp >= jobExp) {
+        score += 30;
+    } else if (candidateExp >= jobExp - 1) {
+        score += 20;
+    } else if (candidateExp >= jobExp - 2) {
+        score += 10;
+    }
+
+    // Location match (20% weight)
+    if (candidate.city && job.location &&
+        candidate.city.toLowerCase().includes(job.location.toLowerCase().split(',')[0])) {
+        score += 20;
+    }
+
+    // Skills match (25% weight)
+    const candidateSkills = (candidate.skills || '').toLowerCase().split(',').map(s => s.trim());
+    const jobSkills = (job.skills || '').toLowerCase().split(',').map(s => s.trim());
+    const matchingSkills = candidateSkills.filter(skill =>
+        jobSkills.some(jobSkill => jobSkill.includes(skill) || skill.includes(jobSkill))
+    ).length;
+    const skillMatchRatio = jobSkills.length > 0 ? matchingSkills / jobSkills.length : 0;
+    score += Math.round(skillMatchRatio * 25);
+
+    // Department match (15% weight)
+    if (candidate.currentDesignation && job.department &&
+        candidate.currentDesignation.toLowerCase().includes(job.department.toLowerCase())) {
+        score += 15;
+    }
+
+    // New candidate bonus (5% weight)
+    if (candidate.isNew) {
+        score += 5;
+    }
+
+    // Source quality bonus (5% weight)
+    const premiumSources = ['linkedin', 'naukri premium', 'referral', 'internal'];
+    if (candidate.source && premiumSources.some(s =>
+        candidate.source.toLowerCase().includes(s))) {
+        score += 5;
+    }
+
+    return Math.min(100, Math.max(0, score));
 }
-
-// ===================== FLOATING CALCULATOR LOGIC =====================
-let calcDisplayValue = '0';
-let calcFirstOperand = null;
-let calcOperator = null;
-let calcWaitingForSecondOperand = false;
-
-window.toggleCalculator = () => {
-    const calc = document.getElementById('floating-calculator');
-    const toggleBtn = document.getElementById('calc-toggle-btn');
-    if (!calc) return;
-
-    calc.classList.toggle('hidden');
-    if (!calc.classList.contains('hidden')) {
-        calc.classList.add('animate-in', 'fade-in', 'zoom-in-95', 'duration-200');
-    }
-};
-
-window.minimizeCalculator = () => {
-    const body = document.getElementById('calc-body');
-    if (body) {
-        body.classList.toggle('hidden');
-    }
-};
-
-window.calcNum = (num) => {
-    const display = document.getElementById('calc-display');
-    if (calcWaitingForSecondOperand) {
-        calcDisplayValue = num;
-        calcWaitingForSecondOperand = false;
-    } else {
-        calcDisplayValue = calcDisplayValue === '0' ? num : calcDisplayValue + num;
-    }
-    if (display) display.value = calcDisplayValue;
-};
-
-window.calcOp = (nextOperator) => {
-    const inputValue = parseFloat(calcDisplayValue);
-
-    if (calcOperator && calcWaitingForSecondOperand) {
-        calcOperator = nextOperator;
-        return;
-    }
-
-    if (calcFirstOperand === null && !isNaN(inputValue)) {
-        calcFirstOperand = inputValue;
-    } else if (calcOperator) {
-        const result = performCalculation[calcOperator](calcFirstOperand, inputValue);
-        calcDisplayValue = `${parseFloat(result.toFixed(7))}`;
-        calcFirstOperand = result;
-        const display = document.getElementById('calc-display');
-        if (display) display.value = calcDisplayValue;
-    }
-
-    calcWaitingForSecondOperand = true;
-    calcOperator = nextOperator;
-};
-
-const performCalculation = {
-    '/': (firstOperand, secondOperand) => firstOperand / secondOperand,
-    '*': (firstOperand, secondOperand) => firstOperand * secondOperand,
-    '+': (firstOperand, secondOperand) => firstOperand + secondOperand,
-    '-': (firstOperand, secondOperand) => firstOperand - secondOperand,
-    '=': (firstOperand, secondOperand) => secondOperand
-};
-
-window.calcClear = () => {
-    calcDisplayValue = '0';
-    calcFirstOperand = null;
-    calcOperator = null;
-    calcWaitingForSecondOperand = false;
-    const display = document.getElementById('calc-display');
-    if (display) display.value = '0';
-};
-
-window.calcEqual = () => {
-    const inputValue = parseFloat(calcDisplayValue);
-
-    if (calcOperator && !calcWaitingForSecondOperand) {
-        const result = performCalculation[calcOperator](calcFirstOperand, inputValue);
-        calcDisplayValue = `${parseFloat(result.toFixed(7))}`;
-        calcFirstOperand = null;
-        calcOperator = null;
-        calcWaitingForSecondOperand = false;
-        const display = document.getElementById('calc-display');
-        if (display) display.value = calcDisplayValue;
-    }
-};
-
-// --- DRAGGABLE LOGIC ---
-(function initCalculatorDraggable() {
-    const calc = document.getElementById('floating-calculator');
-    const header = document.getElementById('calc-header');
-    if (!calc || !header) return;
-
-    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-
-    header.onmousedown = dragMouseDown;
-
-    function dragMouseDown(e) {
-        e = e || window.event;
-        e.preventDefault();
-        // get the mouse cursor position at startup:
-        pos3 = e.clientX;
-        pos4 = e.clientY;
-        document.onmouseup = closeDragElement;
-        // call a function whenever the cursor moves:
-        document.onmousemove = elementDrag;
-        header.classList.add('bg-blue-700'); // Visual feedback
-    }
-
-    function elementDrag(e) {
-        e = e || window.event;
-        e.preventDefault();
-        // calculate the new cursor position:
-        pos1 = pos3 - e.clientX;
-        pos2 = pos4 - e.clientY;
-        pos3 = e.clientX;
-        pos4 = e.clientY;
-
-        // set the element's new position:
-        let newTop = calc.offsetTop - pos2;
-        let newLeft = calc.offsetLeft - pos1;
-
-        // Constraint within viewport
-        const buffer = 10;
-        newTop = Math.max(buffer, Math.min(newTop, window.innerHeight - calc.offsetHeight - buffer));
-        newLeft = Math.max(buffer, Math.min(newLeft, window.innerWidth - calc.offsetWidth - buffer));
-
-        calc.style.top = newTop + "px";
-        calc.style.left = newLeft + "px";
-        calc.style.right = 'auto'; // Break existing 'right' style
-    }
-
-    function closeDragElement() {
-        // stop moving when mouse button is released:
-        document.onmouseup = null;
-        document.onmousemove = null;
-        header.classList.remove('bg-blue-700');
-    }
-})();
-
-// --- KEYBOARD SUPPORT ---
-document.addEventListener('keydown', (e) => {
-    const calc = document.getElementById('floating-calculator');
-    if (!calc || calc.classList.contains('hidden')) return;
-
-    // Don't capture keys if we're typing in an input or textarea
-    const activeEl = document.activeElement;
-    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable)) {
-        return;
-    }
-
-    const key = e.key;
-
-    // Numeric keys
-    if (/[0-9]/.test(key)) {
-        e.preventDefault();
-        calcNum(key);
-    }
-    // Operators
-    else if (['+', '-', '*', '/'].includes(key)) {
-        e.preventDefault();
-        calcOp(key);
-    }
-    // Equal / Enter
-    else if (key === 'Enter' || key === '=') {
-        e.preventDefault();
-        calcEqual();
-    }
-    // Clear / Escape
-    else if (key === 'Escape') {
-        e.preventDefault();
-        calcClear();
-    }
-    // Backspace
-    else if (key === 'Backspace') {
-        e.preventDefault();
-        calcDisplayValue = calcDisplayValue.length > 1 ? calcDisplayValue.slice(0, -1) : '0';
-        const display = document.getElementById('calc-display');
-        if (display) display.value = calcDisplayValue;
-    }
-    // Decimal
-    else if (key === '.') {
-        e.preventDefault();
-        calcNum('.');
-    }
-});
-
 
 // ===================== SEGMENTED PORTFOLIO REPORTS =====================
 
@@ -6888,6 +7722,10 @@ window.openCandidateModal = () => {
         window.setRating('communication', 0);
     }
     if (window.clearResumeSelection) window.clearResumeSelection();
+
+    // Populate source select with masters data
+    populateCandidateSourceSelect();
+
     openModal('modal-candidate');
 };
 
@@ -7028,6 +7866,20 @@ window.openJobModal = () => {
     document.getElementById('job-status-display').innerText = 'Drafting Pipeline';
     const budgetMonthly = document.getElementById('job-budget-monthly-imm');
     if (budgetMonthly) budgetMonthly.innerText = '';
+
+    // Set current date for job posting
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('job-posting-date').value = today;
+
+    // Populate company select
+    populateJobCompanySelect();
+
+    // Initialize branch select
+    document.getElementById('job-branch-select').innerHTML = '<option value="">Select a company first</option>';
+
+    // Populate masters data
+    populateJobMastersData();
+
     openModal('modal-job');
 };
 
@@ -7039,7 +7891,86 @@ window.openCompanyModal = () => {
     document.getElementById('comp-name-display').innerText = 'New Partner';
     document.getElementById('comp-industry-display').innerText = 'Sector Unassigned';
     document.getElementById('comp-logo-display').innerHTML = '<i class="fas fa-city"></i>';
+    document.getElementById('branches-container').innerHTML = '';
+
+    // Populate industry select with masters data
+    populateCompanyIndustrySelect();
+
     openModal('modal-company');
+};
+
+window.addBranch = () => {
+    const container = document.getElementById('branches-container');
+    const branchIndex = container.children.length;
+    const branchDiv = document.createElement('div');
+    branchDiv.className = 'flex items-center gap-3 branch-item';
+    branchDiv.innerHTML = `
+        <input type="text" name="branches[${branchIndex}][name]" class="theme-input flex-1" placeholder="Branch name (e.g. Faridabad Office)" required>
+        <input type="text" name="branches[${branchIndex}][location]" class="theme-input flex-1" placeholder="Location (e.g. Faridabad, Haryana)" required>
+        <button type="button" onclick="removeBranch(this)" class="px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
+    container.appendChild(branchDiv);
+};
+
+window.populateJobBranches = () => {
+    const companySelect = document.getElementById('job-company-select');
+    const branchSelect = document.getElementById('job-branch-select');
+    const selectedCompanyId = companySelect.value;
+
+    if (!selectedCompanyId) {
+        branchSelect.innerHTML = '<option value="">Select a company first</option>';
+        return;
+    }
+
+    const company = cachedCompanies.find(c => c.id === selectedCompanyId);
+    if (!company) {
+        branchSelect.innerHTML = '<option value="">Company not found</option>';
+        return;
+    }
+
+    let options = '<option value="">Select Branch Location</option>';
+
+    // Add headquarters as an option
+    if (company.location) {
+        options += `<option value="headquarters">${company.name} - Headquarters (${company.location})</option>`;
+    }
+
+    // Add branches
+    if (company.branches && company.branches.length > 0) {
+        company.branches.forEach((branch, index) => {
+            options += `<option value="branch-${index}">${company.name} - ${branch.name} (${branch.location})</option>`;
+        });
+    }
+
+    branchSelect.innerHTML = options;
+};
+
+window.updateJobLocation = () => {
+    const companySelect = document.getElementById('job-company-select');
+    const branchSelect = document.getElementById('job-branch-select');
+    const locationInput = document.getElementById('job-location');
+
+    const selectedCompanyId = companySelect.value;
+    const selectedBranch = branchSelect.value;
+
+    if (!selectedCompanyId || !selectedBranch) {
+        locationInput.value = '';
+        return;
+    }
+
+    const company = cachedCompanies.find(c => c.id === selectedCompanyId);
+    if (!company) return;
+
+    if (selectedBranch === 'headquarters') {
+        locationInput.value = company.location || '';
+    } else if (selectedBranch.startsWith('branch-')) {
+        const branchIndex = parseInt(selectedBranch.replace('branch-', ''));
+        if (company.branches && company.branches[branchIndex]) {
+            locationInput.value = company.branches[branchIndex].location;
+        }
+    }
 };
 
 window.openInterviewModal = (candidateId = '') => {
@@ -7081,3 +8012,529 @@ window.populateInterviewCandidateSearchList = () => {
 
     list.innerHTML = activeCandidates.map(c => `<option value="${c.name} | ${c.phone || ''} | ${c.email || ''}" data-id="${c.id}"></option>`).join('');
 };
+
+/* ==========================================================================
+   MASTERS MANAGEMENT FUNCTIONS
+   ========================================================================== */
+
+// Cache for masters data
+let cachedDepartments = [];
+let cachedDesignations = [];
+let cachedIndustries = [];
+let cachedSources = [];
+
+// Load masters data from Firebase
+async function loadMastersData() {
+    try {
+        const [deptSnap, desigSnap, indSnap, srcSnap] = await Promise.all([
+            getDocs(collection(db, 'masters_departments')),
+            getDocs(collection(db, 'masters_designations')),
+            getDocs(collection(db, 'masters_industries')),
+            getDocs(collection(db, 'masters_sources'))
+        ]);
+
+        cachedDepartments = deptSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        cachedDesignations = desigSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        cachedIndustries = indSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        cachedSources = srcSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        renderDepartments();
+        renderDesignations();
+        renderIndustries();
+        renderSources();
+    } catch (error) {
+        console.error('Error loading masters data:', error);
+        showToast('Failed to load masters data', 'error');
+    }
+}
+
+// Render functions for each master type
+window.renderDepartments = () => {
+    const container = document.getElementById('departments-list');
+    if (!container) return;
+
+    if (cachedDepartments.length === 0) {
+        container.innerHTML = `
+            <div class="col-span-full py-12 text-center">
+                <div class="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
+                    <i class="fas fa-building text-2xl"></i>
+                </div>
+                <p class="text-slate-400 font-medium">No departments added yet</p>
+                <button onclick="openAddDepartmentModal()" class="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm transition">Add First Department</button>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = cachedDepartments.map(dept => `
+        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 transition-all">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center text-blue-600">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 dark:text-white">${dept.name}</h4>
+                        <p class="text-xs text-slate-500">${dept.description || 'No description'}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="editDepartment('${dept.id}')" class="p-2 text-slate-400 hover:text-blue-600 transition">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteDepartment('${dept.id}')" class="p-2 text-slate-400 hover:text-red-600 transition">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+};
+
+window.renderDesignations = () => {
+    const container = document.getElementById('designations-list');
+    if (!container) return;
+
+    if (cachedDesignations.length === 0) {
+        container.innerHTML = `
+            <div class="col-span-full py-12 text-center">
+                <div class="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
+                    <i class="fas fa-user-tie text-2xl"></i>
+                </div>
+                <p class="text-slate-400 font-medium">No designations added yet</p>
+                <button onclick="openAddDesignationModal()" class="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm transition">Add First Designation</button>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = cachedDesignations.map(desig => `
+        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 transition-all">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg flex items-center justify-center text-emerald-600">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 dark:text-white">${desig.name}</h4>
+                        <p class="text-xs text-slate-500">${desig.level || 'No level specified'}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="editDesignation('${desig.id}')" class="p-2 text-slate-400 hover:text-blue-600 transition">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteDesignation('${desig.id}')" class="p-2 text-slate-400 hover:text-red-600 transition">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+};
+
+window.renderIndustries = () => {
+    const container = document.getElementById('industries-list');
+    if (!container) return;
+
+    if (cachedIndustries.length === 0) {
+        container.innerHTML = `
+            <div class="col-span-full py-12 text-center">
+                <div class="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
+                    <i class="fas fa-industry text-2xl"></i>
+                </div>
+                <p class="text-slate-400 font-medium">No industries added yet</p>
+                <button onclick="openAddIndustryModal()" class="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm transition">Add First Industry</button>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = cachedIndustries.map(ind => `
+        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 transition-all">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-purple-50 dark:bg-purple-900/20 rounded-lg flex items-center justify-center text-purple-600">
+                        <i class="fas fa-industry"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 dark:text-white">${ind.name}</h4>
+                        <p class="text-xs text-slate-500">${ind.sector || 'General sector'}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="editIndustry('${ind.id}')" class="p-2 text-slate-400 hover:text-blue-600 transition">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteIndustry('${ind.id}')" class="p-2 text-slate-400 hover:text-red-600 transition">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+};
+
+window.renderSources = () => {
+    const container = document.getElementById('sources-list');
+    if (!container) return;
+
+    if (cachedSources.length === 0) {
+        container.innerHTML = `
+            <div class="col-span-full py-12 text-center">
+                <div class="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
+                    <i class="fas fa-bullhorn text-2xl"></i>
+                </div>
+                <p class="text-slate-400 font-medium">No sources added yet</p>
+                <button onclick="openAddSourceModal()" class="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm transition">Add First Source</button>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = cachedSources.map(src => `
+        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 transition-all">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-amber-50 dark:bg-amber-900/20 rounded-lg flex items-center justify-center text-amber-600">
+                        <i class="fas fa-bullhorn"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 dark:text-white">${src.name}</h4>
+                        <p class="text-xs text-slate-500">${src.type || 'General source'}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="editSource('${src.id}')" class="p-2 text-slate-400 hover:text-blue-600 transition">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteSource('${src.id}')" class="p-2 text-slate-400 hover:text-red-600 transition">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+};
+
+// Modal functions for adding/editing masters
+window.openAddDepartmentModal = () => {
+    document.getElementById('department-modal-title').innerText = 'Add Department';
+    document.getElementById('department-form').reset();
+    document.getElementById('department-id').value = '';
+    openModal('modal-department');
+};
+
+window.openAddDesignationModal = () => {
+    document.getElementById('designation-modal-title').innerText = 'Add Designation';
+    document.getElementById('designation-form').reset();
+    document.getElementById('designation-id').value = '';
+    openModal('modal-designation');
+};
+
+window.openAddIndustryModal = () => {
+    document.getElementById('industry-modal-title').innerText = 'Add Industry';
+    document.getElementById('industry-form').reset();
+    document.getElementById('industry-id').value = '';
+    openModal('modal-industry');
+};
+
+window.openAddSourceModal = () => {
+    document.getElementById('source-modal-title').innerText = 'Add Source';
+    document.getElementById('source-form').reset();
+    document.getElementById('source-id').value = '';
+    openModal('modal-source');
+};
+
+// Edit functions
+window.editDepartment = (id) => {
+    const dept = cachedDepartments.find(d => d.id === id);
+    if (!dept) return;
+
+    document.getElementById('department-modal-title').innerText = 'Edit Department';
+    document.getElementById('department-id').value = dept.id;
+    document.getElementById('department-name').value = dept.name || '';
+    document.getElementById('department-description').value = dept.description || '';
+    openModal('modal-department');
+};
+
+window.editDesignation = (id) => {
+    const desig = cachedDesignations.find(d => d.id === id);
+    if (!desig) return;
+
+    document.getElementById('designation-modal-title').innerText = 'Edit Designation';
+    document.getElementById('designation-id').value = desig.id;
+    document.getElementById('designation-name').value = desig.name || '';
+    document.getElementById('designation-level').value = desig.level || '';
+    openModal('modal-designation');
+};
+
+window.editIndustry = (id) => {
+    const ind = cachedIndustries.find(i => i.id === id);
+    if (!ind) return;
+
+    document.getElementById('industry-modal-title').innerText = 'Edit Industry';
+    document.getElementById('industry-id').value = ind.id;
+    document.getElementById('industry-name').value = ind.name || '';
+    document.getElementById('industry-sector').value = ind.sector || '';
+    openModal('modal-industry');
+};
+
+window.editSource = (id) => {
+    const src = cachedSources.find(s => s.id === id);
+    if (!src) return;
+
+    document.getElementById('source-modal-title').innerText = 'Edit Source';
+    document.getElementById('source-id').value = src.id;
+    document.getElementById('source-name').value = src.name || '';
+    document.getElementById('source-type').value = src.type || '';
+    openModal('modal-source');
+};
+
+// Save functions
+window.saveDepartment = async () => {
+    const form = document.getElementById('department-form');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    const isEdit = data.id;
+
+    try {
+        if (isEdit) {
+            await updateDoc(doc(db, 'masters_departments', data.id), {
+                name: data.name,
+                description: data.description,
+                updatedAt: serverTimestamp()
+            });
+            showToast('Department updated successfully');
+        } else {
+            await addDoc(collection(db, 'masters_departments'), {
+                name: data.name,
+                description: data.description,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
+            showToast('Department added successfully');
+        }
+
+        closeModal('modal-department');
+        await loadMastersData();
+    } catch (error) {
+        console.error('Error saving department:', error);
+        showToast('Failed to save department', 'error');
+    }
+};
+
+window.saveDesignation = async () => {
+    const form = document.getElementById('designation-form');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    const isEdit = data.id;
+
+    try {
+        if (isEdit) {
+            await updateDoc(doc(db, 'masters_designations', data.id), {
+                name: data.name,
+                level: data.level,
+                updatedAt: serverTimestamp()
+            });
+            showToast('Designation updated successfully');
+        } else {
+            await addDoc(collection(db, 'masters_designations'), {
+                name: data.name,
+                level: data.level,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
+            showToast('Designation added successfully');
+        }
+
+        closeModal('modal-designation');
+        await loadMastersData();
+    } catch (error) {
+        console.error('Error saving designation:', error);
+        showToast('Failed to save designation', 'error');
+    }
+};
+
+window.saveIndustry = async () => {
+    const form = document.getElementById('industry-form');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    const isEdit = data.id;
+
+    try {
+        if (isEdit) {
+            await updateDoc(doc(db, 'masters_industries', data.id), {
+                name: data.name,
+                sector: data.sector,
+                updatedAt: serverTimestamp()
+            });
+            showToast('Industry updated successfully');
+        } else {
+            await addDoc(collection(db, 'masters_industries'), {
+                name: data.name,
+                sector: data.sector,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
+            showToast('Industry added successfully');
+        }
+
+        closeModal('modal-industry');
+        await loadMastersData();
+    } catch (error) {
+        console.error('Error saving industry:', error);
+        showToast('Failed to save industry', 'error');
+    }
+};
+
+window.saveSource = async () => {
+    const form = document.getElementById('source-form');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    const isEdit = data.id;
+
+    try {
+        if (isEdit) {
+            await updateDoc(doc(db, 'masters_sources', data.id), {
+                name: data.name,
+                type: data.type,
+                updatedAt: serverTimestamp()
+            });
+            showToast('Source updated successfully');
+        } else {
+            await addDoc(collection(db, 'masters_sources'), {
+                name: data.name,
+                type: data.type,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
+            showToast('Source added successfully');
+        }
+
+        closeModal('modal-source');
+        await loadMastersData();
+    } catch (error) {
+        console.error('Error saving source:', error);
+        showToast('Failed to save source', 'error');
+    }
+};
+
+// Delete functions
+window.deleteDepartment = async (id) => {
+    if (!confirm('Are you sure you want to delete this department?')) return;
+
+    try {
+        await deleteDoc(doc(db, 'masters_departments', id));
+        showToast('Department deleted successfully');
+        await loadMastersData();
+    } catch (error) {
+        console.error('Error deleting department:', error);
+        showToast('Failed to delete department', 'error');
+    }
+};
+
+window.deleteDesignation = async (id) => {
+    if (!confirm('Are you sure you want to delete this designation?')) return;
+
+    try {
+        await deleteDoc(doc(db, 'masters_designations', id));
+        showToast('Designation deleted successfully');
+        await loadMastersData();
+    } catch (error) {
+        console.error('Error deleting designation:', error);
+        showToast('Failed to delete designation', 'error');
+    }
+};
+
+window.deleteIndustry = async (id) => {
+    if (!confirm('Are you sure you want to delete this industry?')) return;
+
+    try {
+        await deleteDoc(doc(db, 'masters_industries', id));
+        showToast('Industry deleted successfully');
+        await loadMastersData();
+    } catch (error) {
+        console.error('Error deleting industry:', error);
+        showToast('Failed to delete industry', 'error');
+    }
+};
+
+window.deleteSource = async (id) => {
+    if (!confirm('Are you sure you want to delete this source?')) return;
+
+    try {
+        await deleteDoc(doc(db, 'masters_sources', id));
+        showToast('Source deleted successfully');
+        await loadMastersData();
+    } catch (error) {
+        console.error('Error deleting source:', error);
+        showToast('Failed to delete source', 'error');
+    }
+};
+
+// Initialize masters when section is shown
+document.addEventListener('DOMContentLoaded', () => {
+    // Listen for masters section being shown
+    const mastersSection = document.getElementById('section-masters');
+    if (mastersSection) {
+        // Load masters data when the section becomes visible
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    if (!mastersSection.classList.contains('hidden')) {
+                        loadMastersData();
+                    }
+                }
+            });
+        });
+        observer.observe(mastersSection, { attributes: true });
+    }
+});
+
+window.refreshMastersData = async () => {
+    showToast('Refreshing masters data...');
+    await loadMastersData();
+    showToast('Masters data refreshed');
+};
+
+// Job Modal Helper Functions
+function populateJobCompanySelect() {
+    const companySelect = document.getElementById('job-company-select');
+    if (!companySelect) return;
+
+    let options = '<option value="">Select Hiring Company</option>';
+    cachedCompanies.forEach(company => {
+        options += `<option value="${company.id}">${company.name}</option>`;
+    });
+    companySelect.innerHTML = options;
+}
+
+function populateJobMastersData() {
+    // Load masters data if not already loaded
+    if (cachedDepartments.length === 0 || cachedDesignations.length === 0) {
+        loadMastersData().then(() => {
+            populateJobMastersSelects();
+        });
+    } else {
+        populateJobMastersSelects();
+    }
+}
+
+function populateCompanyIndustrySelect() {
+    const industrySelect = document.getElementById('comp-industry');
+    if (!industrySelect) return;
+
+    // Load masters data if not already loaded
+    if (cachedIndustries.length === 0) {
+        loadMastersData().then(() => {
+            populateIndustryOptions();
+        });
+    } else {
+        populateIndustryOptions();
+    }
+
+    function populateIndustryOptions() {
+        let options = '<option value="">Select Industry</option>';
+        cachedIndustries.forEach(industry => {
+            options += `<option value="${industry.name}">${industry.name}</option>`;
+        });
+        industrySelect.innerHTML = options;
+    }
+}
