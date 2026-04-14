@@ -7725,6 +7725,7 @@ window.openCandidateModal = () => {
 
     // Populate source select with masters data
     populateCandidateSourceSelect();
+    populateCandidateMastersData();
 
     openModal('modal-candidate');
 };
@@ -8538,3 +8539,66 @@ function populateCompanyIndustrySelect() {
         industrySelect.innerHTML = options;
     }
 }
+
+window.populateCandidateSourceSelect = function () {
+    const sourceSelect = document.getElementById('cand-source');
+    if (!sourceSelect) return;
+
+    if (cachedSources.length === 0) {
+        loadMastersData().then(() => {
+            renderSourceOptions();
+        });
+    } else {
+        renderSourceOptions();
+    }
+
+    function renderSourceOptions() {
+        let options = '<option value="">Select Source</option>';
+        cachedSources.forEach(src => {
+            options += `<option value="${src.name}">${src.name}</option>`;
+        });
+        sourceSelect.innerHTML = options;
+    }
+};
+
+window.populateJobMastersSelects = function () {
+    const deptSelect = document.getElementById('job-department');
+    const desigSelect = document.getElementById('job-designation');
+
+    if (deptSelect) {
+        let options = '<option value="">Select Department</option>';
+        cachedDepartments.forEach(dept => {
+            options += `<option value="${dept.name}">${dept.name}</option>`;
+        });
+        deptSelect.innerHTML = options;
+    }
+
+    if (desigSelect) {
+        let options = '<option value="">Select Designation</option>';
+        cachedDesignations.forEach(desig => {
+            options += `<option value="${desig.name}">${desig.name}</option>`;
+        });
+        desigSelect.innerHTML = options;
+    }
+};
+
+window.populateCandidateMastersData = function () {
+    const deptSelect = document.getElementById('candidate-job-dept-select');
+    if (!deptSelect) return;
+
+    if (cachedDepartments.length === 0) {
+        loadMastersData().then(() => {
+            renderDeptOptions();
+        });
+    } else {
+        renderDeptOptions();
+    }
+
+    function renderDeptOptions() {
+        let options = '<option value="">Select Department</option>';
+        cachedDepartments.forEach(dept => {
+            options += `<option value="${dept.name}">${dept.name}</option>`;
+        });
+        deptSelect.innerHTML = options;
+    }
+};
