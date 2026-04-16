@@ -139,8 +139,38 @@
             overflow: hidden;
         }
 
-        #offer-bulk-bar, #fab-container {
+        #offer-floating-bulk-bar, #fab-container {
             will-change: transform, opacity;
+        }
+
+        /* Unique Modal Styles */
+        .modal-company-edit .immersive-workspace {
+            border-left: 4px solid #3b82f6;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+        .modal-job-edit .immersive-workspace {
+            border-left: 4px solid #8b5cf6;
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+        }
+        .modal-candidate-edit .immersive-workspace {
+            border-left: 4px solid #06b6d4;
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+        }
+        .modal-interview-edit .immersive-workspace {
+            border-left: 4px solid #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+        }
+        .modal-profile-view .immersive-workspace {
+            border-left: 4px solid #f59e0b;
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+        }
+        .modal-company-profile-view .immersive-workspace {
+            border-left: 4px solid #ef4444;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+        .modal-resume-preview {
+            border: 2px solid #6366f1;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
         }
     </style>
 </head>
@@ -1244,9 +1274,9 @@
                             </div>
 
                             <!-- Bulk Actions Bar -->
-                            <div id="offer-bulk-bar" class="hidden animate-in fade-in zoom-in-95 duration-200 flex items-center gap-3 bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-200 dark:border-red-800">
+                            <div id="offer-section-bulk-bar" class="hidden animate-in fade-in zoom-in-95 duration-200 flex items-center gap-3 bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-200 dark:border-red-800">
                                 <span class="text-xs font-bold text-red-600 dark:text-red-400">
-                                    <span id="offer-selected-count">0</span> selected
+                                    <span id="offer-section-selected-count">0</span> selected
                                 </span>
                                 <button onclick="bulkDeleteOffers()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-all">
                                     <i class="fas fa-trash mr-1"></i> Delete Selected
@@ -1873,7 +1903,7 @@
 
             <!-- MODAL: ADD/EDIT COMPANY (Immersive Overhaul) -->
             <div id="modal-company"
-                class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-0 sm:p-4">
+                class="modal-company-edit fixed inset-0 bg-black/85 backdrop-blur-md z-[101] hidden flex items-center justify-center p-0 sm:p-4">
                 <div class="immersive-workspace">
                     <div class="workspace-header">
                         <div class="flex items-center gap-4">
@@ -2041,7 +2071,7 @@
 
         </div> <!-- MODAL: ADD/EDIT JOB (Immersive Overhaul) -->
         <div id="modal-job"
-            class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-0 sm:p-4">
+            class="modal-job-edit fixed inset-0 bg-black/90 backdrop-blur-md z-[102] hidden flex items-center justify-center p-0 sm:p-4">
             <div class="immersive-workspace">
                 <div class="workspace-header">
                     <div class="flex items-center gap-4">
@@ -2078,6 +2108,13 @@
                                 <h4 class="font-bold text-lg text-slate-800 dark:text-white" id="job-title-display">New
                                     Opening</h4>
                                 <p class="text-xs text-slate-500" id="job-status-display">Drafting Pipeline</p>
+                                <!-- Company Info Display -->
+                                <div class="mt-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                                    <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Associated Company</p>
+                                    <div id="job-company-display" class="text-sm text-slate-700 dark:text-slate-300">
+                                        No company selected
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="space-y-4">
@@ -2276,7 +2313,7 @@
 
     <!-- MODAL: ADD/EDIT CANDIDATE (Immersive Overhaul) -->
     <div id="modal-candidate"
-        class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-0 sm:p-4">
+        class="modal-candidate-edit fixed inset-0 bg-black/75 backdrop-blur-md z-[103] hidden flex items-center justify-center p-0 sm:p-4">
         <div class="immersive-workspace">
             <div class="workspace-header">
                 <div class="flex items-center gap-4">
@@ -2711,7 +2748,7 @@
 
     <!-- MODAL: ADD/EDIT INTERVIEW (Immersive Overhaul) -->
     <div id="modal-interview"
-        class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-0 sm:p-4">
+        class="modal-interview-edit fixed inset-0 bg-black/70 backdrop-blur-md z-[104] hidden flex items-center justify-center p-0 sm:p-4">
         <div class="immersive-workspace">
             <div class="workspace-header">
                 <div class="flex items-center gap-4">
@@ -2871,7 +2908,7 @@
     </div>
 
     <!-- MODAL: RESUME PREVIEWER -->
-    <div id="modal-resume-preview" class="fixed inset-0 bg-black/80 z-[150] hidden flex flex-col p-4 md:p-8">
+    <div id="modal-resume-preview" class="modal-resume-preview fixed inset-0 bg-black/80 z-[150] hidden flex flex-col p-4 md:p-8">
         <!-- Header removed as requested to give more room -->
         <div class="flex-1 bg-white rounded-2xl overflow-hidden relative shadow-2xl">
             <iframe id="resume-preview-iframe" class="w-full h-full border-none" src="about:blank"></iframe>
@@ -3003,7 +3040,7 @@
 
     <!-- MODAL: MESSAGING TEMPLATE (Immersive Overhaul) -->
     <div id="modal-wa-template"
-        class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-0 sm:p-4">
+        class="fixed inset-0 bg-green-900/80 backdrop-blur-md z-[105] hidden flex items-center justify-center p-0 sm:p-4">
         <div class="immersive-workspace">
             <div class="workspace-header">
                 <div class="flex items-center gap-4">
@@ -3152,7 +3189,7 @@
 
     <!-- MODAL: CANDIDATE OFFER (Immersive Overhaul) -->
     <div id="modal-offer"
-        class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-0 sm:p-4">
+        class="fixed inset-0 bg-emerald-900/80 backdrop-blur-md z-[106] hidden flex items-center justify-center p-0 sm:p-4">
         <div class="immersive-workspace">
             <div class="workspace-header">
                 <div class="flex items-center gap-4">
@@ -3290,7 +3327,7 @@
 
     <!-- MODAL: CANDIDATE REJECTION (Immersive Overhaul) -->
     <div id="modal-reject"
-        class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-0 sm:p-4">
+        class="fixed inset-0 bg-red-900/80 backdrop-blur-md z-[107] hidden flex items-center justify-center p-0 sm:p-4">
         <div class="immersive-workspace">
             <div class="workspace-header">
                 <div class="flex items-center gap-4">
@@ -3355,7 +3392,7 @@
 
     <!-- MODAL: ASSESSMENT EVALUATION (Immersive Overhaul) -->
     <div id="modal-assessment"
-        class="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-0 sm:p-4">
+        class="fixed inset-0 bg-purple-900/80 backdrop-blur-md z-[108] hidden flex items-center justify-center p-0 sm:p-4">
         <div class="immersive-workspace">
             <div class="workspace-header">
                 <div class="flex items-center gap-4">
@@ -3445,7 +3482,7 @@
     <!-- FIREBASE SDK -->
     <!-- MODAL: IMMERSIVE PROFILE VIEW (3-Column Overhaul) -->
     <div id="modal-profile-view"
-        class="fixed inset-0 bg-black/80 backdrop-blur-md z-[160] hidden flex items-center justify-center p-0 sm:p-4">
+        class="modal-profile-view fixed inset-0 bg-black/80 backdrop-blur-md z-[160] hidden flex items-center justify-center p-0 sm:p-4">
         <div class="immersive-workspace">
             <div class="workspace-header">
                 <div class="flex items-center gap-4">
@@ -3511,7 +3548,7 @@
 
     <!-- MODAL: IMMERSIVE COMPANY PROFILE VIEW -->
     <div id="modal-company-profile-view"
-        class="fixed inset-0 bg-black/80 backdrop-blur-md z-[160] hidden flex items-center justify-center p-0 sm:p-4">
+        class="modal-company-profile-view fixed inset-0 bg-black/80 backdrop-blur-md z-[160] hidden flex items-center justify-center p-0 sm:p-4">
         <div class="immersive-workspace">
             <div class="workspace-header">
                 <div class="flex items-center gap-4">
@@ -3562,6 +3599,21 @@
                     <div class="max-w-4xl mx-auto space-y-6" id="company-profile-view-content">
                         <!-- Dynamic Content Injected Here -->
                     </div>
+                    <!-- Jobs Section -->
+                    <div class="max-w-4xl mx-auto space-y-6" id="company-jobs-section">
+                        <div class="glass-card p-6 rounded-2xl">
+                            <h5 class="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-3">
+                                <span class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-500 flex items-center justify-center">
+                                    <i class="fas fa-briefcase"></i>
+                                </span>
+                                Open Positions
+                            </h5>
+                            <div id="company-jobs-list" class="space-y-3">
+                                <!-- Jobs will be listed here -->
+                                <p class="text-sm text-slate-500">No open positions available.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Right Sidebar: Contextual Actions & Workflow -->
@@ -3581,11 +3633,11 @@
 
     <!-- Floating Draggable Calculator -->
     <!-- Floating Bulk Action Bar for Offers -->
-    <div id="offer-bulk-bar"
+    <div id="offer-floating-bulk-bar"
         class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-5 rounded-3xl shadow-2xl flex items-center gap-8 z-[1000] transition-all transform translate-y-32 opacity-0 pointer-events-none border border-slate-700/50 backdrop-blur-xl">
         <div class="flex items-center gap-4 border-r border-slate-700 pr-8">
             <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-black"
-                id="offer-selected-count">0</div>
+                id="offer-floating-selected-count">0</div>
             <div>
                 <p class="text-[10px] font-black uppercase tracking-tighter opacity-50">Offers Selected</p>
                 <p class="text-xs font-bold">Ready for Process</p>

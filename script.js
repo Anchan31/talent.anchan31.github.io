@@ -710,10 +710,8 @@ window.addEventListener('keydown', (e) => {
 // Global Escape Key to close modals
 window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-        const modals = ['modal-company', 'modal-job', 'modal-candidate', 'modal-interview', 'modal-wa-template', 'modal-reports'];
-        modals.forEach(id => {
-            const el = document.getElementById(id);
-            if (el && !el.classList.contains('hidden')) closeModal(id);
+        document.querySelectorAll('#modal-container .fixed.inset-0:not(.hidden)').forEach(modal => {
+            closeModal(modal.id);
         });
     }
 });
@@ -2693,13 +2691,20 @@ if (document.readyState === 'loading') {
     attachFormHandlers();
 }
 
-window.editCompany = (id) => {
+window.editCompany = async (id) => {
     const current = cachedCompanies.find(c => c.id === id);
     if (!current) return;
     const form = document.getElementById('form-company');
     form.reset();
+
+    // Populate industries first, then set values
+    await populateCompanyIndustrySelect(current.industry);
+
     for (const key in current) {
-        if (key !== 'branches' && form.elements[key]) form.elements[key].value = current[key];
+        if (key !== 'branches' && form.elements[key]) {
+            if (key === 'industry') continue; // Handled above
+            form.elements[key].value = current[key];
+        }
     }
 
     // Populate branches
@@ -5485,8 +5490,203 @@ function updateFAB(actions) {
 }
 
 
-window.openModal = (id) => document.getElementById(id).classList.remove('hidden');
-window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+window.openModal = (id) => {
+    // Close any other open modals before opening the requested one
+    document.querySelectorAll('#modal-container .fixed.inset-0:not(.hidden)').forEach(modal => {
+        if (modal.id !== id) {
+            modal.classList.add('hidden');
+        }
+    });
+    const target = document.getElementById(id);
+    if (target) {
+        // Clear modal data before showing
+        clearModalData(id);
+        target.classList.remove('hidden');
+    }
+};
+window.closeModal = (id) => {
+    const target = document.getElementById(id);
+    if (target) {
+        target.classList.add('hidden');
+    }
+};
+
+// Function to clear modal-specific data
+function clearModalData(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+
+    // Reset all forms within the modal
+    const forms = modal.querySelectorAll('form');
+    forms.forEach(form => {
+        form.reset();
+        // Clear any hidden ID fields
+        const idField = form.querySelector('input[name="id"]');
+        if (idField) idField.value = '';
+    });
+
+    // Clear dynamic content areas
+    const dynamicAreas = [
+        'profile-view-content',
+        'company-profile-view-content',
+        'company-profile-view-actions',
+        'profile-view-actions',
+        'company-jobs-section',
+        'company-profile-sidebar-actions',
+        'profile-sidebar-actions'
+    ];
+
+    dynamicAreas.forEach(areaId => {
+        const area = document.getElementById(areaId);
+        if (area) area.innerHTML = '';
+    });
+
+    // Clear modal-specific elements
+    switch (modalId) {
+        case 'modal-company':
+            // Clear company-specific displays
+            const compDisplays = ['comp-name-display', 'comp-industry-display', 'comp-logo-display'];
+            compDisplays.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (id === 'comp-name-display') el.innerText = 'New Partner';
+                    else if (id === 'comp-industry-display') el.innerText = 'Sector Unassigned';
+                    else if (id === 'comp-logo-display') el.innerHTML = '<i class="fas fa-city"></i>';
+                }
+            });
+            // Clear branches container
+            const branchesContainer = document.getElementById('branches-container');
+            if (branchesContainer) branchesContainer.innerHTML = '';
+            break;
+
+        case 'modal-job':
+            // Clear job-specific displays
+            const jobDisplays = ['job-title-display', 'job-status-display', 'job-company-display'];
+            jobDisplays.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (id === 'job-title-display') el.innerText = 'New Opening';
+                    else if (id === 'job-status-display') el.innerText = 'Drafting Pipeline';
+                    else if (id === 'job-company-display') el.innerHTML = 'No company selected';
+                }
+            });
+            break;
+
+        case 'modal-candidate':
+            // Clear candidate-specific data
+            const candDisplays = ['candidate-is-contact'];
+            candDisplays.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = 'false';
+            });
+            break;
+
+        case 'modal-interview':
+            // Clear interview-specific data
+            break;
+
+        case 'modal-wa-template':
+            // Clear WhatsApp template preview
+            const waPreview = document.getElementById('wa-modal-preview');
+            if (waPreview) waPreview.innerHTML = '<div class="wa-message-bubble">Your content will appear here...</div>';
+            const waPreviewModal = document.getElementById('wa-modal-preview');
+            if (waPreviewModal) waPreviewModal.innerHTML = '<div class="wa-message-bubble">Your content will appear here...</div>';
+            break;
+
+        case 'modal-offer':
+            // Clear offer-specific data
+            const offerFields = ['offer-candidate-id'];
+            offerFields.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            break;
+
+        case 'modal-reject':
+            // Clear rejection-specific data
+            const rejectFields = ['reject-candidate-id'];
+            rejectFields.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            break;
+
+        case 'modal-assessment':
+            // Clear assessment-specific data
+            const assessmentFields = ['assessment-candidate-id'];
+            assessmentFields.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            break;
+
+        case 'modal-resume-preview':
+            // Clear resume preview
+            const iframe = document.getElementById('resume-preview-iframe');
+            if (iframe) iframe.src = 'about:blank';
+            const loader = document.getElementById('resume-preview-loader');
+            if (loader) loader.classList.add('hidden');
+            break;
+
+        case 'modal-advanced-report':
+            // Clear report filters and selections
+            const reportContainers = ['advanced-report-filters-container', 'advanced-report-items-container'];
+            reportContainers.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = '';
+            });
+            break;
+
+        case 'modal-calendar-view':
+            // Clear calendar grid
+            const calendarGrid = document.getElementById('calendar-grid-container');
+            if (calendarGrid) calendarGrid.innerHTML = '';
+            break;
+
+        case 'modal-profile-view':
+            // Clear profile view specific elements
+            const profileElements = [
+                'profile-title', 'profile-subtitle', 'profile-icon-box', 'profile-avatar-box',
+                'profile-name', 'profile-type', 'profile-header-metrics', 'profile-sidebar-actions',
+                'profile-nav-container'
+            ];
+            profileElements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (id === 'profile-title') el.innerText = '';
+                    else if (id === 'profile-subtitle') el.innerText = '';
+                    else if (id === 'profile-icon-box') el.innerHTML = '';
+                    else if (id === 'profile-avatar-box') el.innerHTML = '';
+                    else if (id === 'profile-name') el.innerText = '';
+                    else if (id === 'profile-type') el.innerText = '';
+                    else if (id === 'profile-header-metrics') el.innerHTML = '';
+                    else if (id === 'profile-sidebar-actions') el.innerHTML = '';
+                    else if (id === 'profile-nav-container') el.innerHTML = '';
+                }
+            });
+            break;
+
+        // Masters modals
+        case 'modal-department':
+        case 'modal-designation':
+        case 'modal-industry':
+        case 'modal-source':
+            // Clear master data forms
+            const masterForm = modal.querySelector('form');
+            if (masterForm) {
+                masterForm.reset();
+                const idField = masterForm.querySelector('input[name="id"]');
+                if (idField) idField.value = '';
+            }
+            break;
+    }
+
+    // Clear any toast notifications
+    const toast = document.getElementById('toast');
+    if (toast) {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+    }
+}
 
 function showToast(msg) {
     const t = document.getElementById('toast');
@@ -5904,22 +6104,36 @@ window.bulkDeleteOffers = async () => {
 };
 
 window.clearOfferSelection = () => {
-    document.querySelectorAll('input[name="offer-check"]').forEach(cb => cb.checked = false);
-    toggleOfferBulkBar();
+    document.querySelectorAll('input[name="offer-check"]:checked').forEach(cb => cb.checked = false);
+    toggleOfferBulkBars();
 };
 
-window.toggleOfferBulkBar = () => {
+window.toggleOfferBulkBars = () => {
     const selected = document.querySelectorAll('input[name="offer-check"]:checked').length;
-    const bar = document.getElementById('offer-bulk-bar');
-    const countEl = document.getElementById('offer-selected-count');
-    if (bar) {
+
+    const sectionBar = document.getElementById('offer-section-bulk-bar');
+    const sectionCount = document.getElementById('offer-section-selected-count');
+    if (sectionBar) {
         if (selected > 0) {
-            bar.classList.remove('hidden');
-            bar.classList.add('flex');
-            if (countEl) countEl.innerText = selected;
+            sectionBar.classList.remove('hidden');
+            sectionBar.classList.add('flex');
+            if (sectionCount) sectionCount.innerText = selected;
         } else {
-            bar.classList.add('hidden');
-            bar.classList.remove('flex');
+            sectionBar.classList.add('hidden');
+            sectionBar.classList.remove('flex');
+        }
+    }
+
+    const floatingBar = document.getElementById('offer-floating-bulk-bar');
+    const floatingCount = document.getElementById('offer-floating-selected-count');
+    if (floatingBar) {
+        if (selected > 0) {
+            floatingBar.classList.remove('translate-y-32', 'opacity-0', 'pointer-events-none');
+            floatingBar.classList.add('translate-y-0', 'opacity-100');
+            if (floatingCount) floatingCount.innerText = selected;
+        } else {
+            floatingBar.classList.add('translate-y-32', 'opacity-0', 'pointer-events-none');
+            floatingBar.classList.remove('translate-y-0', 'opacity-100');
         }
     }
 };
@@ -6230,6 +6444,9 @@ window.loadPortalSettings = async () => {
 
 // --- POLYMORPHIC PROFILE VIEW LOGIC ---
 window.openProfileView = (subtitle, title, icon, candidateId) => {
+    // Clear any existing data first
+    clearModalData('modal-profile-view');
+    
     const modal = document.getElementById('modal-profile-view');
     if (!modal) return;
 
@@ -6271,7 +6488,7 @@ window.openProfileView = (subtitle, title, icon, candidateId) => {
         navContainer.innerHTML = navHtml;
     }
 
-    modal.classList.remove('hidden');
+    openModal('modal-profile-view');
 };
 
 // --- SHAREABLE PROFILE LINK ---
@@ -6533,59 +6750,132 @@ window.showJobDetails = (id) => {
     const comp = cachedCompanies.find(c => c.id === j.companyId);
 
     window.openProfileView('Job Opening', j.title, 'fa-briefcase');
-    const grid = document.getElementById('profile-detailed-grid');
-    const badgeContainer = document.getElementById('profile-status-badge');
 
+    // Identity Update
+    document.getElementById('profile-name').innerText = j.title;
+    document.getElementById('profile-type').innerText = comp ? comp.name : 'Unknown Partner';
+    const avatarBox = document.getElementById('profile-avatar-box');
+    if (avatarBox) {
+        avatarBox.innerHTML = (j.title.charAt(0) + (comp ? comp.name.charAt(0) : 'J')).toUpperCase();
+        avatarBox.classList.add('bg-purple-600', 'text-white', 'font-black');
+    }
+
+    // Status Badge
+    const badgeContainer = document.getElementById('profile-status-badge');
     if (badgeContainer) {
         const priorityClass = j.priority === 'Urgent' ? 'badge-red' : (j.priority === 'Medium' ? 'badge-orange' : 'badge-blue');
         badgeContainer.innerHTML = `<span class="badge ${priorityClass} scale-110 px-4 py-1.5 shadow-sm">${j.priority} Priority</span>`;
     }
 
-    grid.innerHTML = `
-                <div class="profile-data-card">
-                    <p class="profile-label">Hiring Metadata</p>
-                    <div class="grid grid-cols-2 gap-4 mt-2">
+    // Header Metrics
+    const headerMetrics = document.getElementById('profile-header-metrics');
+    if (headerMetrics) {
+        headerMetrics.innerHTML = `
+            <span class="rounded-lg bg-white/90 dark:bg-slate-800/90 px-3 py-1 text-[10px] font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">Budget: ₹${(j.budget || 0).toLocaleString()} LPA</span>
+            <span class="rounded-lg bg-white/90 dark:bg-slate-800/90 px-3 py-1 text-[10px] font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">Dept: ${j.department}</span>
+            <span class="rounded-lg bg-white/90 dark:bg-slate-800/90 px-3 py-1 text-[10px] font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">Location: ${j.location}</span>
+        `;
+    }
+
+    // Sidebar Actions
+    const sidebarActions = document.getElementById('profile-sidebar-actions');
+    if (sidebarActions) {
+        sidebarActions.innerHTML = `
+            <button onclick="window.viewJobInbox('${j.id}')" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-500/20">
+                <i class="fas fa-inbox"></i> View Applications
+            </button>
+            <button onclick="openEditJobModal('${j.id}')" class="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
+                <i class="fas fa-edit"></i> Edit Configuration
+            </button>
+        `;
+    }
+
+    // Main Content
+    const content = document.getElementById('profile-view-content');
+    if (content) {
+        content.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="form-group-card">
+                    <h5 class="field-label">Hiring Metadata</h5>
+                    <div class="space-y-4">
                         <div>
-                            <p class="text-[10px] text-slate-400 uppercase">Company</p>
-                            <p class="profile-value">${comp ? comp.name : 'N/A'}</p>
+                            <p class="text-[10px] text-slate-400 uppercase font-black">Company</p>
+                            <p class="text-lg font-black text-slate-800 dark:text-white">${comp ? comp.name : 'N/A'}</p>
                         </div>
                         <div>
-                            <p class="text-[10px] text-slate-400 uppercase">Department</p>
-                            <p class="profile-value">${j.department}</p>
-                        </div>
-                        <div>
-                            <p class="text-[10px] text-slate-400 uppercase">Location</p>
-                            <p class="profile-value">${j.location}</p>
-                        </div>
-                        <div>
-                            <p class="text-[10px] text-slate-400 uppercase">Designation</p>
-                            <p class="profile-value">${j.designation || j.title}</p>
+                            <p class="text-[10px] text-slate-400 uppercase font-black">Official Designation</p>
+                            <p class="text-lg font-black text-slate-800 dark:text-white">${j.designation || j.title}</p>
                         </div>
                     </div>
                 </div>
-                <div class="profile-data-card">
-                    <p class="profile-label">Budget & Timeline</p>
-                    <div class="grid grid-cols-1 gap-4 mt-2">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs text-slate-500">Annual Budget</span>
-                            <span class="profile-value text-emerald-600">₹${(j.budget || 0).toLocaleString()}</span>
+
+                <div class="form-group-card">
+                    <h5 class="field-label">Budget & Timeline</h5>
+                    <div class="space-y-4">
+                        <div class="flex justify-between">
+                            <div>
+                                <p class="text-[10px] text-slate-400 uppercase font-black">Annual Budget</p>
+                                <p class="text-lg font-black text-emerald-600">₹${(j.budget || 0).toLocaleString()} LPA</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-slate-400 uppercase font-black">Closing Date</p>
+                                <p class="text-lg font-black text-red-500">${j.closingDate ? new Date(j.closingDate).toLocaleDateString() : 'N/A'}</p>
+                            </div>
                         </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs text-slate-500">Closing Date</span>
-                            <span class="profile-value text-red-500">${j.closingDate ? new Date(j.closingDate).toLocaleDateString() : 'N/A'}</span>
-                        </div>
-                         <div class="flex items-center justify-between">
-                            <span class="text-xs text-slate-500">MRF Received</span>
-                            <span class="profile-value">${j.mrfReceived === 'Yes' ? '✅ Verified' : '⏳ Pending'}</span>
+                        <div>
+                            <p class="text-[10px] text-slate-400 uppercase font-black">MRF Status</p>
+                            <p class="text-lg font-black text-slate-800 dark:text-white">${j.mrfReceived === 'Yes' ? '✅ Verified Authority' : '⏳ Pending Authorization'}</p>
                         </div>
                     </div>
                 </div>
-                <div class="profile-data-card md:col-span-2">
-                    <p class="profile-label">Job Description</p>
-                    <div class="mt-3 text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">${j.description || 'No description provided.'}</div>
+
+                <div class="col-span-full form-group-card">
+                    <h5 class="field-label">Role Description</h5>
+                    <div class="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap leading-relaxed">${j.description || 'No description provided.'}</div>
                 </div>
-            `;
+
+                <div class="col-span-full form-group-card">
+                    <h5 class="field-label">Success Criteria / Requirements</h5>
+                    <div class="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap leading-relaxed">${j.requirements || 'No specific requirements listed.'}</div>
+                </div>
+
+                <div class="col-span-full form-group-card">
+                    <h5 class="field-label">Key Competencies (Skills)</h5>
+                    <div class="flex flex-wrap gap-2">
+                        ${(() => {
+                            const skillsRaw = j.skills || j.keySkills || 'General Proficiency';
+                            const skillsArray = Array.isArray(skillsRaw)
+                                ? skillsRaw
+                                : typeof skillsRaw === 'string'
+                                    ? skillsRaw.split('\n')
+                                    : [String(skillsRaw)];
+                            return skillsArray
+                                .filter(skill => skill && skill.toString().trim())
+                                .map(skill => `<span class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-bold border border-blue-100 dark:border-blue-900/30">${skill.toString().trim()}</span>`)
+                                .join('');
+                        })()}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Right Sidebar Actions (Workflow)
+    const actionsArea = document.getElementById('profile-view-actions');
+    if (actionsArea) {
+        actionsArea.innerHTML = `
+            <div class="space-y-4">
+                <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Job Actions</p>
+                <button onclick="openEditJobModal('${j.id}')" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-xs">Edit Configuration</button>
+                <div class="pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-3">Applicants</p>
+                    <button onclick="window.viewJobInbox('${j.id}')" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs">Manage Pipeline</button>
+                </div>
+            </div>
+        `;
+    }
 };
+
 
 window.showCompanyProfile = (id) => {
     const c = cachedCompanies.find(x => x.id === id);
@@ -6958,10 +7248,10 @@ window.renderInboxCandidates = () => {
     // Apply Search Filter
     if (searchTerm) {
         candidates = candidates.filter(c =>
-            (c.name || "").toLowerCase().includes(searchTerm) ||
-            (c.email || "").toLowerCase().includes(searchTerm) ||
-            ((c.skills || "") && c.skills.toLowerCase().includes(searchTerm)) ||
-            ((c.currentDesignation || "") && c.currentDesignation.toLowerCase().includes(searchTerm))
+            String(c.name || "").toLowerCase().includes(searchTerm) ||
+            String(c.email || "").toLowerCase().includes(searchTerm) ||
+            String(c.skills || "").toLowerCase().includes(searchTerm) ||
+            String(c.currentDesignation || "").toLowerCase().includes(searchTerm)
         );
     }
 
@@ -7115,30 +7405,9 @@ document.addEventListener('change', (e) => {
         toggleBulkBar();
     }
     if (e.target.name === 'offer-check') {
-        toggleOfferBulkBar();
+        toggleOfferBulkBars();
     }
 });
-
-window.toggleOfferBulkBar = () => {
-    const selected = document.querySelectorAll('input[name="offer-check"]:checked').length;
-    const bar = document.getElementById('offer-bulk-bar');
-    const countEl = document.getElementById('offer-selected-count');
-    if (bar) {
-        if (selected > 0) {
-            bar.classList.remove('translate-y-32', 'opacity-0', 'pointer-events-none');
-            bar.classList.add('translate-y-0', 'opacity-100');
-            if (countEl) countEl.innerText = selected;
-        } else {
-            bar.classList.add('translate-y-32', 'opacity-0', 'pointer-events-none');
-            bar.classList.remove('translate-y-0', 'opacity-100');
-        }
-    }
-};
-
-window.clearOfferSelection = () => {
-    document.querySelectorAll('input[name="offer-check"]').forEach(c => c.checked = false);
-    toggleOfferBulkBar();
-};
 
 window.bulkOfferAction = async (status) => {
     const selected = Array.from(document.querySelectorAll('input[name="offer-check"]:checked')).map(i => i.value);
@@ -7226,12 +7495,13 @@ function calculateMatchScore(candidate, job) {
     }
 
     // Skills match (25% weight)
-    const candidateSkills = (candidate.skills || '').toLowerCase().split(',').map(s => s.trim());
-    const jobSkills = (job.skills || '').toLowerCase().split(',').map(s => s.trim());
-    const matchingSkills = candidateSkills.filter(skill =>
-        jobSkills.some(jobSkill => jobSkill.includes(skill) || skill.includes(jobSkill))
+    const candidateSkillsArr = String(candidate.skills || '').toLowerCase().split(',').map(s => s.trim());
+    const jobSkillsArr = String(job.skills || job.keySkills || '').toLowerCase().split(',').map(s => s.trim());
+    const matchingSkills = candidateSkillsArr.filter(skill =>
+        jobSkillsArr.some(jobSkill => jobSkill.includes(skill) || skill.includes(jobSkill))
     ).length;
-    const skillMatchRatio = jobSkills.length > 0 ? matchingSkills / jobSkills.length : 0;
+    const skillMatchRatio = jobSkillsArr.length > 0 ? matchingSkills / jobSkillsArr.length : 0;
+
     score += Math.round(skillMatchRatio * 25);
 
     // Department match (15% weight)
@@ -7884,7 +8154,7 @@ window.openJobModal = () => {
     openModal('modal-job');
 };
 
-window.openCompanyModal = () => {
+window.openCompanyModal = async () => {
     const form = document.getElementById('form-company');
     if (form) form.reset();
     document.getElementById('form-company-id').value = '';
@@ -7895,7 +8165,7 @@ window.openCompanyModal = () => {
     document.getElementById('branches-container').innerHTML = '';
 
     // Populate industry select with masters data
-    populateCompanyIndustrySelect();
+    await populateCompanyIndustrySelect();
 
     openModal('modal-company');
 };
@@ -8236,7 +8506,13 @@ window.openAddIndustryModal = () => {
     openModal('modal-industry');
 };
 
+window.removeBranch = (btn) => {
+    const item = btn.closest('.branch-item');
+    if (item) item.remove();
+};
+
 window.openAddSourceModal = () => {
+
     document.getElementById('source-modal-title').innerText = 'Add Source';
     document.getElementById('source-form').reset();
     document.getElementById('source-id').value = '';
@@ -8518,25 +8794,26 @@ function populateJobMastersData() {
     }
 }
 
-function populateCompanyIndustrySelect() {
+async function populateCompanyIndustrySelect(selectedValue = null) {
     const industrySelect = document.getElementById('comp-industry');
     if (!industrySelect) return;
 
     // Load masters data if not already loaded
     if (cachedIndustries.length === 0) {
-        loadMastersData().then(() => {
-            populateIndustryOptions();
-        });
-    } else {
-        populateIndustryOptions();
+        await loadMastersData();
     }
 
-    function populateIndustryOptions() {
-        let options = '<option value="">Select Industry</option>';
-        cachedIndustries.forEach(industry => {
-            options += `<option value="${industry.name}">${industry.name}</option>`;
-        });
-        industrySelect.innerHTML = options;
+    let options = '<option value="">Select Industry</option>';
+    cachedIndustries.forEach(industry => {
+        options += `<option value="${industry.name}">${industry.name}</option>`;
+    });
+    industrySelect.innerHTML = options;
+
+    if (selectedValue) {
+        industrySelect.value = selectedValue;
+        // Trigger UI update if necessary
+        const display = document.getElementById('comp-industry-display');
+        if (display) display.innerText = selectedValue || 'Sector Unassigned';
     }
 }
 
