@@ -111,10 +111,10 @@ function applyRolePermissions(role) {
     }
 
     // Initialize Theme Status Text
-    const theme = localStorage.getItem('theme') || 'system';
+    const currentTheme = localStorage.getItem('theme') || 'system';
     const statusEl = document.getElementById('theme-status');
     if (statusEl) {
-        statusEl.innerText = theme === 'system' ? 'Auto' : theme === 'dark' ? 'Dark' : 'Light';
+        statusEl.innerText = currentTheme === 'system' ? 'Auto' : currentTheme === 'dark' ? 'Dark' : 'Light';
     }
 }
 
@@ -1426,6 +1426,8 @@ async function handleLogin() {
     const orig = loginBtn.innerText; loginBtn.innerText = 'Signing in...'; loginBtn.disabled = true;
     try {
         await signInWithEmailAndPassword(auth, email, pass);
+        // Store password temporarily for Dialer QR Login bridge
+        sessionStorage.setItem('dialer_bridge_pass', pass);
     } catch (err) { showError(err.message); }
     finally { loginBtn.innerText = orig; loginBtn.disabled = false; }
 }
@@ -6384,8 +6386,11 @@ window.toggleTheme = (event) => {
         if (theme === 'system') {
             actual = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         }
-        if (actual === 'dark') document.documentElement.classList.add('dark');
-        else document.documentElement.classList.remove('dark');
+        if (actual === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
     };
 
     applyTheme(next);
@@ -9794,4 +9799,124 @@ window.runLegacyMigration = async () => {
         console.error(e);
         if (statusEl) statusEl.textContent = `Error: ${e.message}`;
     }
+};
+// --- DIALER QR LOGIN BRIDGE ---
+let qrBridgeUnsub = null;
+let qrBridgeTimer = null;
+
+window.openDialerQRLogin = () => {
+    openModal('modal-dialer-qr');
+    generateDialerLoginQR();
+};
+
+window.generateDialerLoginQR = async () => {
+    const container = document.getElementById('qr-container');
+    const status = document.getElementById('qr-status');
+    const timerEl = document.getElementById('qr-timer');
+    const approvalBox = document.getElementById('qr-approval-box');
+    
+    if (!container) return;
+    
+    // Clear previous state
+    if (qrBridgeUnsub) qrBridgeUnsub();
+    if (qrBridgeTimer) clearInterval(qrBridgeTimer);
+    approvalBox.classList.add('hidden');
+    status.innerText = "Generating secure bridge...";
+    
+    // Clear container
+    container.innerHTML = '';
+    
+    const bridgeId = Math.random().toString(36).substring(2, 15);
+    const secret = Math.random().toString(36).substring(2, 15);
+    const expiresAt = Date.now() + 60000; // 1 minute expiry
+
+    try {
+        // Create bridge document
+        await setDoc(doc(db, 'qr_bridges', bridgeId), {
+            status: 'pending',
+            createdAt: serverTimestamp(),
+            expiresAt: expiresAt,
+            desktopUid: auth.currentUser.uid,
+            desktopEmail: auth.currentUser.email
+        });
+
+        // Generate QR Code (bridgeId:secret)
+        const qrData = `${bridgeId}:${secret}`;
+        
+        new QRCode(container, {
+            text: qrData,
+            width: 256,
+            height: 256,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+
+        status.innerText = "Scan this with your mobile dialer.";
+        
+        // Start Timer
+        let timeLeft = 60;
+        qrBridgeTimer = setInterval(() => {
+            timeLeft--;
+            timerEl.innerText = timeLeft;
+            if (timeLeft <= 0) {
+                cleanupDialerBridge(bridgeId);
+                closeModal('modal-dialer-qr');
+            }
+        }, 1000);
+
+        // Listen for Handshake
+        qrBridgeUnsub = onSnapshot(doc(db, 'qr_bridges', bridgeId), (snap) => {
+            if (!snap.exists()) return;
+            const data = snap.data();
+            
+            if (data.status === 'scanned') {
+                status.innerText = "Handshake detected. Please approve.";
+                approvalBox.classList.remove('hidden');
+                document.getElementById('qr-request-device').innerText = data.deviceInfo || 'Mobile Device';
+                
+                document.getElementById('btn-qr-approve').onclick = async () => {
+                    const pass = sessionStorage.getItem('dialer_bridge_pass');
+                    if (!pass) {
+                        showToast('Session expired. Please log in again.', 'error');
+                        return;
+                    }
+                    
+                    status.innerText = "Transferring credentials...";
+                    await updateDoc(doc(db, 'qr_bridges', bridgeId), {
+                        status: 'approved',
+                        email: auth.currentUser.email,
+                        password: pass,
+                        approvedAt: serverTimestamp()
+                    });
+                    
+                    showToast('Login approved!');
+                    setTimeout(() => closeModal('modal-dialer-qr'), 2000);
+                };
+                
+                document.getElementById('btn-qr-deny').onclick = () => {
+                    cleanupDialerBridge(bridgeId);
+                    closeModal('modal-dialer-qr');
+                };
+            } else if (data.status === 'completed') {
+                status.innerText = "Login successful!";
+                setTimeout(() => closeModal('modal-dialer-qr'), 2000);
+            }
+        });
+
+    } catch (error) {
+        console.error('QR Bridge Error:', error);
+        status.innerText = "Failed: " + (error.message || "Unknown error");
+        if (typeof QRCode === 'undefined') {
+            status.innerText = "Error: QRCode library not loaded.";
+        }
+    }
+};
+
+window.cleanupDialerBridge = async (bridgeId) => {
+    if (qrBridgeUnsub) qrBridgeUnsub();
+    if (qrBridgeTimer) clearInterval(qrBridgeTimer);
+    try {
+        await deleteDoc(doc(db, 'qr_bridges', bridgeId));
+    } catch (e) {}
 };

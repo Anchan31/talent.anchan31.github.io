@@ -185,6 +185,14 @@ service cloud.firestore {
     }
 
     // =========================
+    // 🤝 QR BRIDGE (AUTH TRANSFER)
+    // =========================
+    match /qr_bridges/{bridgeId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if true; 
+    }
+
+    // =========================
     // 🚫 DEFAULT DENY
     // =========================
     match /{document=**} {

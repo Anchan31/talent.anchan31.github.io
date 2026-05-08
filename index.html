@@ -16,6 +16,7 @@
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
     <link rel="stylesheet" href="styles.css">
     <script>
         // Theme Initialization
@@ -199,6 +200,37 @@
 
     <!-- MODALS SECTION -->
     <div id="modal-container">
+
+        <!-- Dialer QR Login Modal -->
+        <div id="modal-dialer-qr" class="fixed inset-0 bg-black/60 z-[150] hidden flex items-center justify-center p-4 animate-fade-in">
+            <div class="modal-box w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden p-8 text-center space-y-6">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xl font-bold">Dialer QR Login</h3>
+                    <button onclick="closeModal('modal-dialer-qr')" class="text-slate-400 hover:text-slate-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="p-6 bg-white rounded-2xl shadow-inner inline-block mx-auto border border-slate-100 dark:border-slate-700">
+                    <div id="qr-container" class="mx-auto min-w-[256px] min-h-[256px]"></div>
+                </div>
+
+                <div id="qr-status" class="text-sm font-medium text-slate-500">
+                    Scan this with your mobile dialer to log in.
+                </div>
+
+                <div id="qr-approval-box" class="hidden p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 space-y-4">
+                    <p class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Login Request Detected</p>
+                    <p id="qr-request-device" class="text-sm font-medium">Unknown Device</p>
+                    <div class="flex gap-3 justify-center">
+                        <button id="btn-qr-approve" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20">Approve</button>
+                        <button id="btn-qr-deny" class="px-6 py-2 bg-slate-200 dark:bg-slate-800 rounded-lg font-bold text-sm">Deny</button>
+                    </div>
+                </div>
+
+                <p class="text-[10px] text-slate-400 uppercase font-black tracking-widest">Expires in <span id="qr-timer">60</span>s</p>
+            </div>
+        </div>
 
         <!-- Auth Section -->
         <div id="auth-container" class="fixed inset-0 z-[100] flex overflow-hidden">
@@ -577,6 +609,11 @@
                                     <div class="ml-auto flex items-center gap-1.5">
                                         <span id="theme-status" class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Auto</span>
                                     </div>
+                                </div>
+                                <div class="border-t border-slate-100 dark:border-slate-800 my-1"></div>
+                                <div class="profile-menu-item" onclick="openDialerQRLogin()">
+                                    <i class="fas fa-qrcode text-indigo-500"></i>
+                                    <span>Dialer QR Login</span>
                                 </div>
                                 <div class="border-t border-slate-100 dark:border-slate-800 my-1"></div>
                                 <div class="profile-menu-item text-red-500" id="nav-btn-logout">
