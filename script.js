@@ -9875,10 +9875,23 @@ window.generateDialerLoginQR = async () => {
                 approvalBox.classList.remove('hidden');
                 document.getElementById('qr-request-device').innerText = data.deviceInfo || 'Mobile Device';
                 
+                const passVerifyBox = document.getElementById('qr-pass-verify-box');
+                const sessionPass = sessionStorage.getItem('dialer_bridge_pass');
+                
+                if (!sessionPass) {
+                    passVerifyBox.classList.remove('hidden');
+                } else {
+                    passVerifyBox.classList.add('hidden');
+                }
+
                 document.getElementById('btn-qr-approve').onclick = async () => {
-                    const pass = sessionStorage.getItem('dialer_bridge_pass');
+                    let pass = sessionStorage.getItem('dialer_bridge_pass');
                     if (!pass) {
-                        showToast('Session expired. Please log in again.', 'error');
+                        pass = document.getElementById('qr-pass-verify').value;
+                    }
+                    
+                    if (!pass) {
+                        showToast('Please enter your password to confirm.', 'error');
                         return;
                     }
                     
@@ -9889,6 +9902,9 @@ window.generateDialerLoginQR = async () => {
                         password: pass,
                         approvedAt: serverTimestamp()
                     });
+                    
+                    // Save password for subsequent uses in this tab
+                    sessionStorage.setItem('dialer_bridge_pass', pass);
                     
                     showToast('Login approved!');
                     setTimeout(() => closeModal('modal-dialer-qr'), 2000);

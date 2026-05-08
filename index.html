@@ -222,6 +222,13 @@
                 <div id="qr-approval-box" class="hidden p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 space-y-4">
                     <p class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Login Request Detected</p>
                     <p id="qr-request-device" class="text-sm font-medium">Unknown Device</p>
+                    
+                    <!-- Fallback Password Input if sessionStorage is empty -->
+                    <div id="qr-pass-verify-box" class="hidden space-y-2">
+                        <p class="text-[10px] text-slate-500 uppercase font-bold text-left">Confirm Password to Authorize</p>
+                        <input type="password" id="qr-pass-verify" placeholder="Your Password" class="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
                     <div class="flex gap-3 justify-center">
                         <button id="btn-qr-approve" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20">Approve</button>
                         <button id="btn-qr-deny" class="px-6 py-2 bg-slate-200 dark:bg-slate-800 rounded-lg font-bold text-sm">Deny</button>
