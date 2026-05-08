@@ -20,12 +20,24 @@
     <script>
         // Theme Initialization
         (function () {
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'dark') {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
+            const savedTheme = localStorage.getItem('theme') || 'system';
+            const applyTheme = (theme) => {
+                let actualTheme = theme;
+                if (theme === 'system') {
+                    actualTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (actualTheme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            };
+            applyTheme(savedTheme);
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+                if (localStorage.getItem('theme') === 'system' || !localStorage.getItem('theme')) {
+                    applyTheme('system');
+                }
+            });
         })();
     </script>
     <style>
@@ -470,6 +482,12 @@
                         <i class="fas fa-database w-5 flex-shrink-0 text-center"></i> <span
                             class="sidebar-label whitespace-nowrap">Masters</span>
                     </a>
+                    <a href="#" onclick="showSection('usermgmt')"
+                        class="sidebar-btn flex items-center gap-3 p-3 rounded-lg transition-all duration-300 ease-out text-rose-500 hover-lift hidden"
+                        id="btn-nav-usermgmt" style="color: var(--text-secondary)">
+                        <i class="fas fa-users-cog w-5 flex-shrink-0 text-center"></i> <span
+                            class="sidebar-label whitespace-nowrap">Users</span>
+                    </a>
                 </nav>
             </aside>
 
@@ -510,6 +528,15 @@
                     </div>
 
                     <div class="flex items-center gap-4">
+                        <div id="presence-peers" class="flex items-center gap-1 presence-peer-stack"
+                            title="Teammates online"></div>
+                        <label id="my-pipeline-toggle-wrap"
+                            class="hidden items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 cursor-pointer select-none">
+                            <input type="checkbox" id="my-pipeline-toggle" onchange="toggleMyPipelineOnly(this)">
+                            My pipeline
+                        </label>
+                        <span id="nav-user-role-badge"
+                            class="hidden text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"></span>
                         <!-- Profile Dropdown -->
                         <div class="profile-dropdown">
                             <button onclick="toggleProfileMenu(event)"
@@ -534,15 +561,21 @@
                                     <p class="text-sm font-semibold truncate" id="menu-user-email">admin@recruitment.com
                                     </p>
                                 </div>
-                                <!-- Dark Mode Toggle moved here -->
+                                <div class="border-t border-slate-100 dark:border-slate-800 my-1"></div>
+                                <div class="profile-menu-item hidden" id="menu-item-usermgmt" onclick="showSection('usermgmt')">
+                                    <i class="fas fa-users-cog text-rose-500"></i>
+                                    <span>Team Management</span>
+                                </div>
+                                <div class="profile-menu-item hidden" id="menu-item-activity" onclick="showSection('activity')">
+                                    <i class="fas fa-history text-cyan-500"></i>
+                                    <span>Activity Log</span>
+                                </div>
+                                <div class="border-t border-slate-100 dark:border-slate-800 my-1"></div>
                                 <div class="profile-menu-item" id="theme-toggle" onclick="toggleTheme(event)">
-                                    <i class="fa-solid fa-moon text-blue-500"></i>
+                                    <i class="fa-solid fa-circle-half-stroke text-blue-500"></i>
                                     <span>Appearance</span>
                                     <div class="ml-auto flex items-center gap-1.5">
-                                        <span
-                                            class="text-[9px] font-bold text-slate-400 uppercase tracking-widest hidden dark:block">Dark</span>
-                                        <span
-                                            class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block dark:hidden">Light</span>
+                                        <span id="theme-status" class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Auto</span>
                                     </div>
                                 </div>
                                 <div class="border-t border-slate-100 dark:border-slate-800 my-1"></div>
@@ -1946,6 +1979,66 @@
                         <!-- END MASTERS VIEW -->
 
                     </div>
+
+                    <!-- USER MANAGEMENT (admin) -->
+                    <div id="section-usermgmt" class="hidden space-y-6 animate-fade-up">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h2 class="text-2xl font-black text-slate-800 dark:text-white">User management</h2>
+                                <p class="text-sm text-slate-500">Provision accounts and roles</p>
+                            </div>
+                            <button type="button" onclick="openCreateUserModal()"
+                                class="px-5 py-2.5 bg-rose-600 text-white rounded-2xl text-xs font-bold shadow-lg">
+                                <i class="fas fa-user-plus mr-2"></i>Add user
+                            </button>
+                        </div>
+                        <div class="glass-card p-6 rounded-2xl overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead>
+                                    <tr class="border-b border-slate-200 dark:border-slate-700 text-xs uppercase text-slate-500">
+                                        <th class="py-2">Email</th>
+                                        <th class="py-2">Name</th>
+                                        <th class="py-2">Role</th>
+                                        <th class="py-2">Status</th>
+                                        <th class="py-2">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="user-mgmt-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ACTIVITY / AUDIT -->
+                    <div id="section-activity" class="hidden space-y-6 animate-fade-up">
+                        <h2 class="text-2xl font-black text-slate-800 dark:text-white">Activity log</h2>
+                        <div class="glass-card p-4 rounded-2xl overflow-x-auto">
+                            <table class="w-full text-left text-[11px]" id="activity-feed-table">
+                                <thead>
+                                    <tr class="border-b border-slate-200 dark:border-slate-700">
+                                        <th class="py-2">When</th>
+                                        <th class="py-2">Entity</th>
+                                        <th class="py-2">Action</th>
+                                        <th class="py-2">User</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- DATA MIGRATION -->
+                    <div id="section-migration" class="hidden space-y-6 animate-fade-up">
+                        <h2 class="text-2xl font-black text-slate-800 dark:text-white">Legacy data migration</h2>
+                        <p class="text-sm text-slate-500">One-time: set ownerId and audit fields on existing candidates,
+                            interviews, and offers (assigns to your account).</p>
+                        <button type="button" onclick="runLegacyMigration()"
+                            class="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-sm">
+                            Run migration
+                        </button>
+                        <p id="migration-status" class="text-sm text-slate-600 dark:text-slate-400"></p>
+                    </div>
+
+                </div><!-- /#content-area -->
             </main>
 
             <!-- MODAL: ADD/EDIT COMPANY (Immersive Overhaul) -->
@@ -2398,6 +2491,9 @@
             <form id="form-candidate" class="workspace-body">
                 <input type="hidden" name="id" id="form-candidate-id">
                 <input type="hidden" name="isContact" id="candidate-is-contact" value="false">
+                <div id="candidate-lock-banner"
+                    class="hidden col-span-full mx-4 mb-2 px-3 py-2 rounded-lg bg-amber-500/15 text-amber-800 dark:text-amber-200 text-xs font-bold border border-amber-500/30">
+                </div>
 
                 <!-- Left Sidebar: Core Identity -->
                 <div class="workspace-sidebar">
@@ -2443,6 +2539,12 @@
                                 <input type="url" id="cand-linkedin" name="linkedinUrl"
                                     class="theme-input !pl-10 text-xs" placeholder="linkedin.com/in/username">
                             </div>
+                        </div>
+                        <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+                            <label class="field-label !mb-2">Assign to team</label>
+                            <select id="candidate-assignees" multiple size="4"
+                                class="theme-input text-xs min-h-[5rem]"></select>
+                            <p class="text-[10px] text-slate-400 mt-1">Hold Ctrl/Cmd to select multiple.</p>
                         </div>
                     </div>
                 </div>
@@ -2792,6 +2894,11 @@
                             </div>
                         </div>
 
+                        <div class="form-group-card !bg-transparent border border-slate-200 dark:border-slate-700 rounded-xl p-4">
+                            <h5 class="font-bold text-xs uppercase text-slate-400 mb-2">Change history</h5>
+                            <div id="record-audit-body" class="max-h-40 overflow-y-auto text-[11px] text-slate-600 dark:text-slate-300"></div>
+                        </div>
+
                         <div class="pt-8 space-y-3">
                             <button type="submit"
                                 class="w-full h-14 rounded-2xl bg-blue-600 text-white font-black text-lg shadow-xl shadow-blue-500/20 hover:scale-[1.02] active:scale-98 transition-all shimmer">
@@ -2835,6 +2942,9 @@
 
             <form id="form-interview" class="workspace-body">
                 <input type="hidden" name="id" id="form-interview-id">
+                <div id="interview-lock-banner"
+                    class="hidden col-span-full mx-4 mb-2 px-3 py-2 rounded-lg bg-amber-500/15 text-amber-800 dark:text-amber-200 text-xs font-bold border border-amber-500/30">
+                </div>
 
                 <!-- Left Sidebar: Context -->
                 <div class="workspace-sidebar">
@@ -2863,6 +2973,11 @@
                                 <label class="field-label">Primary Interviewer</label>
                                 <input type="text" id="interview-interviewer" name="interviewer" required
                                     placeholder="Who is conducting?" class="theme-input">
+                            </div>
+                            <div>
+                                <label class="field-label">Assign to team</label>
+                                <select id="interview-assignees" multiple size="3"
+                                    class="theme-input text-xs min-h-[4rem]"></select>
                             </div>
                         </div>
                     </div>
@@ -3277,6 +3392,9 @@
 
             <form id="form-offer" class="workspace-body">
                 <input type="hidden" name="candidateId" id="offer-candidate-id">
+                <div id="offer-lock-banner"
+                    class="hidden col-span-full mx-4 mb-2 px-3 py-2 rounded-lg bg-amber-500/15 text-xs font-bold border border-amber-500/30">
+                </div>
 
                 <div class="workspace-sidebar">
                     <div class="space-y-8">
@@ -3615,6 +3733,45 @@
                         <!-- Workflow buttons, share link, etc. -->
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Create user (admin) -->
+    <div id="modal-create-user"
+        class="fixed inset-0 z-[210] hidden flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full p-8 border border-slate-200 dark:border-slate-700">
+            <h3 class="text-lg font-black text-slate-800 dark:text-white mb-6">Add user</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="field-label">Email</label>
+                    <input type="email" id="create-user-email" class="theme-input w-full" required>
+                </div>
+                <div>
+                    <label class="field-label">Display name</label>
+                    <input type="text" id="create-user-name" class="theme-input w-full">
+                </div>
+                <div>
+                    <label class="field-label">Role</label>
+                    <select id="create-user-role" class="theme-input w-full">
+                        <option value="recruiter">Recruiter</option>
+                        <option value="viewer">Viewer</option>
+                        <option value="manager">Manager</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="field-label">Temporary password</label>
+                    <input type="password" id="create-user-temp-pass" class="theme-input w-full"
+                        placeholder="Min 6 characters" required autocomplete="new-password">
+                </div>
+                <p id="create-user-error" class="text-xs text-red-500 hidden"></p>
+            </div>
+            <div class="flex gap-3 mt-8">
+                <button type="button" onclick="submitCreateUser()"
+                    class="flex-1 py-3 bg-rose-600 text-white rounded-xl font-bold text-sm">Create &amp; send reset</button>
+                <button type="button" onclick="closeModal('modal-create-user')"
+                    class="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 rounded-xl font-bold text-sm">Cancel</button>
             </div>
         </div>
     </div>

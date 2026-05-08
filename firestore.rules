@@ -1,0 +1,194 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================
+    // 🔐 AUTH & ROLE FUNCTIONS
+    // =========================
+    function userDocPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function userDoc() {
+      return get(userDocPath());
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isActive() {
+      return isSignedIn()
+        && exists(userDocPath())
+        && userDoc().data.status == 'active';
+    }
+
+    function role() {
+      return userDoc().data.role;
+    }
+
+    function isAdmin() {
+      return isActive() && role() == 'admin';
+    }
+
+    function isManagerUp() {
+      return isActive() && (role() == 'admin' || role() == 'manager');
+    }
+
+    function isWriter() {
+      return isActive()
+        && (role() == 'admin' || role() == 'manager' || role() == 'recruiter');
+    }
+
+    function isViewer() {
+      return isActive() && role() == 'viewer';
+    }
+
+    function ownsResourceData(data) {
+      return data.ownerId == request.auth.uid
+        || ('assignedTo' in data && request.auth.uid in data.assignedTo);
+    }
+
+    function canReadOwned(data) {
+      return isManagerUp() || ownsResourceData(data) || isViewer();
+    }
+
+    function canWriteOwned(data) {
+      return isManagerUp()
+        || (isWriter() && ownsResourceData(data));
+    }
+
+    // =========================
+    // 🌐 PUBLIC PORTAL ACCESS
+    // =========================
+
+    // Public Candidates (for share page)
+    match /candidates/{id} {
+      allow read: if true; // public access
+      allow create: if isWriter()
+        && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isActive() && canWriteOwned(resource.data);
+    }
+
+    // Public Jobs
+    match /jobs/{id} {
+      allow read: if true; // public access
+      allow create, update, delete: if isManagerUp();
+    }
+
+    // Public Companies
+    match /companies/{id} {
+      allow read: if true; // public access
+      allow create, update, delete: if isManagerUp();
+    }
+
+    // Public Portal Settings (only this doc)
+    match /settings/publicPortal {
+      allow read: if true;
+      allow write: if isManagerUp();
+    }
+
+    // =========================
+    // 👥 USERS
+    // =========================
+    match /users/{uid} {
+      allow read: if request.auth.uid == uid || isManagerUp();
+      allow create: if isAdmin() || (request.auth.uid == uid && request.auth.token.email == 'hrd@brawnlabs.in');
+      allow update, delete: if isAdmin();
+    }
+
+    // =========================
+    // 📦 MASTER DATA
+    // =========================
+    match /masters_departments/{id} {
+      allow read: if isActive();
+      allow create, update, delete: if isManagerUp();
+    }
+
+    match /masters_designations/{id} {
+      allow read: if isActive();
+      allow create, update, delete: if isManagerUp();
+    }
+
+    match /masters_industries/{id} {
+      allow read: if isActive();
+      allow create, update, delete: if isManagerUp();
+    }
+
+    match /masters_sources/{id} {
+      allow read: if isActive();
+      allow create, update, delete: if isManagerUp();
+    }
+
+    // =========================
+    // 📄 TEMPLATES
+    // =========================
+    match /whatsappTemplates/{id} {
+      allow read: if isActive();
+      allow create, update, delete: if isManagerUp();
+    }
+
+    match /offerTemplates/{id} {
+      allow read: if isActive();
+      allow create, update, delete: if isManagerUp();
+    }
+
+    // =========================
+    // ⚙️ SETTINGS (OTHER)
+    // =========================
+    match /settings/{docId} {
+      allow read: if isActive();
+      allow create, update, delete: if isManagerUp();
+    }
+
+    // =========================
+    // 📞 REMOTE CALLS
+    // =========================
+    match /remote_calls/{uid} {
+      allow read, write: if isActive() && request.auth.uid == uid;
+    }
+
+    // =========================
+    // 🔄 PIPELINE COLLECTIONS
+    // =========================
+    match /interviews/{id} {
+      allow read: if isActive() && canReadOwned(resource.data);
+      allow create: if isWriter()
+        && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isActive() && canWriteOwned(resource.data);
+    }
+
+    match /offers/{id} {
+      allow read: if isActive() && canReadOwned(resource.data);
+      allow create: if isWriter()
+        && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isActive() && canWriteOwned(resource.data);
+    }
+
+    // =========================
+    // 🤝 COLLABORATION
+    // =========================
+    match /presence/{uid} {
+      allow read: if isActive();
+      allow write: if isActive() && request.auth.uid == uid;
+    }
+
+    match /locks/{lockId} {
+      allow read: if isActive();
+      allow create, update, delete: if isActive();
+    }
+
+    match /audit_logs/{id} {
+      allow read: if isManagerUp();
+      allow create: if isActive();
+      allow update, delete: if false;
+    }
+
+    // =========================
+    // 🚫 DEFAULT DENY
+    // =========================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

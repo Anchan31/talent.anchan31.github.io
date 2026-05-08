@@ -1,11 +1,11 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
     getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, setPersistence, browserSessionPersistence
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { initializeFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // --- FIREBASE CONFIG ---
-const firebaseConfig = {
+export const firebaseConfig = {
     apiKey: "AIzaSyDKuFUJyHUl5AIFSFHCg-4S_wadsha6Et4",
     authDomain: "recruitment-suite-hr.firebaseapp.com",
     projectId: "recruitment-suite-hr",
@@ -23,6 +23,13 @@ setPersistence(auth, browserSessionPersistence);
 
 // --- INITIALIZE FIRESTORE ---
 export const db = initializeFirestore(app, {});
+
+/** Secondary Firebase app for admin user creation without signing out the primary session. */
+export function createSecondaryApp(name) {
+    return initializeApp(firebaseConfig, name);
+}
+
+export { deleteApp };
 
 export * from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 export * from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";

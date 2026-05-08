@@ -2054,3 +2054,24 @@ option {
         transform: translate(-50%, -50%) scale(1);
     }
 }
+
+/* Presence / collaboration */
+.presence-peer-stack .presence-peer-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 9999px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    color: #fff;
+    margin-left: -0.35rem;
+    border: 2px solid var(--bg-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.presence-peer-stack .presence-peer-avatar:first-child {
+    margin-left: 0;
+}

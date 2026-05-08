@@ -1,7 +1,10 @@
 import {
-    auth, db, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail,
-    collection, addDoc, getDocs, getDoc, doc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, setDoc, query, where, orderBy, writeBatch, limit
+    auth, db, getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail,
+    createUserWithEmailAndPassword as createUserSecondary,
+    createSecondaryApp, deleteApp, firebaseConfig,
+    collection, addDoc, getDocs, getDoc, doc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, setDoc, query, where, orderBy, writeBatch, limit, runTransaction, startAfter
 } from "./firebase_config.js";
+import * as perm from "./permissions.js";
 
 
 // PDF.js setup
@@ -9,6 +12,21 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 
 // --- STATE MANAGEMENT ---
 let currentUser = null;
+/** @type {{ role: string, displayName?: string, status?: string, email?: string } | null} */
+let currentUserProfile = null;
+let cachedUserDirectory = [];
+let myPipelineOnly = false;
+let _candidatesOwner = [];
+let _candidatesAssigned = [];
+let _interviewsOwner = [];
+let _interviewsAssigned = [];
+let _offersOwner = [];
+let _offersAssigned = [];
+let presenceUnsub = null;
+let presenceHeartbeat = null;
+let activeEditLock = null;
+let currentLockContext = null;
+let auditUnsub = null;
 let cachedCompanies = [];
 let cachedJobs = [];
 let cachedCandidates = [];
@@ -24,6 +42,377 @@ let currentMapperPageDim = { width: 0, height: 0 };
 let currentMapperDisplayDim = { width: 0, height: 0 };
 let currentMapperScale = 1;
 let currentMapperSelectedField = '';
+
+// --- RBAC & COLLABORATION HELPERS ---
+
+function userRole() {
+    return currentUserProfile?.role || perm.ROLES.RECRUITER;
+}
+
+function isElevatedRole() {
+    return perm.isManagerUp(userRole());
+}
+
+function mergeById(arrs) {
+    const m = new Map();
+    arrs.forEach((arr) => {
+        (arr || []).forEach((item) => m.set(item.id, item));
+    });
+    return Array.from(m.values());
+}
+
+function recomputeOwnedCaches() {
+    cachedCandidates = mergeById([_candidatesOwner, _candidatesAssigned]);
+    cachedInterviews = mergeById([_interviewsOwner, _interviewsAssigned]);
+    cachedOffers = mergeById([_offersOwner, _offersAssigned]).sort((a, b) => {
+        const ta = a.createdAt?.seconds || 0;
+        const tb = b.createdAt?.seconds || 0;
+        return tb - ta;
+    });
+    if (typeof getTalentPoolCandidates === 'function') {
+        cachedTalentPool = getTalentPoolCandidates();
+    }
+}
+
+function filterPipelineRows(rows) {
+    if (!myPipelineOnly || !auth.currentUser) return rows;
+    const uid = auth.currentUser.uid;
+    return rows.filter((r) => r.ownerId === uid || (Array.isArray(r.assignedTo) && r.assignedTo.includes(uid)));
+}
+
+function applyMyPipelineIfNeeded(list) {
+    if (!isElevatedRole() || !myPipelineOnly) return list;
+    return filterPipelineRows(list);
+}
+
+function applyRolePermissions(role) {
+    const adminOnly = ['menu-item-usermgmt', 'menu-item-activity'];
+    adminOnly.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) {
+            const show = perm.canManageUsers(role);
+            el.classList.toggle('hidden', !show);
+        }
+    });
+    const managerNavIds = ['btn-nav-portalsettings', 'btn-nav-masters'];
+    managerNavIds.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('hidden', !perm.canEditSharedData(role));
+    });
+    const reportsBtn = document.getElementById('btn-nav-reports');
+    if (reportsBtn) reportsBtn.classList.toggle('hidden', role === perm.ROLES.VIEWER);
+    const pdffiller = document.getElementById('btn-nav-pdffiller');
+    if (pdffiller) pdffiller.classList.toggle('hidden', !perm.canEditSharedData(role));
+    const pipelineToggle = document.getElementById('my-pipeline-toggle-wrap');
+    if (pipelineToggle) {
+        const show = isElevatedRole();
+        pipelineToggle.classList.toggle('hidden', !show);
+        pipelineToggle.classList.toggle('flex', show);
+    }
+
+    // Initialize Theme Status Text
+    const theme = localStorage.getItem('theme') || 'system';
+    const statusEl = document.getElementById('theme-status');
+    if (statusEl) {
+        statusEl.innerText = theme === 'system' ? 'Auto' : theme === 'dark' ? 'Dark' : 'Light';
+    }
+}
+
+async function loadUserDirectoryForAssignments() {
+    if (!perm.isManagerUp(userRole())) {
+        try {
+            const self = await getDoc(doc(db, 'users', auth.currentUser.uid));
+            cachedUserDirectory = self.exists() ? [{ id: self.id, ...self.data() }] : [];
+        } catch (e) {
+            cachedUserDirectory = [];
+        }
+        populateAssigneeSelects();
+        return;
+    }
+    try {
+        const q = query(collection(db, 'users'), where('status', '==', 'active'), limit(100));
+        const snap = await getDocs(q);
+        cachedUserDirectory = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    } catch (e) {
+        console.warn('User directory', e);
+        cachedUserDirectory = [];
+    }
+    populateAssigneeSelects();
+}
+
+function populateAssigneeSelects() {
+    const selects = [
+        document.getElementById('candidate-assignees'),
+        document.getElementById('interview-assignees'),
+        document.getElementById('offer-assignees')
+    ];
+    selects.forEach((sel) => {
+        if (!sel) return;
+        const cur = Array.from(sel.selectedOptions).map((o) => o.value);
+        sel.innerHTML = '';
+        cachedUserDirectory.forEach((u) => {
+            if (u.status !== 'active') return;
+            const opt = document.createElement('option');
+            opt.value = u.id;
+            opt.textContent = u.displayName || u.email || u.id;
+            if (cur.includes(u.id)) opt.selected = true;
+            sel.appendChild(opt);
+        });
+    });
+}
+
+function lockDocId(col, id) {
+    return `${col}_${id}`;
+}
+
+async function tryAcquireEditLock(col, id) {
+    if (!id || !auth.currentUser) return { allowed: true, readOnly: false };
+    const lockId = lockDocId(col, id);
+    const ref = doc(db, 'locks', lockId);
+    const now = Date.now();
+    const exp = now + 10 * 60 * 1000;
+    try {
+        const out = await runTransaction(db, async (t) => {
+            const s = await t.get(ref);
+            if (s.exists()) {
+                const d = s.data();
+                const ex = d.expiresAt;
+                if (ex > now && d.lockedBy && d.lockedBy !== auth.currentUser.uid) {
+                    return { blocked: true, by: d.lockedByEmail || d.lockedBy, readOnly: true };
+                }
+            }
+            t.set(ref, {
+                lockedBy: auth.currentUser.uid,
+                lockedByEmail: auth.currentUser?.email || '',
+                lockedAt: serverTimestamp(),
+                expiresAt: exp,
+                collection: col,
+                recordId: id
+            });
+            return { blocked: false, readOnly: false };
+        });
+        if (out.blocked) {
+            return { allowed: true, readOnly: true, lockedBy: out.by };
+        }
+        activeEditLock = { lockId, col, id };
+        return { allowed: true, readOnly: false };
+    } catch (e) {
+        console.warn('Lock', e);
+        return { allowed: true, readOnly: false };
+    }
+}
+
+async function releaseActiveEditLock() {
+    if (!activeEditLock) return;
+    const { lockId, col, id } = activeEditLock;
+    try {
+        const ref = doc(db, 'locks', lockId);
+        const s = await getDoc(ref);
+        if (s.exists() && s.data().lockedBy === auth.currentUser?.uid) {
+            await deleteDoc(ref);
+        }
+    } catch (e) { /* noop */ }
+    activeEditLock = null;
+    currentLockContext = null;
+}
+
+function stampOwnedCreate(extra = {}) {
+    const uid = auth.currentUser?.uid;
+    const assigned = extra.assignedTo !== undefined ? extra.assignedTo : [];
+    const { assignedTo: _as, ownerId: _ow, ...rest } = extra;
+    return {
+        ...rest,
+        ownerId: uid,
+        assignedTo: Array.isArray(assigned) ? assigned : [],
+        createdBy: uid,
+        createdAt: serverTimestamp(),
+        updatedBy: uid,
+        updatedAt: serverTimestamp()
+    };
+}
+
+function stampOwnedUpdate(extra = {}) {
+    const uid = auth.currentUser?.uid;
+    return {
+        ...extra,
+        updatedBy: uid,
+        updatedAt: serverTimestamp()
+    };
+}
+
+function stampSharedCreate(extra = {}) {
+    const uid = auth.currentUser?.uid;
+    return {
+        ...extra,
+        createdBy: uid,
+        createdAt: serverTimestamp(),
+        updatedBy: uid,
+        updatedAt: serverTimestamp()
+    };
+}
+
+function stampSharedUpdate(extra = {}) {
+    return stampOwnedUpdate(extra);
+}
+
+async function appendAuditEntry(entity, entityId, action, changes) {
+    if (!auth.currentUser) return;
+    try {
+        await addDoc(collection(db, 'audit_logs'), {
+            entity,
+            entityId: entityId || null,
+            action,
+            byUid: auth.currentUser.uid,
+            byEmail: auth.currentUser.email || '',
+            at: serverTimestamp(),
+            changes: changes || null
+        });
+    } catch (e) { console.warn('Audit log failed', e); }
+}
+
+/** kind: 'candidate' | 'interview' | 'offer' */
+function applyEditModalLockUI(kind, readOnly, lockedByLabel) {
+    const map = {
+        candidate: { banner: 'candidate-lock-banner', form: 'form-candidate' },
+        interview: { banner: 'interview-lock-banner', form: 'form-interview' },
+        offer: { banner: 'offer-lock-banner', form: 'form-offer' }
+    };
+    const m = map[kind];
+    if (!m) return;
+    const el = document.getElementById(m.banner);
+    const form = document.getElementById(m.form);
+    const msg = readOnly && lockedByLabel
+        ? `Read-only: ${lockedByLabel} is editing this record.`
+        : '';
+    if (el) {
+        if (msg) {
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        } else {
+            el.classList.add('hidden');
+        }
+    }
+    if (form) {
+        Array.from(form.elements).forEach((inp) => {
+            if (inp.type === 'hidden') return;
+            if (inp.type === 'submit') {
+                inp.disabled = !!readOnly;
+                return;
+            }
+            if (readOnly) {
+                inp.setAttribute('readonly', 'readonly');
+                inp.setAttribute('disabled', 'disabled');
+            } else {
+                inp.removeAttribute('readonly');
+                inp.removeAttribute('disabled');
+            }
+        });
+    }
+}
+
+function startPresenceHeartbeat() {
+    if (presenceHeartbeat) clearInterval(presenceHeartbeat);
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    const tick = () => {
+        const sec = document.getElementById('section-title')?.innerText || '';
+        setDoc(doc(db, 'presence', uid), {
+            email: auth.currentUser?.email || '',
+            displayName: currentUserProfile?.displayName || '',
+            lastSeen: serverTimestamp(),
+            section: sec.slice(0, 120)
+        }, { merge: true }).catch(() => { });
+    };
+    tick();
+    presenceHeartbeat = setInterval(tick, 30000);
+}
+
+function subscribePresencePeers() {
+    const wrap = document.getElementById('presence-peers');
+    if (!wrap) return;
+    if (presenceUnsub) {
+        try { presenceUnsub(); } catch (e) { /* noop */ }
+        presenceUnsub = null;
+    }
+    try {
+        presenceUnsub = onSnapshot(collection(db, 'presence'), (snap) => {
+            const now = Date.now();
+            const peers = [];
+            snap.forEach((d) => {
+                if (d.id === auth.currentUser?.uid) return;
+                const x = d.data();
+                const ls = x.lastSeen?.toMillis?.() || 0;
+                if (now - ls > 90000) return;
+                peers.push({ id: d.id, ...x });
+            });
+            wrap.innerHTML = peers.slice(0, 8).map((p) => {
+                const label = (p.displayName || p.email || '?')[0].toUpperCase();
+                return `<span class="presence-peer-avatar" title="${p.email || ''}">${label}</span>`;
+            }).join('');
+        });
+    } catch (e) { console.warn('presence', e); }
+}
+
+function subscribeAuditFeed() {
+    const tbody = document.querySelector('#activity-feed-table tbody');
+    if (!tbody) return;
+    if (auditUnsub) {
+        try { auditUnsub(); } catch (e) { /* noop */ }
+        auditUnsub = null;
+    }
+    try {
+        auditUnsub = onSnapshot(query(collection(db, 'audit_logs'), orderBy('at', 'desc'), limit(80)), (snap) => {
+            tbody.innerHTML = snap.docs.map((d) => {
+                const x = d.data();
+                const t = x.at?.toDate ? x.at.toDate().toLocaleString() : '';
+                return `<tr class="border-b border-slate-100 dark:border-slate-800 text-[11px]"><td class="py-1">${escapeHtml(t)}</td><td>${escapeHtml(x.entity || '')}</td><td>${escapeHtml(x.action || '')}</td><td class="truncate max-w-[120px]">${escapeHtml(x.byEmail || '')}</td></tr>`;
+            }).join('') || '<tr><td colspan="4" class="py-2 text-slate-400">No activity yet.</td></tr>';
+        });
+    } catch (e) { console.warn('audit feed', e); }
+}
+
+window.toggleMyPipelineOnly = (el) => {
+    myPipelineOnly = !!(el && el.checked);
+    queueRender();
+};
+
+window.setAssigneesFromDoc = (prefix, docSnap) => {
+    const sel = document.getElementById(`${prefix}-assignees`);
+    if (!sel || !docSnap) return;
+    const ids = Array.isArray(docSnap.assignedTo) ? docSnap.assignedTo : [];
+    Array.from(sel.options).forEach((o) => {
+        o.selected = ids.includes(o.value);
+    });
+};
+
+window.collectAssignees = (prefix) => {
+    const sel = document.getElementById(`${prefix}-assignees`);
+    if (!sel) return [];
+    return Array.from(sel.selectedOptions).map((o) => o.value).filter(Boolean);
+};
+
+window.filterAuditForEntity = async (entity, entityId) => {
+    const box = document.getElementById('record-audit-body');
+    if (!box) return;
+    box.innerHTML = '<p class="text-xs text-slate-400">Loading…</p>';
+    try {
+        const qy = query(
+            collection(db, 'audit_logs'),
+            where('entity', '==', entity),
+            where('entityId', '==', entityId),
+            orderBy('at', 'desc'),
+            limit(40)
+        );
+        const snap = await getDocs(qy);
+        box.innerHTML = snap.docs.map((d) => {
+            const x = d.data();
+            const t = x.at?.toDate ? x.at.toDate().toLocaleString() : '';
+            return `<div class="text-[11px] border-b border-slate-100 dark:border-slate-800 py-2"><span class="text-slate-500">${escapeHtml(t)}</span> — <strong>${escapeHtml(x.action || '')}</strong> by ${escapeHtml(x.byEmail || '')}</div>`;
+        }).join('') || '<p class="text-xs">No history.</p>';
+    } catch (e) {
+        box.innerHTML = '<p class="text-xs text-red-500">Could not load history (index may be building).</p>';
+    }
+};
 
 
 window.filterOffersByStatus = (status) => {
@@ -1117,28 +1506,85 @@ if (resetBtn) {
 
 
 
+/** First deploy: auto-create admin profile for legacy allowlisted emails */
+const LEGACY_BOOTSTRAP_EMAILS = ['hrd@brawnlabs.in'].map(e => e.toLowerCase());
+
+async function ensureUserProfile(user) {
+    const ref = doc(db, 'users', user.uid);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+        return { id: user.uid, ...snap.data() };
+    }
+    const em = (user.email || '').toLowerCase();
+    if (em && LEGACY_BOOTSTRAP_EMAILS.includes(em)) {
+        await setDoc(ref, {
+            email: user.email,
+            displayName: user.displayName || user.email.split('@')[0],
+            role: perm.ROLES.ADMIN,
+            status: 'active',
+            createdAt: serverTimestamp(),
+            createdBy: 'legacy_bootstrap'
+        });
+        const again = await getDoc(ref);
+        return { id: user.uid, ...again.data() };
+    }
+    return null;
+}
+
+function stopPresenceSession() {
+    if (presenceHeartbeat) {
+        clearInterval(presenceHeartbeat);
+        presenceHeartbeat = null;
+    }
+    if (presenceUnsub) {
+        try { presenceUnsub(); } catch (e) { /* noop */ }
+        presenceUnsub = null;
+    }
+    if (auditUnsub) {
+        try { auditUnsub(); } catch (e) { /* noop */ }
+        auditUnsub = null;
+    }
+    if (currentUser && auth.currentUser) {
+        try {
+            setDoc(doc(db, 'presence', auth.currentUser.uid), {
+                email: auth.currentUser.email || '',
+                displayName: currentUserProfile?.displayName || '',
+                lastSeen: serverTimestamp(),
+                section: 'offline'
+            }, { merge: true }).catch(() => { });
+        } catch (e) { /* noop */ }
+    }
+}
+
 onAuthStateChanged(auth, async (user) => {
     if (user && !user.isAnonymous) {
-        // AUTHORIZATION CHECK
-        const allowedEmails = ['hrd@brawnlabs.in', 'talentacq@brawnlabs.in', 'chandansingh22004@gmail.com'];
-        if (!user.email || !allowedEmails.includes(user.email.toLowerCase())) {
-            alert('Access Denied. Only authorized HR personnel can access this dashboard.');
-            await auth.signOut();
+        let profile;
+        try {
+            profile = await ensureUserProfile(user);
+        } catch (e) {
+            console.error('User profile load failed', e);
+            alert('Could not verify your account. Try again.');
+            await signOut(auth);
+            return;
+        }
+
+        if (!profile || profile.status !== 'active') {
+            alert('Access denied. Your account is inactive or not provisioned. Contact an administrator.');
+            await signOut(auth);
             return;
         }
 
         currentUser = user;
+        currentUserProfile = profile;
+
         document.getElementById('auth-container').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
 
-        // Ensure FAB is only visible after successful login
         const fab = document.getElementById('fab-container');
         if (fab) {
-            fab.style.display = 'flex';
+            fab.style.display = perm.isWriter(profile.role) ? 'flex' : 'none';
         }
 
-
-        // Update navbar profile
         const navEmail = document.getElementById('nav-user-email');
         const navName = document.getElementById('nav-user-name');
         const navInitial = document.getElementById('user-initial-nav');
@@ -1147,31 +1593,49 @@ onAuthStateChanged(auth, async (user) => {
         const displayEmail = user.email;
 
         if (navEmail) navEmail.innerText = displayEmail;
-        if (navName) navName.innerText = user.displayName || (user.email ? user.email.split('@')[0] : 'HR Admin');
-        if (navInitial) navInitial.innerText = (user.displayName ? user.displayName[0] : (displayEmail[0])).toUpperCase();
+        if (navName) navName.innerText = profile.displayName || user.displayName || (user.email ? user.email.split('@')[0] : 'User');
+        if (navInitial) navInitial.innerText = ((profile.displayName || user.displayName || displayEmail || 'U')[0]).toUpperCase();
         if (menuEmail) menuEmail.innerText = displayEmail;
+
+        const roleBadge = document.getElementById('nav-user-role-badge');
+        if (roleBadge) {
+            roleBadge.textContent = profile.role || '';
+            roleBadge.classList.remove('hidden');
+        }
+
+        applyRolePermissions(profile.role);
+        await loadUserDirectoryForAssignments();
+        startPresenceHeartbeat();
+        subscribePresencePeers();
+        if (perm.canViewAudit(profile.role)) {
+            subscribeAuditFeed();
+        }
 
         startIdleTimer();
         initApp();
     } else {
+        stopPresenceSession();
         currentUser = null;
+        currentUserProfile = null;
         stopIdleTimer();
         document.getElementById('auth-container').classList.remove('hidden');
         document.getElementById('main-app').classList.add('hidden');
-        // Hide FAB when logged out
         const fab = document.getElementById('fab-container');
         if (fab) {
             fab.style.display = 'none';
         }
         const modal = document.getElementById('modal-inactivity');
         if (modal) modal.classList.add('hidden');
+        const roleBadge = document.getElementById('nav-user-role-badge');
+        if (roleBadge) roleBadge.classList.add('hidden');
     }
 });
 
 // --- CORE DATA FUNCTIONS ---
 async function initApp() {
-    // When app starts after login, show loader until first data snapshots arrive
-    pendingInitialLoads = 6; // companies, jobs, candidates, interviews, offers, waTemplates
+    const role = userRole();
+    const elevated = perm.isManagerUp(role) || role === perm.ROLES.VIEWER;
+    pendingInitialLoads = elevated ? 6 : 9;
     showLoader();
     setupRealtimeListeners();
     attachFormHandlers();
@@ -1189,6 +1653,10 @@ async function initApp() {
 }
 
 function setupRealtimeListeners() {
+    const uid = auth.currentUser?.uid;
+    const role = userRole();
+    const elevated = perm.isManagerUp(role) || role === perm.ROLES.VIEWER;
+
     const handleError = (collectionName, error) => {
         console.error(`Error in ${collectionName} listener:`, error);
         if (pendingInitialLoads > 0) {
@@ -1202,6 +1670,13 @@ function setupRealtimeListeners() {
         console.log(`[Firestore] ${collectionName} loaded from ${source} (${snapshot.size} docs)`);
     };
 
+    const bump = () => {
+        if (pendingInitialLoads > 0) {
+            pendingInitialLoads--;
+            if (pendingInitialLoads === 0) hideLoader();
+        }
+    };
+
     // Listen for Companies
     const compQuery = query(collection(db, "companies"), orderBy("createdAt", "desc"), limit(50));
     onSnapshot(compQuery, (snapshot) => {
@@ -1209,10 +1684,7 @@ function setupRealtimeListeners() {
         cachedCompanies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         updateDropdowns();
         queueRender();
-        if (pendingInitialLoads > 0) {
-            pendingInitialLoads--;
-            if (pendingInitialLoads === 0) hideLoader();
-        }
+        bump();
     }, (error) => handleError("Companies", error));
 
     // Listen for Jobs
@@ -1223,55 +1695,100 @@ function setupRealtimeListeners() {
         updateDropdowns();
         if (typeof renderTalentPool === 'function') renderTalentPool();
         queueRender();
-        if (pendingInitialLoads > 0) {
-            pendingInitialLoads--;
-            if (pendingInitialLoads === 0) hideLoader();
-        }
+        bump();
     }, (error) => handleError("Jobs", error));
 
-    // Listen for Candidates (Unified) - with pagination for performance
-    const candidateQuery = query(collection(db, "candidates"), limit(500));
-    onSnapshot(candidateQuery, (snapshot) => {
-        logSource("Candidates", snapshot);
-        cachedCandidates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        cachedTalentPool = getTalentPoolCandidates();
+    if (elevated) {
+        const candidateQuery = query(collection(db, "candidates"), limit(500));
+        onSnapshot(candidateQuery, (snapshot) => {
+            logSource("Candidates", snapshot);
+            cachedCandidates = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            cachedTalentPool = getTalentPoolCandidates();
+            if (typeof renderTalentPool === 'function') renderTalentPool();
+            if (typeof updateTalentPoolBadge === 'function') updateTalentPoolBadge();
+            queueRender();
+            bump();
+        }, (error) => handleError("Candidates", error));
 
-        if (typeof renderTalentPool === 'function') renderTalentPool();
-        if (typeof updateTalentPoolBadge === 'function') updateTalentPoolBadge();
-        queueRender();
-        if (pendingInitialLoads > 0) {
-            pendingInitialLoads--;
-            if (pendingInitialLoads === 0) hideLoader();
-        }
-    }, (error) => handleError("Candidates", error));
+        const interviewQuery = query(collection(db, "interviews"), limit(300));
+        onSnapshot(interviewQuery, (snapshot) => {
+            logSource("Interviews", snapshot);
+            cachedInterviews = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            autoCleanupOldInterviews();
+            queueRender();
+            bump();
+        }, (error) => handleError("Interviews", error));
 
-    // Listen for Interviews
-    const interviewQuery = query(collection(db, "interviews"), limit(300));
-    onSnapshot(interviewQuery, (snapshot) => {
-        logSource("Interviews", snapshot);
-        cachedInterviews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const offersQuery = query(collection(db, "offers"), orderBy("createdAt", "desc"), limit(200));
+        onSnapshot(offersQuery, (snapshot) => {
+            logSource("Offers", snapshot);
+            cachedOffers = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            queueRender();
+            bump();
+        }, (error) => handleError("Offers", error));
+    } else if (uid) {
+        const candOwnerQ = query(collection(db, "candidates"), where("ownerId", "==", uid), limit(500));
+        onSnapshot(candOwnerQ, (snapshot) => {
+            logSource("Candidates(owner)", snapshot);
+            _candidatesOwner = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            recomputeOwnedCaches();
+            cachedTalentPool = getTalentPoolCandidates();
+            if (typeof renderTalentPool === 'function') renderTalentPool();
+            if (typeof updateTalentPoolBadge === 'function') updateTalentPoolBadge();
+            queueRender();
+            bump();
+        }, (error) => handleError("Candidates(owner)", error));
 
-        // Auto-Cleanup: Delete interviews older than 14 days if Done/Rejected
-        autoCleanupOldInterviews();
+        const candAssQ = query(collection(db, "candidates"), where("assignedTo", "array-contains", uid), limit(500));
+        onSnapshot(candAssQ, (snapshot) => {
+            logSource("Candidates(assigned)", snapshot);
+            _candidatesAssigned = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            recomputeOwnedCaches();
+            cachedTalentPool = getTalentPoolCandidates();
+            if (typeof renderTalentPool === 'function') renderTalentPool();
+            if (typeof updateTalentPoolBadge === 'function') updateTalentPoolBadge();
+            queueRender();
+            bump();
+        }, (error) => handleError("Candidates(assigned)", error));
 
-        queueRender();
-        if (pendingInitialLoads > 0) {
-            pendingInitialLoads--;
-            if (pendingInitialLoads === 0) hideLoader();
-        }
-    }, (error) => handleError("Interviews", error));
+        const intOwnerQ = query(collection(db, "interviews"), where("ownerId", "==", uid), limit(300));
+        onSnapshot(intOwnerQ, (snapshot) => {
+            logSource("Interviews(owner)", snapshot);
+            _interviewsOwner = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            recomputeOwnedCaches();
+            autoCleanupOldInterviews();
+            queueRender();
+            bump();
+        }, (error) => handleError("Interviews(owner)", error));
 
-    // Listen for Offers
-    const offersQuery = query(collection(db, "offers"), orderBy("createdAt", "desc"), limit(200));
-    onSnapshot(offersQuery, (snapshot) => {
-        logSource("Offers", snapshot);
-        cachedOffers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        queueRender();
-        if (pendingInitialLoads > 0) {
-            pendingInitialLoads--;
-            if (pendingInitialLoads === 0) hideLoader();
-        }
-    }, (error) => handleError("Offers", error));
+        const intAssQ = query(collection(db, "interviews"), where("assignedTo", "array-contains", uid), limit(300));
+        onSnapshot(intAssQ, (snapshot) => {
+            logSource("Interviews(assigned)", snapshot);
+            _interviewsAssigned = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            recomputeOwnedCaches();
+            autoCleanupOldInterviews();
+            queueRender();
+            bump();
+        }, (error) => handleError("Interviews(assigned)", error));
+
+        const offOwnerQ = query(collection(db, "offers"), where("ownerId", "==", uid), limit(200));
+        onSnapshot(offOwnerQ, (snapshot) => {
+            logSource("Offers(owner)", snapshot);
+            _offersOwner = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            recomputeOwnedCaches();
+            queueRender();
+            bump();
+        }, (error) => handleError("Offers(owner)", error));
+
+        const offAssQ = query(collection(db, "offers"), where("assignedTo", "array-contains", uid), limit(200));
+        onSnapshot(offAssQ, (snapshot) => {
+            logSource("Offers(assigned)", snapshot);
+            _offersAssigned = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            recomputeOwnedCaches();
+            queueRender();
+            bump();
+        }, (error) => handleError("Offers(assigned)", error));
+    }
 
     // Listen for WhatsApp Templates
     const waQuery = query(collection(db, "whatsappTemplates"), orderBy("createdAt", "desc"), limit(50));
@@ -1280,10 +1797,7 @@ function setupRealtimeListeners() {
         cachedWaTemplates = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         updateWaDropdowns();
         queueRender();
-        if (pendingInitialLoads > 0) {
-            pendingInitialLoads--;
-            if (pendingInitialLoads === 0) hideLoader();
-        }
+        bump();
     }, (error) => handleError("WhatsApp Templates", error));
 }
 
@@ -2491,17 +3005,19 @@ function renderInterviews() {
 // --- DASHBOARD ANALYTICS ---
 let stageChartInstance, budgetChartInstance, sourceChartInstance;
 function updateDashboard() {
+    const dashCandidates = applyMyPipelineIfNeeded(cachedCandidates);
+    const dashInterviews = applyMyPipelineIfNeeded(cachedInterviews);
     // Basic Counters
-    const totalCandidates = cachedCandidates.length;
+    const totalCandidates = dashCandidates.length;
     const activeJobs = cachedJobs.filter(j => j.status === 'Open').length;
-    const pipelineCount = cachedCandidates.filter(c => !['Hired', 'Rejected', 'Backed Out', 'Not Interested'].includes(c.stage)).length;
+    const pipelineCount = dashCandidates.filter(c => !['Hired', 'Rejected', 'Backed Out', 'Not Interested'].includes(c.stage)).length;
     document.getElementById('stat-total-candidates').innerText = pipelineCount;
     document.getElementById('stat-active-jobs').innerText = activeJobs || cachedJobs.length;
 
     // Today's Interviews
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
-    const todayInts = cachedInterviews.filter(i => i.dateTime && i.dateTime.startsWith(todayStr)).length;
+    const todayInts = dashInterviews.filter(i => i.dateTime && i.dateTime.startsWith(todayStr)).length;
     document.getElementById('stat-today-interviews').innerText = todayInts;
 
 
@@ -2512,7 +3028,7 @@ function updateDashboard() {
     if (tpEl) tpEl.innerText = talentPool;
 
     // Total Hires
-    const hiredCount = cachedCandidates.filter(c => c.stage === 'Hired').length;
+    const hiredCount = dashCandidates.filter(c => c.stage === 'Hired').length;
     const thEl = document.getElementById('stat-total-hires');
     if (thEl) thEl.innerText = hiredCount;
 
@@ -2522,7 +3038,7 @@ function updateDashboard() {
     let ctcs = [];
     const sourceMap = {};
 
-    cachedCandidates.forEach(c => {
+    dashCandidates.forEach(c => {
         const job = cachedJobs.find(j => j.id === c.jobId);
         const expCTC = Number(c.expectedCTC || c.expectedSalary || 0);
         const annualExpCTC = expCTC * 12;
@@ -2543,7 +3059,7 @@ function updateDashboard() {
     const adherence = totalCandWithJob > 0 ? Math.round((withinBudgetCount / totalCandWithJob) * 100) : 100;
     const sortedSources = Object.entries(sourceMap).sort((a, b) => b[1] - a[1]);
     // Statistics for legacy elements if they still exist
-    const selectedCount = cachedCandidates.filter(c => c.stage === 'Selected' || c.stage === 'Hired').length;
+    const selectedCount = dashCandidates.filter(c => c.stage === 'Selected' || c.stage === 'Hired').length;
     const selectionRate = totalCandidates > 0 ? Math.round((selectedCount / totalCandidates) * 100) : 0;
     const srLegacy = document.getElementById('stat-selection-rate');
     if (srLegacy) srLegacy.innerText = selectionRate + '%';
@@ -2573,9 +3089,9 @@ function updateDashboard() {
 
     // Interview Stats
 
-    const upcomingInts = cachedInterviews.filter(i => i.dateTime && new Date(i.dateTime) >= now).length;
-    const pendingFeedback = cachedInterviews.filter(i => (i.status === 'Interviewed' || i.status === 'Done') && !i.feedback).length;
-    const completedToday = cachedInterviews.filter(i => {
+    const upcomingInts = dashInterviews.filter(i => i.dateTime && new Date(i.dateTime) >= now).length;
+    const pendingFeedback = dashInterviews.filter(i => (i.status === 'Interviewed' || i.status === 'Done') && !i.feedback).length;
+    const completedToday = dashInterviews.filter(i => {
         if (!i.dateTime) return false;
         const d = new Date(i.dateTime);
         return d.toDateString() === now.toDateString() && (i.status === 'Done' || i.status === 'Interviewed');
@@ -2589,7 +3105,7 @@ function updateDashboard() {
     if (statCompletedTodayEl) statCompletedTodayEl.innerText = completedToday;
 
     // Join Ratio
-    const selectedOf = cachedCandidates.filter(c => c.stage === 'Selected').length;
+    const selectedOf = dashCandidates.filter(c => c.stage === 'Selected').length;
     const joinRatio = (hiredCount + selectedOf) > 0 ? Math.round((hiredCount / (hiredCount + selectedOf)) * 100) : 0;
     const jrEl = document.getElementById('stat-join-ratio');
     if (jrEl) jrEl.innerText = joinRatio + '%';
@@ -2597,7 +3113,7 @@ function updateDashboard() {
     // Charts update
     if (stageChartInstance) stageChartInstance.destroy();
     const stages = ['Applied', 'Screening', 'Interview', 'Selected', 'Hired', 'Rejected', 'Backed Out', 'Not Interested'];
-    const stageCounts = stages.map(s => cachedCandidates.filter(c => c.stage === s).length);
+    const stageCounts = stages.map(s => dashCandidates.filter(c => c.stage === s).length);
     stageChartInstance = new Chart(document.getElementById('stageChart'), {
         type: 'bar',
         data: {
@@ -2871,11 +3387,10 @@ const attachFormHandlers = () => {
                 delete data.id;
 
                 if (editId) {
-                    await updateDoc(doc(db, "companies", editId), data);
+                    await updateDoc(doc(db, "companies", editId), stampSharedUpdate(data));
                     showToast("Company Updated!");
                 } else {
-                    data.createdAt = serverTimestamp();
-                    await addDoc(collection(db, "companies"), data);
+                    await addDoc(collection(db, "companies"), stampSharedCreate(data));
                     showToast("Company Added!");
                 }
 
@@ -3022,11 +3537,9 @@ document.getElementById('form-job').onsubmit = async (e) => {
                 }
             }
 
-            await updateDoc(doc(db, "jobs", editId), data);
+            await updateDoc(doc(db, "jobs", editId), stampSharedUpdate(data));
             showToast("Job Updated Successfully!");
         } else {
-            data.createdAt = serverTimestamp();
-
             // Status Logic for New Jobs
             if (data.status !== 'Draft') {
                 if (data.status === 'Closed') {
@@ -3039,7 +3552,7 @@ document.getElementById('form-job').onsubmit = async (e) => {
                     data.status = 'Open';
                 }
             }
-            await addDoc(collection(db, "jobs"), data);
+            await addDoc(collection(db, "jobs"), stampSharedCreate(data));
             showToast("Job Created Successfully!");
         }
 
@@ -3383,20 +3896,25 @@ document.getElementById('form-candidate').onsubmit = async (e) => {
 
         const editId = data.id;
         delete data.id;
+        const assignees = collectAssignees('candidate');
 
         if (editId) {
-            await updateDoc(doc(db, "candidates", editId), data);
+            const prev = cachedCandidates.find((c) => c.id === editId);
+            await updateDoc(doc(db, "candidates", editId), stampOwnedUpdate({ ...data, assignedTo: assignees }));
+            await appendAuditEntry('candidates', editId, 'update', { before: prev ? { stage: prev.stage } : null, after: data });
             showToast("Candidate Updated!");
         } else {
-            data.createdAt = serverTimestamp();
             data.stage = 'Applied';
             data.inTalentPool = true;
             data.isNew = true;
-            await addDoc(collection(db, "candidates"), data);
+            const payload = stampOwnedCreate({ ...data, assignedTo: assignees });
+            const ref = await addDoc(collection(db, "candidates"), payload);
+            await appendAuditEntry('candidates', ref.id, 'create', { fields: Object.keys(payload) });
             showToast("Candidate Added!");
         }
 
         notifyCrossTabChange({ type: 'data-update', collection: 'candidates', id: editId || 'new' });
+        await releaseActiveEditLock();
         document.getElementById('modal-candidate').classList.add('hidden');
 
         e.target.reset();
@@ -3466,11 +3984,14 @@ document.getElementById('form-candidate').onsubmit = async (e) => {
     });
 })();
 
-window.editCandidate = (id) => {
+window.editCandidate = async (id) => {
     const cand = cachedCandidates.find(c => c.id === id);
     if (!cand) return;
     const form = document.getElementById('form-candidate');
     if (!form) return;
+
+    const lk = await tryAcquireEditLock('candidates', id);
+    applyEditModalLockUI('candidate', lk.readOnly, lk.lockedBy);
 
     form.reset();
 
@@ -3565,6 +4086,9 @@ window.editCandidate = (id) => {
     try { initCustomSelects(); } catch (e) { console.warn('initCustomSelects in editCandidate failed', e); }
     document.getElementById('form-candidate-id').value = id;
     document.getElementById('modal-candidate-title').innerText = "Edit Candidate Profile";
+    populateAssigneeSelects();
+    setAssigneesFromDoc('candidate', cand);
+    if (typeof filterAuditForEntity === 'function') filterAuditForEntity('candidates', id);
     openModal('modal-candidate');
 };
 
@@ -3593,6 +4117,7 @@ document.getElementById('form-interview').onsubmit = async (e) => {
 
         const editId = data.id;
         delete data.id;
+        const assignees = collectAssignees('interview');
 
         // Check for scheduling conflicts
         if (data.dateTime && !editId) {
@@ -3604,15 +4129,15 @@ document.getElementById('form-interview').onsubmit = async (e) => {
         }
 
         if (editId) {
-            data.updatedAt = serverTimestamp();
-            await updateDoc(doc(db, "interviews", editId), data);
+            const prev = cachedInterviews.find((i) => i.id === editId);
+            await updateDoc(doc(db, "interviews", editId), stampOwnedUpdate({ ...data, assignedTo: assignees }));
+            await appendAuditEntry('interviews', editId, 'update', { status: data.status });
             showToast("Interview Updated!");
         } else {
-            // Save the stage before this interview was scheduled
             data.previousStage = currentStage;
-            data.createdAt = serverTimestamp();
-            data.updatedAt = serverTimestamp();
-            await addDoc(collection(db, "interviews"), data);
+            const payload = stampOwnedCreate({ ...data, assignedTo: assignees });
+            const ref = await addDoc(collection(db, "interviews"), payload);
+            await appendAuditEntry('interviews', ref.id, 'create', {});
             showToast("Interview Scheduled!");
         }
 
@@ -3640,6 +4165,7 @@ document.getElementById('form-interview').onsubmit = async (e) => {
         }
 
         notifyCrossTabChange({ type: 'data-update', collection: 'interviews', id: editId || 'new' });
+        await releaseActiveEditLock();
         document.getElementById('modal-interview').classList.add('hidden');
         e.target.reset();
         document.getElementById('form-interview-id').value = '';
@@ -3726,7 +4252,7 @@ window.scheduleNextInterviewRound = async (candidateId, currentRound) => {
     };
 
     try {
-        await addDoc(collection(db, "interviews"), nextInterviewData);
+        await addDoc(collection(db, "interviews"), stampOwnedCreate({ ...nextInterviewData, assignedTo: [] }));
         showToast(`Next round (${nextRound}) auto-scheduled for ${nextDate.toLocaleDateString()}`);
     } catch (error) {
         console.error("Error scheduling next round:", error);
@@ -3796,9 +4322,11 @@ window.syncInterviewCandidateId = (val) => {
     }
 };
 
-window.editInterview = (id) => {
+window.editInterview = async (id) => {
     const current = cachedInterviews.find(i => i.id === id);
     if (!current) return;
+    const lk = await tryAcquireEditLock('interviews', id);
+    applyEditModalLockUI('interview', lk.readOnly, lk.lockedBy);
     const form = document.getElementById('form-interview');
     form.reset();
     for (const key in current) {
@@ -3820,12 +4348,18 @@ window.editInterview = (id) => {
 
     document.getElementById('form-interview-id').value = id;
     document.getElementById('modal-interview-title').innerText = "Manage Interview & Feedback";
+    populateAssigneeSelects();
+    setAssigneesFromDoc('interview', current);
+    if (typeof filterAuditForEntity === 'function') filterAuditForEntity('interviews', id);
     openModal('modal-interview');
 };
 
-window.rescheduleInterview = (id) => {
+window.rescheduleInterview = async (id) => {
     const current = cachedInterviews.find(i => i.id === id);
     if (!current) return;
+
+    const lk = await tryAcquireEditLock('interviews', id);
+    applyEditModalLockUI('interview', lk.readOnly, lk.lockedBy);
 
     // Pre-fill the form with current data
     const form = document.getElementById('form-interview');
@@ -3848,6 +4382,8 @@ window.rescheduleInterview = (id) => {
     document.getElementById('interview-round-display').innerText = current.round || 'Technical Round';
     document.getElementById('form-interview-id').value = id;
     document.getElementById('modal-interview-title').innerText = "Reschedule Interview";
+    populateAssigneeSelects();
+    setAssigneesFromDoc('interview', current);
     openModal('modal-interview');
 };
 
@@ -3972,19 +4508,18 @@ window.updateCandidateStage = async (id, stage) => {
             const existingOffer = cachedOffers.find(o => o.candidateId === id);
 
             if (!existingOffer) {
-                await addDoc(collection(db, "offers"), {
+                await addDoc(collection(db, "offers"), stampOwnedCreate({
                     candidateId: id,
                     candidateName: cand ? cand.name : 'Unknown',
                     jobId: cand ? cand.jobId : null,
                     jobTitle: job ? job.title : 'Position Unknown',
                     offeredCTC: cand ? (cand.offeredCTC || cand.expectedCTC || 0) : 0,
                     status: 'Pending',
-                    createdAt: serverTimestamp(),
-                    updatedAt: serverTimestamp()
-                });
+                    assignedTo: Array.isArray(cand?.assignedTo) ? cand.assignedTo : []
+                }));
             }
         }
-        await updateDoc(doc(db, "candidates", id), updateData);
+        await updateDoc(doc(db, "candidates", id), stampOwnedUpdate(updateData));
 
         const cand = cachedCandidates.find(c => c.id === id);
         if (cand && cand.jobId) {
@@ -5429,6 +5964,21 @@ window.showSection = async (sectionId) => {
                 title: 'Public Portal Settings',
                 subtitle: 'Configure how candidates see your career page',
                 actions: []
+            },
+            'usermgmt': {
+                title: 'User management',
+                subtitle: 'Create and manage team access',
+                actions: []
+            },
+            'activity': {
+                title: 'Activity log',
+                subtitle: 'Audit trail of important changes',
+                actions: []
+            },
+            'migration': {
+                title: 'Data migration',
+                subtitle: 'Backfill ownership on legacy records',
+                actions: []
             }
         };
 
@@ -5490,6 +6040,12 @@ window.showSection = async (sectionId) => {
                 break;
             case 'contacts':
                 renderContactsSection();
+                break;
+            case 'usermgmt':
+                renderUserManagementTable();
+                break;
+            case 'masters':
+                refreshMastersData();
                 break;
             default:
                 break;
@@ -5559,7 +6115,12 @@ window.openModal = (id) => {
         target.classList.remove('hidden');
     }
 };
-window.closeModal = (id) => {
+window.closeModal = async (id) => {
+    if (id === 'modal-candidate' || id === 'modal-interview' || id === 'modal-offer') {
+        const kind = id.replace('modal-', '');
+        await releaseActiveEditLock();
+        applyEditModalLockUI(kind, false, null);
+    }
     const target = document.getElementById(id);
     if (target) {
         target.classList.add('hidden');
@@ -5809,13 +6370,35 @@ document.getElementById('filter-budget').onchange = renderCandidates;
 // Theme Toggle Logic
 window.toggleTheme = (event) => {
     if (event && typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
-    const isDark = document.documentElement.classList.toggle('dark');
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    
+    const current = localStorage.getItem('theme') || 'system';
+    let next;
+    if (current === 'system') next = 'light';
+    else if (current === 'light') next = 'dark';
+    else next = 'system';
+    
+    localStorage.setItem('theme', next);
+    
+    const applyTheme = (theme) => {
+        let actual = theme;
+        if (theme === 'system') {
+            actual = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        if (actual === 'dark') document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+    };
+
+    applyTheme(next);
+    
+    const statusEl = document.getElementById('theme-status');
+    if (statusEl) {
+        statusEl.innerText = next === 'system' ? 'Auto' : next === 'dark' ? 'Dark' : 'Light';
+    }
 
     // Update charts if they exist
-    if (stageChartInstance) updateChartTheme(stageChartInstance);
-    if (budgetChartInstance) updateChartTheme(budgetChartInstance);
-    if (sourceChartInstance) updateChartTheme(sourceChartInstance);
+    if (typeof stageChartInstance !== 'undefined' && stageChartInstance) updateChartTheme(stageChartInstance);
+    if (typeof budgetChartInstance !== 'undefined' && budgetChartInstance) updateChartTheme(budgetChartInstance);
+    if (typeof sourceChartInstance !== 'undefined' && sourceChartInstance) updateChartTheme(sourceChartInstance);
 };
 
 window.logoutNow = async () => {
@@ -6099,20 +6682,19 @@ ${job?.companyName || 'Our Company'}`;
 
 window.updateOfferStatus = async (id, status) => {
     try {
-        await updateDoc(doc(db, "offers", id), {
-            status: status,
-            updatedAt: serverTimestamp()
-        });
+        await updateDoc(doc(db, "offers", id), stampOwnedUpdate({
+            status: status
+        }));
+        await appendAuditEntry('offers', id, 'status', { status });
 
         // Automation: If offer is SENT, move candidate to HIRED
         if (status === 'Sent') {
             const offer = cachedOffers.find(o => o.id === id);
             if (offer && offer.candidateId) {
-                await updateDoc(doc(db, "candidates", offer.candidateId), {
+                await updateDoc(doc(db, "candidates", offer.candidateId), stampOwnedUpdate({
                     stage: 'Hired',
-                    hiredAt: serverTimestamp(),
-                    updatedAt: serverTimestamp()
-                });
+                    hiredAt: serverTimestamp()
+                }));
                 showToast("Candidate marked as HIRED!");
             }
         }
@@ -6127,20 +6709,18 @@ window.updateOfferStatus = async (id, status) => {
 window.rejectOffer = async (id) => {
     const reason = prompt("Please provide a reason for rejection (optional):");
     try {
-        await updateDoc(doc(db, "offers", id), {
+        await updateDoc(doc(db, "offers", id), stampOwnedUpdate({
             status: 'Rejected',
             rejectionReason: reason || '',
-            rejectedAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
-        });
+            rejectedAt: serverTimestamp()
+        }));
 
         // Update candidate stage back to Interview or previous stage
         const offer = cachedOffers.find(o => o.id === id);
         if (offer && offer.candidateId) {
-            await updateDoc(doc(db, "candidates", offer.candidateId), {
-                stage: 'Interview', // Or keep as is, depending on workflow
-                updatedAt: serverTimestamp()
-            });
+            await updateDoc(doc(db, "candidates", offer.candidateId), stampOwnedUpdate({
+                stage: 'Interview'
+            }));
         }
 
         showToast("Offer rejected");
@@ -6529,7 +7109,7 @@ window.loadPortalSettings = async () => {
 window.openProfileView = (subtitle, title, icon, candidateId) => {
     // Clear any existing data first
     clearModalData('modal-profile-view');
-    
+
     const modal = document.getElementById('modal-profile-view');
     if (!modal) return;
 
@@ -6926,17 +7506,17 @@ window.showJobDetails = (id) => {
                     <h5 class="field-label">Key Competencies (Skills)</h5>
                     <div class="flex flex-wrap gap-2">
                         ${(() => {
-                            const skillsRaw = j.skills || j.keySkills || 'General Proficiency';
-                            const skillsArray = Array.isArray(skillsRaw)
-                                ? skillsRaw
-                                : typeof skillsRaw === 'string'
-                                    ? skillsRaw.split('\n')
-                                    : [String(skillsRaw)];
-                            return skillsArray
-                                .filter(skill => skill && skill.toString().trim())
-                                .map(skill => `<span class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-bold border border-blue-100 dark:border-blue-900/30">${skill.toString().trim()}</span>`)
-                                .join('');
-                        })()}
+                const skillsRaw = j.skills || j.keySkills || 'General Proficiency';
+                const skillsArray = Array.isArray(skillsRaw)
+                    ? skillsRaw
+                    : typeof skillsRaw === 'string'
+                        ? skillsRaw.split('\n')
+                        : [String(skillsRaw)];
+                return skillsArray
+                    .filter(skill => skill && skill.toString().trim())
+                    .map(skill => `<span class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-bold border border-blue-100 dark:border-blue-900/30">${skill.toString().trim()}</span>`)
+                    .join('');
+            })()}
                     </div>
                 </div>
             </div>
@@ -8167,6 +8747,8 @@ window.openCandidateModal = () => {
     // Populate source select with masters data
     populateCandidateSourceSelect();
     populateCandidateMastersData();
+    populateAssigneeSelects();
+    applyEditModalLockUI('candidate', false, null);
 
     openModal('modal-candidate');
 };
@@ -8441,6 +9023,9 @@ window.openInterviewModal = (candidateId = '') => {
             document.getElementById('interview-cand-initials').innerText = cand.name.charAt(0).toUpperCase();
         }
     }
+
+    populateAssigneeSelects();
+    applyEditModalLockUI('interview', false, null);
 
     openModal('modal-interview');
 };
@@ -9051,5 +9636,162 @@ window.populateCandidateMastersData = function () {
             options += `<option value="${dept.name}">${dept.name}</option>`;
         });
         deptSelect.innerHTML = options;
+    }
+};
+
+// --- ADMIN: USERS & MIGRATION ---
+window.openCreateUserModal = () => {
+    const err = document.getElementById('create-user-error');
+    if (err) err.classList.add('hidden');
+    openModal('modal-create-user');
+};
+
+window.submitCreateUser = async () => {
+    if (!perm.canManageUsers(userRole())) return;
+    const email = document.getElementById('create-user-email')?.value?.trim();
+    const displayName = document.getElementById('create-user-name')?.value?.trim();
+    const role = document.getElementById('create-user-role')?.value || perm.ROLES.RECRUITER;
+    const tempPass = document.getElementById('create-user-temp-pass')?.value;
+    const errEl = document.getElementById('create-user-error');
+    if (!email || !tempPass || tempPass.length < 6) {
+        if (errEl) {
+            errEl.textContent = 'Valid email and temporary password (6+ characters) required.';
+            errEl.classList.remove('hidden');
+        }
+        return;
+    }
+    const appName = `sec-create-${Date.now()}`;
+    const tmpApp = createSecondaryApp(appName);
+    const tmpAuth = getAuth(tmpApp);
+    try {
+        const cred = await createUserSecondary(tmpAuth, email, tempPass);
+        await setDoc(doc(db, 'users', cred.user.uid), {
+            email,
+            displayName: displayName || email.split('@')[0],
+            role,
+            status: 'active',
+            createdAt: serverTimestamp(),
+            createdBy: auth.currentUser.uid
+        });
+        await sendPasswordResetEmail(tmpAuth, email);
+        showToast('User created. Password setup email sent.');
+        closeModal('modal-create-user');
+        await renderUserManagementTable();
+        await loadUserDirectoryForAssignments();
+    } catch (e) {
+        console.error(e);
+        if (errEl) {
+            errEl.textContent = e.message || 'Failed to create user';
+            errEl.classList.remove('hidden');
+        }
+    } finally {
+        try {
+            await deleteApp(tmpApp);
+        } catch (_) { /* noop */ }
+    }
+};
+
+window.renderUserManagementTable = async () => {
+    const tbody = document.getElementById('user-mgmt-table-body');
+    if (!tbody) return;
+    if (!perm.canManageUsers(userRole())) {
+        tbody.innerHTML = '';
+        return;
+    }
+    try {
+        const snap = await getDocs(query(collection(db, 'users'), limit(200)));
+        tbody.innerHTML = snap.docs.map((d) => {
+            const u = { id: d.id, ...d.data() };
+            const selected = (r) => (u.role === r ? 'selected' : '');
+            return `<tr class="border-b border-slate-100 dark:border-slate-800">
+                <td class="py-2">${escapeHtml(u.email || '')}</td>
+                <td class="py-2">${escapeHtml(u.displayName || '')}</td>
+                <td class="py-2">
+                  <select class="theme-input text-xs py-1" data-user-role="${u.id}" onchange="adminUpdateUserRole(this.dataset.userRole, this.value)">
+                    <option value="admin" ${selected('admin')}>admin</option>
+                    <option value="manager" ${selected('manager')}>manager</option>
+                    <option value="recruiter" ${selected('recruiter')}>recruiter</option>
+                    <option value="viewer" ${selected('viewer')}>viewer</option>
+                  </select>
+                </td>
+                <td class="py-2">${escapeHtml(u.status || '')}</td>
+                <td class="py-2">${u.status === 'active'
+                    ? `<button type="button" class="text-xs text-amber-600 font-bold" onclick="adminSetUserStatus('${u.id}','disabled')">Disable</button>`
+                    : `<button type="button" class="text-xs text-emerald-600 font-bold" onclick="adminSetUserStatus('${u.id}','active')">Enable</button>`}
+                </td>
+            </tr>`;
+        }).join('') || '<tr><td colspan="5" class="py-4 text-slate-400">No users</td></tr>';
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-red-500">${escapeHtml(e.message)}</td></tr>`;
+    }
+};
+
+window.adminUpdateUserRole = async (uid, role) => {
+    if (!perm.canManageUsers(userRole())) return;
+    try {
+        await updateDoc(doc(db, 'users', uid), {
+            role,
+            updatedAt: serverTimestamp(),
+            updatedBy: auth.currentUser.uid
+        });
+        showToast('Role updated');
+        await loadUserDirectoryForAssignments();
+    } catch (e) {
+        alert(e.message);
+    }
+};
+
+window.adminSetUserStatus = async (uid, status) => {
+    if (!perm.canManageUsers(userRole())) return;
+    try {
+        await updateDoc(doc(db, 'users', uid), {
+            status,
+            updatedAt: serverTimestamp(),
+            updatedBy: auth.currentUser.uid
+        });
+        showToast('Status updated');
+        await renderUserManagementTable();
+        await loadUserDirectoryForAssignments();
+    } catch (e) {
+        alert(e.message);
+    }
+};
+
+window.runLegacyMigration = async () => {
+    if (!perm.canManageUsers(userRole())) return;
+    const statusEl = document.getElementById('migration-status');
+    const uid = auth.currentUser.uid;
+    let total = 0;
+    try {
+        for (const colName of ['candidates', 'interviews', 'offers']) {
+            const snap = await getDocs(collection(db, colName));
+            let batch = writeBatch(db);
+            let ops = 0;
+            for (const d of snap.docs) {
+                const data = d.data();
+                if (data.ownerId) continue;
+                const patch = {
+                    ownerId: uid,
+                    assignedTo: Array.isArray(data.assignedTo) ? data.assignedTo : [],
+                    updatedBy: uid,
+                    updatedAt: serverTimestamp()
+                };
+                if (!data.createdBy) patch.createdBy = uid;
+                batch.update(d.ref, patch);
+                ops++;
+                total++;
+                if (ops >= 400) {
+                    await batch.commit();
+                    batch = writeBatch(db);
+                    ops = 0;
+                }
+            }
+            if (ops > 0) await batch.commit();
+        }
+        if (statusEl) statusEl.textContent = `Done. Assigned owner on ${total} document(s) missing ownerId.`;
+        showToast('Migration finished');
+    } catch (e) {
+        console.error(e);
+        if (statusEl) statusEl.textContent = `Error: ${e.message}`;
     }
 };
