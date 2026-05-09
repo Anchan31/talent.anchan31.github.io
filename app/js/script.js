@@ -356,16 +356,16 @@ function subscribePresencePeers() {
 function subscribeAuditFeed() {
     const tbody = document.querySelector('#activity-feed-table tbody');
     const dashFeed = document.getElementById('dashboard-activity-feed');
-    
+
     if (auditUnsub) {
         try { auditUnsub(); } catch (e) { /* noop */ }
         auditUnsub = null;
     }
-    
+
     try {
         auditUnsub = onSnapshot(query(collection(db, 'audit_logs'), orderBy('at', 'desc'), limit(80)), (snap) => {
             const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            
+
             // Update Main Activity Table if present
             if (tbody) {
                 tbody.innerHTML = logs.map((x) => {
@@ -373,7 +373,7 @@ function subscribeAuditFeed() {
                     return `<tr class="border-b border-slate-100 dark:border-slate-800 text-[11px]"><td class="py-1">${escapeHtml(t)}</td><td>${escapeHtml(x.entity || '')}</td><td>${escapeHtml(x.action || '')}</td><td class="truncate max-w-[120px]">${escapeHtml(x.byEmail || '')}</td></tr>`;
                 }).join('') || '<tr><td colspan="4" class="py-2 text-slate-400">No activity yet.</td></tr>';
             }
-            
+
             // Update Dashboard Feed if present
             if (dashFeed) {
                 dashFeed.innerHTML = logs.slice(0, 15).map(x => {
@@ -3094,7 +3094,7 @@ function updateDashboard() {
 
     activePipelineCandidates.forEach(c => {
         const job = cachedJobs.find(j => j.id === c.jobId);
-        
+
         // Trends and budget adherence only consider candidates for Open jobs
         if (job && job.status === 'Open') {
             const expCTC = Number(c.expectedCTC || c.expectedSalary || 0);
@@ -3186,7 +3186,7 @@ function updateDashboard() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { 
+            plugins: {
                 legend: { display: false },
                 tooltip: {
                     backgroundColor: 'rgba(15, 23, 42, 0.9)',
@@ -3223,7 +3223,7 @@ function updateDashboard() {
             responsive: true,
             maintainAspectRatio: false,
             cutout: '75%',
-            plugins: { 
+            plugins: {
                 legend: { position: 'bottom', labels: { boxWidth: 8, usePointStyle: true, font: { size: 10, weight: 'bold' } } },
                 tooltip: {
                     backgroundColor: 'rgba(15, 23, 42, 0.9)',
@@ -3241,13 +3241,13 @@ function updateDashboard() {
         data: {
             labels: recentJobs.map(j => j.title.length > 15 ? j.title.substring(0, 12) + '...' : j.title),
             datasets: [
-                { 
-                    label: 'Budget', 
-                    data: recentJobs.map(j => (j.budget || 0)), 
-                    borderColor: '#6366f1', 
+                {
+                    label: 'Budget',
+                    data: recentJobs.map(j => (j.budget || 0)),
+                    borderColor: '#6366f1',
                     borderWidth: 3,
-                    backgroundColor: 'rgba(99, 102, 241, 0.1)', 
-                    fill: true, 
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    fill: true,
                     tension: 0.4,
                     pointBackgroundColor: '#6366f1',
                     pointRadius: 4,
@@ -3258,10 +3258,10 @@ function updateDashboard() {
                     data: recentJobs.map(j => {
                         const cands = activePipelineCandidates.filter(c => c.jobId === j.id);
                         return cands.length > 0 ? (cands.reduce((a, b) => a + Number(b.expectedCTC || 0), 0) / cands.length) * 12 : 0;
-                    }), 
-                    borderColor: '#f43f5e', 
+                    }),
+                    borderColor: '#f43f5e',
                     borderWidth: 2,
-                    borderDash: [5, 5], 
+                    borderDash: [5, 5],
                     tension: 0.4,
                     pointRadius: 0
                 }
@@ -3270,7 +3270,7 @@ function updateDashboard() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { 
+            plugins: {
                 legend: { position: 'top', labels: { boxWidth: 15, font: { size: 11, weight: 'bold' } } },
                 tooltip: {
                     mode: 'index',
@@ -3285,7 +3285,7 @@ function updateDashboard() {
                 axis: 'x',
                 intersect: false
             },
-            scales: { 
+            scales: {
                 y: { grid: { color: 'rgba(51, 65, 85, 0.05)', drawBorder: false }, ticks: { callback: (v) => '₹' + (v / 100000).toFixed(1) + 'L', font: { size: 10 } } },
                 x: { grid: { display: false }, ticks: { font: { size: 10 } } }
             }
@@ -6483,15 +6483,15 @@ document.getElementById('filter-budget').onchange = renderCandidates;
 // Theme Toggle Logic
 window.toggleTheme = (event) => {
     if (event && typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
-    
+
     const current = localStorage.getItem('theme') || 'system';
     let next;
     if (current === 'system') next = 'light';
     else if (current === 'light') next = 'dark';
     else next = 'system';
-    
+
     localStorage.setItem('theme', next);
-    
+
     const applyTheme = (theme) => {
         let actual = theme;
         if (theme === 'system') {
@@ -6505,7 +6505,7 @@ window.toggleTheme = (event) => {
     };
 
     applyTheme(next);
-    
+
     const statusEl = document.getElementById('theme-status');
     if (statusEl) {
         statusEl.innerText = next === 'system' ? 'Auto' : next === 'dark' ? 'Dark' : 'Light';
@@ -7284,8 +7284,8 @@ function _shareHash(str) {
 window.generateShareLink = async (candidateId) => {
     const secret = 'rshr2026';
     const token = _shareHash(candidateId + ':' + secret);
-    const baseUrl = window.location.href.split('/').slice(0, -1).join('/');
-    const shareUrl = `${baseUrl}/share.html?id=${candidateId}&token=${token}`;
+    const baseUrl = window.location.href.split('/').slice(0, -2).join('/');
+    const shareUrl = `${baseUrl}/Share/index.html?id=${candidateId}&token=${token}`;
     try {
         await navigator.clipboard.writeText(shareUrl);
         showToast('Profile link copied to clipboard!');
@@ -9829,7 +9829,7 @@ window.renderUserManagementTable = async () => {
     try {
         const snap = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(200)));
         const allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        
+
         const filteredUsers = allUsers.filter(u => {
             const name = (u.displayName || '').toLowerCase();
             const email = (u.email || '').toLowerCase();
@@ -9860,10 +9860,10 @@ window.renderUserManagementTable = async () => {
                             <i class="fas fa-edit text-xs"></i>
                         </button>
                         ${u.status === 'active'
-                            ? `<button type="button" class="w-8 h-8 flex items-center justify-center hover:bg-amber-50 hover:text-amber-600 rounded-lg transition-colors text-slate-400" onclick="adminSetUserStatus('${u.id}','disabled')" title="Disable User">
+                    ? `<button type="button" class="w-8 h-8 flex items-center justify-center hover:bg-amber-50 hover:text-amber-600 rounded-lg transition-colors text-slate-400" onclick="adminSetUserStatus('${u.id}','disabled')" title="Disable User">
                                 <i class="fas fa-user-slash text-xs"></i>
                                </button>`
-                            : `<button type="button" class="w-8 h-8 flex items-center justify-center hover:bg-emerald-50 hover:text-emerald-600 rounded-lg transition-colors text-slate-400" onclick="adminSetUserStatus('${u.id}','active')" title="Enable User">
+                    : `<button type="button" class="w-8 h-8 flex items-center justify-center hover:bg-emerald-50 hover:text-emerald-600 rounded-lg transition-colors text-slate-400" onclick="adminSetUserStatus('${u.id}','active')" title="Enable User">
                                 <i class="fas fa-user-check text-xs"></i>
                                </button>`}
                         <button type="button" class="w-8 h-8 flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 rounded-lg transition-colors text-slate-400" 
@@ -10029,18 +10029,18 @@ window.generateDialerLoginQR = async () => {
     const status = document.getElementById('qr-status');
     const timerEl = document.getElementById('qr-timer');
     const approvalBox = document.getElementById('qr-approval-box');
-    
+
     if (!container) return;
-    
+
     // Clear previous state
     if (qrBridgeUnsub) qrBridgeUnsub();
     if (qrBridgeTimer) clearInterval(qrBridgeTimer);
     approvalBox.classList.add('hidden');
     status.innerText = "Generating secure bridge...";
-    
+
     // Clear container
     container.innerHTML = '';
-    
+
     const bridgeId = Math.random().toString(36).substring(2, 15);
     const secret = Math.random().toString(36).substring(2, 15);
     const expiresAt = Date.now() + 60000; // 1 minute expiry
@@ -10057,7 +10057,7 @@ window.generateDialerLoginQR = async () => {
 
         // Generate QR Code (bridgeId:secret)
         const qrData = `${bridgeId}:${secret}`;
-        
+
         new QRCode(container, {
             text: qrData,
             width: 256,
@@ -10068,7 +10068,7 @@ window.generateDialerLoginQR = async () => {
         });
 
         status.innerText = "Scan this with your mobile dialer.";
-        
+
         // Start Timer
         let timeLeft = 60;
         qrBridgeTimer = setInterval(() => {
@@ -10084,15 +10084,15 @@ window.generateDialerLoginQR = async () => {
         qrBridgeUnsub = onSnapshot(doc(db, 'qr_bridges', bridgeId), (snap) => {
             if (!snap.exists()) return;
             const data = snap.data();
-            
+
             if (data.status === 'scanned') {
                 status.innerText = "Handshake detected. Please approve.";
                 approvalBox.classList.remove('hidden');
                 document.getElementById('qr-request-device').innerText = data.deviceInfo || 'Mobile Device';
-                
+
                 const passVerifyBox = document.getElementById('qr-pass-verify-box');
                 const sessionPass = sessionStorage.getItem('dialer_bridge_pass');
-                
+
                 if (!sessionPass) {
                     passVerifyBox.classList.remove('hidden');
                 } else {
@@ -10104,12 +10104,12 @@ window.generateDialerLoginQR = async () => {
                     if (!pass) {
                         pass = document.getElementById('qr-pass-verify').value;
                     }
-                    
+
                     if (!pass) {
                         showToast('Please enter your password to confirm.', 'error');
                         return;
                     }
-                    
+
                     status.innerText = "Transferring credentials...";
                     await updateDoc(doc(db, 'qr_bridges', bridgeId), {
                         status: 'approved',
@@ -10117,14 +10117,14 @@ window.generateDialerLoginQR = async () => {
                         password: pass,
                         approvedAt: serverTimestamp()
                     });
-                    
+
                     // Save password for subsequent uses in this tab
                     sessionStorage.setItem('dialer_bridge_pass', pass);
-                    
+
                     showToast('Login approved!');
                     setTimeout(() => closeModal('modal-dialer-qr'), 2000);
                 };
-                
+
                 document.getElementById('btn-qr-deny').onclick = () => {
                     cleanupDialerBridge(bridgeId);
                     closeModal('modal-dialer-qr');
@@ -10149,5 +10149,5 @@ window.cleanupDialerBridge = async (bridgeId) => {
     if (qrBridgeTimer) clearInterval(qrBridgeTimer);
     try {
         await deleteDoc(doc(db, 'qr_bridges', bridgeId));
-    } catch (e) {}
+    } catch (e) { }
 };

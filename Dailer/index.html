@@ -6,15 +6,15 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Remote Dialer - Nextgen Recruitment Suite</title>
-    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="icon" type="image/png" href="../app/assets/images/favicon.png">
     <meta name="theme-color" content="#3b82f6">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Remote Dialer">
-    <link rel="apple-touch-icon" href="favicon.png">
+    <link rel="apple-touch-icon" href="../app/assets/images/favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="tailwind-out.css">
+    <link rel="stylesheet" href="../app/css/tailwind-out.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -67,9 +67,17 @@
         }
 
         @keyframes mesh-rotate {
-            0% { transform: rotate(0deg) scale(1); }
-            50% { transform: rotate(180deg) scale(1.2); }
-            100% { transform: rotate(360deg) scale(1); }
+            0% {
+                transform: rotate(0deg) scale(1);
+            }
+
+            50% {
+                transform: rotate(180deg) scale(1.2);
+            }
+
+            100% {
+                transform: rotate(360deg) scale(1);
+            }
         }
 
         .glass-card {
@@ -88,8 +96,10 @@
             border-radius: 2rem;
         }
 
-        .scanner-target::before, .scanner-target::after,
-        .scanner-target i::before, .scanner-target i::after {
+        .scanner-target::before,
+        .scanner-target::after,
+        .scanner-target i::before,
+        .scanner-target i::after {
             content: "";
             position: absolute;
             width: 40px;
@@ -99,10 +109,33 @@
             z-index: 10;
         }
 
-        .scanner-target::before { top: -2px; left: -2px; border-width: 4px 0 0 4px; border-top-left-radius: 1.5rem; }
-        .scanner-target::after { top: -2px; right: -2px; border-width: 4px 4px 0 0; border-top-right-radius: 1.5rem; }
-        .scanner-target i::before { bottom: -2px; left: -2px; border-width: 0 0 4px 4px; border-bottom-left-radius: 1.5rem; }
-        .scanner-target i::after { bottom: -2px; right: -2px; border-width: 0 4px 4px 0; border-bottom-right-radius: 1.5rem; }
+        .scanner-target::before {
+            top: -2px;
+            left: -2px;
+            border-width: 4px 0 0 4px;
+            border-top-left-radius: 1.5rem;
+        }
+
+        .scanner-target::after {
+            top: -2px;
+            right: -2px;
+            border-width: 4px 4px 0 0;
+            border-top-right-radius: 1.5rem;
+        }
+
+        .scanner-target i::before {
+            bottom: -2px;
+            left: -2px;
+            border-width: 0 0 4px 4px;
+            border-bottom-left-radius: 1.5rem;
+        }
+
+        .scanner-target i::after {
+            bottom: -2px;
+            right: -2px;
+            border-width: 0 4px 4px 0;
+            border-bottom-right-radius: 1.5rem;
+        }
 
         .scanning-line {
             position: absolute;
@@ -117,8 +150,13 @@
         }
 
         @keyframes scan-move {
-            0% { top: 0%; }
-            100% { top: 100%; }
+            0% {
+                top: 0%;
+            }
+
+            100% {
+                top: 100%;
+            }
         }
 
         .bottom-sheet {
@@ -183,8 +221,15 @@
 
         /* Micro-animations */
         @keyframes fade-in-up {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .animate-up {
@@ -206,7 +251,8 @@
     <div id="auth-layer" class="fixed inset-0 z-50 flex flex-col transition-opacity duration-700 bg-slate-950">
         <div class="flex-1 flex flex-col justify-center px-8 text-center">
             <div class="mb-12 animate-up">
-                <div class="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-blue-500/30 transform rotate-6">
+                <div
+                    class="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-blue-500/30 transform rotate-6">
                     <i class="fas fa-headset text-4xl text-white -rotate-6"></i>
                 </div>
                 <h1 class="text-4xl font-black mb-3 tracking-tight text-white">Remote Dialer</h1>
@@ -216,13 +262,11 @@
             <div class="space-y-4 animate-up" style="animation-delay: 0.1s">
                 <div class="relative">
                     <i class="fas fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-slate-500/50"></i>
-                    <input type="email" id="auth-email" placeholder="Work Email" 
-                        class="theme-input pl-12">
+                    <input type="email" id="auth-email" placeholder="Work Email" class="theme-input pl-12">
                 </div>
                 <div class="relative">
                     <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-500/50"></i>
-                    <input type="password" id="auth-password" placeholder="Password" 
-                        class="theme-input pl-12">
+                    <input type="password" id="auth-password" placeholder="Password" class="theme-input pl-12">
                 </div>
             </div>
 
@@ -250,22 +294,25 @@
         <div id="qr-reader-container" class="hidden fixed inset-0 z-[100] bg-slate-950 flex flex-col">
             <div class="p-8 pt-12 flex justify-between items-center z-20">
                 <h3 class="text-xl font-black text-white">Secure Scanner</h3>
-                <button onclick="stopQRScan()" class="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white backdrop-blur-xl">
+                <button onclick="stopQRScan()"
+                    class="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white backdrop-blur-xl">
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
-            
+
             <div class="flex-1 flex flex-col items-center justify-center px-10">
                 <div class="scanner-target w-full aspect-square max-w-[320px] overflow-hidden">
                     <div class="scanning-line"></div>
                     <i></i>
                     <div id="qr-reader" class="w-full h-full"></div>
                 </div>
-                <p class="text-slate-400 font-medium text-sm text-center mt-12 px-6">Align the QR code from your desktop portal</p>
+                <p class="text-slate-400 font-medium text-sm text-center mt-12 px-6">Align the QR code from your desktop
+                    portal</p>
             </div>
         </div>
 
-        <p id="error-msg" class="text-center pb-12 px-8 text-xs font-bold text-red-400 opacity-0 transition-opacity duration-300"></p>
+        <p id="error-msg"
+            class="text-center pb-12 px-8 text-xs font-bold text-red-400 opacity-0 transition-opacity duration-300"></p>
     </div>
 
     <!-- Main Content -->
@@ -344,7 +391,7 @@
     </footer>
 
     <script type="module">
-        import { auth, db, onAuthStateChanged, signInWithEmailAndPassword, signOut, doc, onSnapshot, updateDoc, serverTimestamp } from "./firebase_config.js";
+        import { auth, db, onAuthStateChanged, signInWithEmailAndPassword, signOut, doc, onSnapshot, updateDoc, serverTimestamp } from "../app/js/firebase_config.js";
 
         let swRegistration = null;
         let wakeLock = null;
@@ -352,7 +399,7 @@
         // PWA Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').then(reg => {
+                navigator.serviceWorker.register('../app/js/sw.js').then(reg => {
                     console.log('SW Registered');
                     swRegistration = reg;
                 }).catch(err => console.log('SW Fail', err));
@@ -431,8 +478,8 @@
 
         const loginBtn = document.getElementById('login-btn');
         loginBtn.onclick = async () => {
-            const email = document.getElementById('email').value;
-            const pass = document.getElementById('password').value;
+            const email = document.getElementById('auth-email').value;
+            const pass = document.getElementById('auth-password').value;
             if (!email || !pass) return;
 
             triggerHaptic(20);
@@ -505,8 +552,8 @@
                 const title = "Incoming Call Request";
                 const options = {
                     body: `Call ${data.candidateName} at ${data.phoneNumber}`,
-                    icon: "favicon.png",
-                    badge: "favicon.png",
+                    icon: "../app/assets/images/favicon.png",
+                    badge: "../app/assets/images/favicon.png",
                     tag: "remote-call",
                     renotify: true,
                     vibrate: [200, 100, 200]
@@ -546,7 +593,7 @@
         async function startQRScan() {
             html5QrCode = new Html5Qrcode("qr-reader");
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-            
+
             try {
                 await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
             } catch (err) {
@@ -568,7 +615,7 @@
         async function onScanSuccess(decodedText) {
             triggerHaptic(50);
             await stopQRScan();
-            
+
             // Format: bridgeId:secret
             const parts = decodedText.split(':');
             if (parts.length !== 2) {

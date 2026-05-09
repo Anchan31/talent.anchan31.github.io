@@ -5,8 +5,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Candidate Profile | Nextgen Recruitment Suite HR</title>
-    <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="tailwind-out.css">
+    <link rel="icon" type="image/png" href="../app/assets/images/favicon.png">
+    <link rel="stylesheet" href="../app/css/tailwind-out.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap');
@@ -161,11 +161,17 @@
         }
 
         @media print {
-            .no-print { display: none !important; }
-            body { background: white !important; }
-            .glass-card { 
-                box-shadow: none !important; 
-                border: 1px solid #e2e8f0 !important; 
+            .no-print {
+                display: none !important;
+            }
+
+            body {
+                background: white !important;
+            }
+
+            .glass-card {
+                box-shadow: none !important;
+                border: 1px solid #e2e8f0 !important;
                 background: white !important;
                 backdrop-filter: none !important;
             }
@@ -182,12 +188,14 @@
 
     <!-- Error -->
     <div id="state-error" style="display:none;" class="centered-state animate-fade-in text-center">
-        <div class="w-20 h-20 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-3xl flex items-center justify-center text-3xl mb-4">
+        <div
+            class="w-20 h-20 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-3xl flex items-center justify-center text-3xl mb-4">
             <i class="fas fa-shield-halved"></i>
         </div>
         <h2 class="text-2xl font-black mb-2">Access Denied</h2>
         <p class="text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed">
-            This share link is invalid, expired, or may have been restricted. Please contact your recruitment team for a new link.
+            This share link is invalid, expired, or may have been restricted. Please contact your recruitment team for a
+            new link.
         </p>
     </div>
 
@@ -197,22 +205,25 @@
         <nav class="sticky top-0 z-50 glass-card px-6 py-4 mb-8">
             <div class="max-w-4xl mx-auto flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+                    <div
+                        class="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
                         <i class="fas fa-users-rays"></i>
                     </div>
                     <div>
                         <h1 class="text-sm font-black tracking-tight leading-none">NEXTGEN RECRUITMENT SUITE</h1>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Share Portal</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Share Portal
+                        </p>
                     </div>
                 </div>
-                
+
                 <div class="flex items-center gap-4 no-print">
-                    <button id="theme-toggle" class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+                    <button id="theme-toggle"
+                        class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
                         <i class="fas fa-moon dark:hidden"></i>
                         <i class="fas fa-sun hidden dark:block"></i>
                     </button>
                     <button class="btn-print" onclick="window.print()">
-                        <i class="fas fa-print"></i> 
+                        <i class="fas fa-print"></i>
                         <span class="hidden md:inline">Print Profile</span>
                     </button>
                 </div>
@@ -222,7 +233,8 @@
         <main class="max-w-4xl mx-auto px-6 pb-12">
             <div class="glass-card rounded-[2.5rem] overflow-hidden shadow-2xl shadow-blue-900/5">
                 <!-- Profile Header -->
-                <div class="relative p-8 md:p-12 overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
+                <div
+                    class="relative p-8 md:p-12 overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
                     <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
                         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
                             <defs>
@@ -235,13 +247,18 @@
                     </div>
 
                     <div class="relative z-10 flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
-                        <div class="w-32 h-32 rounded-3xl bg-white/20 backdrop-blur-md border-2 border-white/30 flex items-center justify-center text-4xl font-black text-white shadow-2xl" id="hdr-initial">?</div>
+                        <div class="w-32 h-32 rounded-3xl bg-white/20 backdrop-blur-md border-2 border-white/30 flex items-center justify-center text-4xl font-black text-white shadow-2xl"
+                            id="hdr-initial">?</div>
                         <div class="flex-1">
                             <h2 class="text-4xl font-black mb-2" id="hdr-name">Candidate Name</h2>
                             <p class="text-xl font-medium text-blue-100 mb-4" id="hdr-job">Target Position</p>
                             <div class="flex flex-wrap justify-center md:justify-start gap-3">
-                                <span class="px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-[10px] font-black uppercase tracking-widest" id="hdr-stage">Applied</span>
-                                <span class="px-4 py-1.5 rounded-full bg-emerald-500/20 backdrop-blur-md border border-emerald-500/30 text-[10px] font-black uppercase tracking-widest text-emerald-300">Verified Profile</span>
+                                <span
+                                    class="px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-[10px] font-black uppercase tracking-widest"
+                                    id="hdr-stage">Applied</span>
+                                <span
+                                    class="px-4 py-1.5 rounded-full bg-emerald-500/20 backdrop-blur-md border border-emerald-500/30 text-[10px] font-black uppercase tracking-widest text-emerald-300">Verified
+                                    Profile</span>
                             </div>
                         </div>
                     </div>
@@ -278,7 +295,8 @@
                         <h3 class="section-title">
                             <i class="fas fa-note-sticky text-amber-500"></i> Notes / Summary
                         </h3>
-                        <div class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6 text-slate-600 dark:text-slate-400 leading-relaxed text-sm whitespace-pre-wrap border border-slate-200/60 dark:border-slate-700/60" id="sec-notes"></div>
+                        <div class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6 text-slate-600 dark:text-slate-400 leading-relaxed text-sm whitespace-pre-wrap border border-slate-200/60 dark:border-slate-700/60"
+                            id="sec-notes"></div>
                     </section>
 
                     <!-- Skills -->
@@ -299,9 +317,11 @@
                 </div>
 
                 <!-- Footer -->
-                <div class="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 text-center">
+                <div
+                    class="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 text-center">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-                        Shared via <span class="text-blue-600 dark:text-blue-400">Nextgen Recruitment Suite HR</span> • Read-only snapshot
+                        Shared via <span class="text-blue-600 dark:text-blue-400">Nextgen Recruitment Suite HR</span> •
+                        Read-only snapshot
                     </p>
                 </div>
             </div>
@@ -320,7 +340,7 @@
             messagingSenderId: "1049067446272",
             appId: "1:1049067446272:web:a0eb4e5a9fac1589a8f8e5",
             measurementId: "G-87FVXXYEP7"
-        });        const db = firebase.firestore();
+        }); const db = firebase.firestore();
 
         // --- THEME & SETTINGS ---
         let portalSettings = null;
@@ -435,7 +455,7 @@
                             const q = await db.collection('jobs').where('title', '==', c.jobId).limit(1).get();
                             if (!q.empty) jobTitle = q.docs[0].data().title || '';
                         }
-                    } catch (_) {}
+                    } catch (_) { }
                 }
                 if (!jobTitle) jobTitle = 'Position not specified';
 
