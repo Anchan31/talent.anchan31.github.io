@@ -355,20 +355,69 @@ function subscribePresencePeers() {
 
 function subscribeAuditFeed() {
     const tbody = document.querySelector('#activity-feed-table tbody');
-    if (!tbody) return;
+    const dashFeed = document.getElementById('dashboard-activity-feed');
+    
     if (auditUnsub) {
         try { auditUnsub(); } catch (e) { /* noop */ }
         auditUnsub = null;
     }
+    
     try {
         auditUnsub = onSnapshot(query(collection(db, 'audit_logs'), orderBy('at', 'desc'), limit(80)), (snap) => {
-            tbody.innerHTML = snap.docs.map((d) => {
-                const x = d.data();
-                const t = x.at?.toDate ? x.at.toDate().toLocaleString() : '';
-                return `<tr class="border-b border-slate-100 dark:border-slate-800 text-[11px]"><td class="py-1">${escapeHtml(t)}</td><td>${escapeHtml(x.entity || '')}</td><td>${escapeHtml(x.action || '')}</td><td class="truncate max-w-[120px]">${escapeHtml(x.byEmail || '')}</td></tr>`;
-            }).join('') || '<tr><td colspan="4" class="py-2 text-slate-400">No activity yet.</td></tr>';
+            const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            
+            // Update Main Activity Table if present
+            if (tbody) {
+                tbody.innerHTML = logs.map((x) => {
+                    const t = x.at?.toDate ? x.at.toDate().toLocaleString() : '';
+                    return `<tr class="border-b border-slate-100 dark:border-slate-800 text-[11px]"><td class="py-1">${escapeHtml(t)}</td><td>${escapeHtml(x.entity || '')}</td><td>${escapeHtml(x.action || '')}</td><td class="truncate max-w-[120px]">${escapeHtml(x.byEmail || '')}</td></tr>`;
+                }).join('') || '<tr><td colspan="4" class="py-2 text-slate-400">No activity yet.</td></tr>';
+            }
+            
+            // Update Dashboard Feed if present
+            if (dashFeed) {
+                dashFeed.innerHTML = logs.slice(0, 15).map(x => {
+                    const t = x.at?.toDate ? timeAgo(x.at.toDate()) : 'just now';
+                    const icon = getActionIcon(x.action);
+                    return `
+                        <div class="flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 transition-all hover:border-blue-500/30">
+                            <div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 flex-shrink-0">
+                                <i class="${icon} text-xs"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-[11px] font-bold text-slate-900 dark:text-white leading-tight">${escapeHtml(x.action)} <span class="text-slate-400 font-medium">on</span> ${escapeHtml(x.entity)}</p>
+                                <p class="text-[9px] text-slate-500 mt-1 font-medium">${escapeHtml(x.byEmail.split('@')[0])} • ${t}</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('') || '<div class="text-center py-8 text-slate-400">No recent activity</div>';
+            }
         });
     } catch (e) { console.warn('audit feed', e); }
+}
+
+function getActionIcon(action) {
+    action = (action || '').toLowerCase();
+    if (action.includes('create') || action.includes('add')) return 'fas fa-plus-circle';
+    if (action.includes('update') || action.includes('edit')) return 'fas fa-pen-to-square';
+    if (action.includes('delete') || action.includes('remove')) return 'fas fa-trash-alt';
+    if (action.includes('approve')) return 'fas fa-check-circle';
+    return 'fas fa-bolt';
+}
+
+function timeAgo(date) {
+    const seconds = Math.floor((new Date() - date) / 1000);
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + "y";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + "mo";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + "d";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + "h";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + "m";
+    return Math.floor(seconds) + "s";
 }
 
 window.toggleMyPipelineOnly = (el) => {
@@ -3009,11 +3058,16 @@ let stageChartInstance, budgetChartInstance, sourceChartInstance;
 function updateDashboard() {
     const dashCandidates = applyMyPipelineIfNeeded(cachedCandidates);
     const dashInterviews = applyMyPipelineIfNeeded(cachedInterviews);
+
+    // Filter for Active Pipeline (Applied, Screening, Interview, Selected, Offer)
+    // Hired and Rejected candidates are excluded from active charts/metrics
+    const activeStages = ['Applied', 'Screening', 'Interview', 'Selected', 'Offer'];
+    const activePipelineCandidates = dashCandidates.filter(c => activeStages.includes(c.stage));
+
     // Basic Counters
-    const totalCandidates = dashCandidates.length;
+    const totalCandidates = activePipelineCandidates.length;
     const activeJobs = cachedJobs.filter(j => j.status === 'Open').length;
-    const pipelineCount = dashCandidates.filter(c => !['Hired', 'Rejected', 'Backed Out', 'Not Interested'].includes(c.stage)).length;
-    document.getElementById('stat-total-candidates').innerText = pipelineCount;
+    document.getElementById('stat-total-candidates').innerText = totalCandidates;
     document.getElementById('stat-active-jobs').innerText = activeJobs || cachedJobs.length;
 
     // Today's Interviews
@@ -3022,31 +3076,31 @@ function updateDashboard() {
     const todayInts = dashInterviews.filter(i => i.dateTime && i.dateTime.startsWith(todayStr)).length;
     document.getElementById('stat-today-interviews').innerText = todayInts;
 
-
-
     // Talent Pool
     const talentPool = getTalentPoolCandidates().filter(c => c.isNew || c.stage === 'Applied').length;
     const tpEl = document.getElementById('stat-talent-pool');
     if (tpEl) tpEl.innerText = talentPool;
 
-    // Total Hires
+    // Total Hires - Full history
     const hiredCount = dashCandidates.filter(c => c.stage === 'Hired').length;
     const thEl = document.getElementById('stat-total-hires');
     if (thEl) thEl.innerText = hiredCount;
 
-    // Essential Metrics for Charts and Dashboard
+    // Essential Metrics for Charts and Dashboard - Use Active Pipeline
     let withinBudgetCount = 0;
     let totalCandWithJob = 0;
     let ctcs = [];
     const sourceMap = {};
 
-    dashCandidates.forEach(c => {
+    activePipelineCandidates.forEach(c => {
         const job = cachedJobs.find(j => j.id === c.jobId);
-        const expCTC = Number(c.expectedCTC || c.expectedSalary || 0);
-        const annualExpCTC = expCTC * 12;
-        if (expCTC > 0) ctcs.push(expCTC);
+        
+        // Trends and budget adherence only consider candidates for Open jobs
+        if (job && job.status === 'Open') {
+            const expCTC = Number(c.expectedCTC || c.expectedSalary || 0);
+            if (expCTC > 0) ctcs.push(expCTC);
 
-        if (job) {
+            const annualExpCTC = expCTC * 12;
             let jobBudget = job.budget ? Number(job.budget) : (job.budgetMax ? Number(job.budgetMax) : 0);
             if (jobBudget > 0 && annualExpCTC > 0) {
                 totalCandWithJob++;
@@ -3060,8 +3114,8 @@ function updateDashboard() {
 
     const adherence = totalCandWithJob > 0 ? Math.round((withinBudgetCount / totalCandWithJob) * 100) : 100;
     const sortedSources = Object.entries(sourceMap).sort((a, b) => b[1] - a[1]);
-    // Statistics for legacy elements if they still exist
-    const selectedCount = dashCandidates.filter(c => c.stage === 'Selected' || c.stage === 'Hired').length;
+    // Statistics for active pipeline
+    const selectedCount = activePipelineCandidates.filter(c => c.stage === 'Selected').length;
     const selectionRate = totalCandidates > 0 ? Math.round((selectedCount / totalCandidates) * 100) : 0;
     const srLegacy = document.getElementById('stat-selection-rate');
     if (srLegacy) srLegacy.innerText = selectionRate + '%';
@@ -3106,16 +3160,16 @@ function updateDashboard() {
     const statCompletedTodayEl = document.getElementById('stat-int-completed');
     if (statCompletedTodayEl) statCompletedTodayEl.innerText = completedToday;
 
-    // Join Ratio
-    const selectedOf = dashCandidates.filter(c => c.stage === 'Selected').length;
-    const joinRatio = (hiredCount + selectedOf) > 0 ? Math.round((hiredCount / (hiredCount + selectedOf)) * 100) : 0;
+    // Join Ratio - Based on active pipeline selected vs total pipeline selected (historical hired + active selected)
+    const activeSelected = activePipelineCandidates.filter(c => c.stage === 'Selected').length;
+    const joinRatio = (hiredCount + activeSelected) > 0 ? Math.round((hiredCount / (hiredCount + activeSelected)) * 100) : 0;
     const jrEl = document.getElementById('stat-join-ratio');
     if (jrEl) jrEl.innerText = joinRatio + '%';
 
-    // Charts update
+    // Charts update - Use Active Pipeline Only
     if (stageChartInstance) stageChartInstance.destroy();
-    const stages = ['Applied', 'Screening', 'Interview', 'Selected', 'Hired', 'Rejected', 'Backed Out', 'Not Interested'];
-    const stageCounts = stages.map(s => dashCandidates.filter(c => c.stage === s).length);
+    const stages = ['Applied', 'Screening', 'Interview', 'Selected', 'Offer'];
+    const stageCounts = stages.map(s => activePipelineCandidates.filter(c => c.stage === s).length);
     stageChartInstance = new Chart(document.getElementById('stageChart'), {
         type: 'bar',
         data: {
@@ -3123,16 +3177,28 @@ function updateDashboard() {
             datasets: [{
                 label: 'Candidates',
                 data: stageCounts,
-                backgroundColor: ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#25D366', '#ef4444', '#64748b', '#94a3b8'],
-                borderRadius: 8
+                backgroundColor: ['#6366f1', '#8b5cf6', '#d946ef', '#10b981', '#06b6d4'],
+                borderRadius: 12,
+                borderSkipped: false,
+                barThickness: 32
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            plugins: { 
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    padding: 12,
+                    titleFont: { size: 14, weight: 'bold' },
+                    bodyFont: { size: 12 },
+                    cornerRadius: 8,
+                    displayColors: false
+                }
+            },
             scales: {
-                y: { beginAtZero: true, grid: { color: 'rgba(51, 65, 85, 0.1)', borderDash: [5, 5] }, ticks: { font: { size: 10 } } },
+                y: { beginAtZero: true, grid: { color: 'rgba(51, 65, 85, 0.05)', drawBorder: false }, ticks: { font: { size: 10 } } },
                 x: { grid: { display: false }, ticks: { font: { size: 10, weight: 'bold' } } }
             }
         }
@@ -3147,39 +3213,82 @@ function updateDashboard() {
             labels: [...topSources.map(s => s[0]), ...(otherCount > 0 ? ['Other'] : [])],
             datasets: [{
                 data: [...topSources.map(s => s[1]), ...(otherCount > 0 ? [otherCount] : [])],
-                backgroundColor: ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#94a3b8'],
-                borderWidth: 0
+                backgroundColor: ['#6366f1', '#d946ef', '#f43f5e', '#f59e0b', '#10b981', '#94a3b8'],
+                borderWidth: 4,
+                borderColor: 'transparent',
+                hoverOffset: 15
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '70%',
-            plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
+            cutout: '75%',
+            plugins: { 
+                legend: { position: 'bottom', labels: { boxWidth: 8, usePointStyle: true, font: { size: 10, weight: 'bold' } } },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    padding: 12,
+                    cornerRadius: 8
+                }
+            }
         }
     });
 
     if (budgetChartInstance) budgetChartInstance.destroy();
-    const recentJobs = cachedJobs.slice(0, 6);
+    const recentJobs = cachedJobs.filter(j => j.status === 'Open').slice(0, 6);
     budgetChartInstance = new Chart(document.getElementById('budgetChart'), {
         type: 'line',
         data: {
             labels: recentJobs.map(j => j.title.length > 15 ? j.title.substring(0, 12) + '...' : j.title),
             datasets: [
-                { label: 'Budget', data: recentJobs.map(j => (j.budget || 0)), borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.4 },
+                { 
+                    label: 'Budget', 
+                    data: recentJobs.map(j => (j.budget || 0)), 
+                    borderColor: '#6366f1', 
+                    borderWidth: 3,
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)', 
+                    fill: true, 
+                    tension: 0.4,
+                    pointBackgroundColor: '#6366f1',
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                },
                 {
-                    label: 'Avg Exp', data: recentJobs.map(j => {
-                        const cands = cachedCandidates.filter(c => c.jobId === j.id);
+                    label: 'Avg Expected CTC',
+                    data: recentJobs.map(j => {
+                        const cands = activePipelineCandidates.filter(c => c.jobId === j.id);
                         return cands.length > 0 ? (cands.reduce((a, b) => a + Number(b.expectedCTC || 0), 0) / cands.length) * 12 : 0;
-                    }), borderColor: '#ef4444', borderDash: [5, 5], tension: 0.4
+                    }), 
+                    borderColor: '#f43f5e', 
+                    borderWidth: 2,
+                    borderDash: [5, 5], 
+                    tension: 0.4,
+                    pointRadius: 0
                 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { position: 'top', labels: { boxWidth: 15, font: { size: 11 } } } },
-            scales: { y: { grid: { color: 'rgba(51, 65, 85, 0.1)' }, ticks: { callback: (v) => '₹' + (v / 100000).toFixed(1) + 'L' } } }
+            plugins: { 
+                legend: { position: 'top', labels: { boxWidth: 15, font: { size: 11, weight: 'bold' } } },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    padding: 12,
+                    cornerRadius: 8
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            },
+            scales: { 
+                y: { grid: { color: 'rgba(51, 65, 85, 0.05)', drawBorder: false }, ticks: { callback: (v) => '₹' + (v / 100000).toFixed(1) + 'L', font: { size: 10 } } },
+                x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+            }
         }
     });
 
@@ -3197,7 +3306,7 @@ function updateDashboard() {
     const signedEl = document.getElementById('stat-offers-signed');
     if (signedEl) signedEl.innerText = signedOffers.length;
 
-    const expValues = cachedCandidates.map(c => Number(c.experience || 0)).filter(v => v > 0);
+    const expValues = activePipelineCandidates.map(c => Number(c.experience || 0)).filter(v => v > 0);
     const avgExp = expValues.length > 0 ? (expValues.reduce((a, b) => a + b, 0) / expValues.length).toFixed(1) : 0;
     const aeEl = document.getElementById('stat-avg-exp');
     if (aeEl) aeEl.innerText = avgExp;
@@ -3247,25 +3356,27 @@ function renderHiringFunnel() {
     const container = document.getElementById('hiring-funnel-chart');
     if (!container) return;
 
+    const activeStages = ['Applied', 'Screening', 'Interview', 'Selected', 'Offer'];
+    const activeCandidates = cachedCandidates.filter(c => activeStages.includes(c.stage));
+
     const funnelStages = [
         { label: 'Applied', color: '#3b82f6' },
         { label: 'Screening', color: '#8b5cf6' },
         { label: 'Interview', color: '#f59e0b' },
         { label: 'Selected', color: '#10b981' },
-        { label: 'Offer', color: '#06b6d4' },
-        { label: 'Hired', color: '#22c55e' },
+        { label: 'Offer', color: '#06b6d4' }
     ];
 
     const counts = funnelStages.map(s => ({
         ...s,
-        count: cachedCandidates.filter(c => c.stage === s.label).length
+        count: activeCandidates.filter(c => c.stage === s.label).length
     }));
 
     // Also count stages that don't map 1:1
     const screeningAliases = ['Screening', 'Phone Screen', 'HR Screen'];
     const interviewAliases = ['Interview', 'L1 Interview', 'L2 Interview', 'Technical', 'Final Round'];
-    counts[1].count = cachedCandidates.filter(c => screeningAliases.includes(c.stage)).length;
-    counts[2].count = cachedCandidates.filter(c => interviewAliases.includes(c.stage)).length;
+    counts[1].count = activeCandidates.filter(c => screeningAliases.includes(c.stage)).length;
+    counts[2].count = activeCandidates.filter(c => interviewAliases.includes(c.stage)).length;
 
     const maxCount = Math.max(...counts.map(s => s.count), 1);
 
@@ -9646,6 +9757,16 @@ window.populateCandidateMastersData = function () {
 
 // --- ADMIN: USERS & MIGRATION ---
 window.openCreateUserModal = () => {
+    const email = document.getElementById('create-user-email');
+    const name = document.getElementById('create-user-name');
+    const role = document.getElementById('create-user-role');
+    const pass = document.getElementById('create-user-temp-pass');
+
+    if (email) email.value = '';
+    if (name) name.value = '';
+    if (role) role.value = perm.ROLES.RECRUITER;
+    if (pass) pass.value = '';
+
     const err = document.getElementById('create-user-error');
     if (err) err.classList.add('hidden');
     openModal('modal-create-user');
@@ -9703,31 +9824,125 @@ window.renderUserManagementTable = async () => {
         tbody.innerHTML = '';
         return;
     }
+    const searchVal = document.getElementById('user-mgmt-search')?.value.toLowerCase() || '';
+
     try {
-        const snap = await getDocs(query(collection(db, 'users'), limit(200)));
-        tbody.innerHTML = snap.docs.map((d) => {
-            const u = { id: d.id, ...d.data() };
-            const selected = (r) => (u.role === r ? 'selected' : '');
-            return `<tr class="border-b border-slate-100 dark:border-slate-800">
-                <td class="py-2">${escapeHtml(u.email || '')}</td>
-                <td class="py-2">${escapeHtml(u.displayName || '')}</td>
-                <td class="py-2">
-                  <select class="theme-input text-xs py-1" data-user-role="${u.id}" onchange="adminUpdateUserRole(this.dataset.userRole, this.value)">
-                    <option value="admin" ${selected('admin')}>admin</option>
-                    <option value="manager" ${selected('manager')}>manager</option>
-                    <option value="recruiter" ${selected('recruiter')}>recruiter</option>
-                    <option value="viewer" ${selected('viewer')}>viewer</option>
-                  </select>
+        const snap = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(200)));
+        const allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        
+        const filteredUsers = allUsers.filter(u => {
+            const name = (u.displayName || '').toLowerCase();
+            const email = (u.email || '').toLowerCase();
+            return name.includes(searchVal) || email.includes(searchVal);
+        });
+
+        tbody.innerHTML = filteredUsers.map((u) => {
+            const statusColor = u.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500';
+            const roleColor = u.role === 'admin' ? 'bg-rose-100 text-rose-700' : u.role === 'manager' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700';
+
+            return `<tr class="border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                <td class="py-4 px-4">
+                    <div class="flex flex-col">
+                        <span class="font-bold text-slate-800 dark:text-slate-200">${escapeHtml(u.displayName || 'No Name')}</span>
+                        <span class="text-[10px] text-slate-400 font-medium">${escapeHtml(u.email || '')}</span>
+                    </div>
                 </td>
-                <td class="py-2">${escapeHtml(u.status || '')}</td>
-                <td class="py-2">${u.status === 'active'
-                    ? `<button type="button" class="text-xs text-amber-600 font-bold" onclick="adminSetUserStatus('${u.id}','disabled')">Disable</button>`
-                    : `<button type="button" class="text-xs text-emerald-600 font-bold" onclick="adminSetUserStatus('${u.id}','active')">Enable</button>`}
+                <td class="py-4 px-4">
+                    <span class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${roleColor}">${escapeHtml(u.role || 'recruiter')}</span>
+                </td>
+                <td class="py-4 px-4">
+                    <span class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${statusColor}">${escapeHtml(u.status || 'active')}</span>
+                </td>
+                <td class="py-4 px-4 text-right">
+                    <div class="flex items-center justify-end gap-2">
+                        <button type="button" class="w-8 h-8 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors text-slate-400" 
+                            onclick="openEditUserModal('${u.id}', '${escapeHtml(u.displayName || '')}', '${escapeHtml(u.email || '')}', '${u.role}', '${u.status}')" title="Edit User">
+                            <i class="fas fa-edit text-xs"></i>
+                        </button>
+                        ${u.status === 'active'
+                            ? `<button type="button" class="w-8 h-8 flex items-center justify-center hover:bg-amber-50 hover:text-amber-600 rounded-lg transition-colors text-slate-400" onclick="adminSetUserStatus('${u.id}','disabled')" title="Disable User">
+                                <i class="fas fa-user-slash text-xs"></i>
+                               </button>`
+                            : `<button type="button" class="w-8 h-8 flex items-center justify-center hover:bg-emerald-50 hover:text-emerald-600 rounded-lg transition-colors text-slate-400" onclick="adminSetUserStatus('${u.id}','active')" title="Enable User">
+                                <i class="fas fa-user-check text-xs"></i>
+                               </button>`}
+                        <button type="button" class="w-8 h-8 flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 rounded-lg transition-colors text-slate-400" 
+                            onclick="adminDeleteUser('${u.id}', '${escapeHtml(u.displayName || u.email)}')" title="Delete User">
+                            <i class="fas fa-trash-alt text-xs"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>`;
-        }).join('') || '<tr><td colspan="5" class="py-4 text-slate-400">No users</td></tr>';
+        }).join('') || `<tr><td colspan="4" class="py-12 text-center text-slate-400"><i class="fas fa-search text-4xl mb-2 opacity-20"></i><p>No results for "${searchVal}"</p></td></tr>`;
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-red-500">${escapeHtml(e.message)}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-red-500 font-bold bg-red-50 rounded-xl">${escapeHtml(e.message)}</td></tr>`;
+    }
+};
+
+window.openEditUserModal = (uid, name, email, role, status) => {
+    document.getElementById('edit-user-uid').value = uid;
+    document.getElementById('edit-user-name').value = name;
+    document.getElementById('edit-user-email').value = email;
+    document.getElementById('edit-user-role').value = role || 'recruiter';
+    document.getElementById('edit-user-status').value = status || 'active';
+    openModal('modal-edit-user');
+};
+
+window.adminSendResetEmailFromEdit = async () => {
+    const email = document.getElementById('edit-user-email').value;
+    if (!email) return;
+    try {
+        await sendPasswordResetEmail(auth, email);
+        showToast('Password reset email sent to ' + email);
+    } catch (e) {
+        alert('Failed to send reset email: ' + e.message);
+    }
+};
+
+window.submitEditUser = async () => {
+    if (!perm.canManageUsers(userRole())) return;
+    const uid = document.getElementById('edit-user-uid').value;
+    const displayName = document.getElementById('edit-user-name').value;
+    const role = document.getElementById('edit-user-role').value;
+    const status = document.getElementById('edit-user-status').value;
+
+    if (!displayName) {
+        alert('Name is required');
+        return;
+    }
+
+    try {
+        await updateDoc(doc(db, 'users', uid), {
+            displayName,
+            role,
+            status,
+            updatedAt: serverTimestamp(),
+            updatedBy: auth.currentUser.uid
+        });
+        showToast('User updated successfully');
+        closeModal('modal-edit-user');
+        await renderUserManagementTable();
+        await loadUserDirectoryForAssignments();
+    } catch (e) {
+        alert('Failed to update user: ' + e.message);
+    }
+};
+
+window.adminDeleteUser = async (uid, name) => {
+    if (!perm.canManageUsers(userRole())) return;
+    if (uid === auth.currentUser.uid) {
+        alert('You cannot delete your own account');
+        return;
+    }
+    if (!confirm(`Are you sure you want to delete user "${name}"? This will remove their profile from the system.`)) return;
+
+    try {
+        await deleteDoc(doc(db, 'users', uid));
+        showToast('User deleted successfully');
+        await renderUserManagementTable();
+        await loadUserDirectoryForAssignments();
+    } catch (e) {
+        alert('Failed to delete user: ' + e.message);
     }
 };
 

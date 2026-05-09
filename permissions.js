@@ -3,8 +3,7 @@
 export const ROLES = {
     ADMIN: 'admin',
     MANAGER: 'manager',
-    RECRUITER: 'recruiter',
-    VIEWER: 'viewer'
+    RECRUITER: 'recruiter'
 };
 
 export function isManagerUp(role) {
@@ -17,7 +16,7 @@ export function isWriter(role) {
 
 export function canReadOwnedDoc(role, doc, uid) {
     if (!doc || !uid) return false;
-    if (isManagerUp(role) || role === ROLES.VIEWER) return true;
+    if (isManagerUp(role)) return true;
     if (doc.ownerId === uid) return true;
     const assigned = doc.assignedTo;
     return Array.isArray(assigned) && assigned.includes(uid);
@@ -54,7 +53,7 @@ export function can(action, role, context = {}) {
         case 'write_pipeline':
             return isWriter(role);
         case 'read_all_pipeline':
-            return isManagerUp(role) || role === ROLES.VIEWER;
+            return isManagerUp(role);
         case 'view_audit':
             return canViewAudit(role);
         default:
