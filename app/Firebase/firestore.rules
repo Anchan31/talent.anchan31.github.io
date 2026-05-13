@@ -3,8 +3,16 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // =========================
-    // 🔐 AUTH & ROLE FUNCTIONS
+    // AUTH, PLATFORM ADMIN, TENANT HELPERS
     // =========================
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSignedIn() {
+      return signedIn();
+    }
+
     function userDocPath() {
       return /databases/$(database)/documents/users/$(request.auth.uid);
     }
@@ -13,14 +21,22 @@ service cloud.firestore {
       return get(userDocPath());
     }
 
-    function isSignedIn() {
-      return request.auth != null;
+    function currentUser() {
+      return userDoc();
+    }
+
+    function hasUserProfile() {
+      return signedIn() && exists(userDocPath());
+    }
+
+    function isPlatformAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/platformAdmins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/platformAdmins/$(request.auth.uid)).data.status == 'active';
     }
 
     function isActive() {
-      return isSignedIn()
-        && exists(userDocPath())
-        && userDoc().data.status == 'active';
+      return hasUserProfile() && userDoc().data.status == 'active';
     }
 
     function role() {
@@ -28,20 +44,44 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isActive() && role() == 'admin';
+      return isPlatformAdmin() || (isActive() && role() == 'admin');
     }
 
     function isManagerUp() {
-      return isActive() && (role() == 'admin' || role() == 'manager');
+      return isPlatformAdmin() || (isActive() && (role() == 'admin' || role() == 'manager' || role() == 'owner'));
     }
 
     function isWriter() {
-      return isActive()
-        && (role() == 'admin' || role() == 'manager' || role() == 'recruiter');
+      return isPlatformAdmin()
+        || (isActive()
+          && (role() == 'admin' || role() == 'manager' || role() == 'owner' || role() == 'recruiter'));
     }
 
     function isViewer() {
       return isActive() && role() == 'viewer';
+    }
+
+    function ownerOrAdmin() {
+      return isPlatformAdmin() || (isActive() && role() in ['owner', 'admin']);
+    }
+
+    function ownerOnly() {
+      return isPlatformAdmin() || (isActive() && role() == 'owner');
+    }
+
+    function sameCompany(companyId) {
+      return isPlatformAdmin()
+        || (isActive()
+          && ('companyId' in userDoc().data)
+          && userDoc().data.companyId == companyId);
+    }
+
+    function companyFromResource() {
+      return resource.data.companyId;
+    }
+
+    function companyFromRequest() {
+      return request.resource.data.companyId;
     }
 
     function ownsResourceData(data) {
@@ -49,56 +89,133 @@ service cloud.firestore {
         || ('assignedTo' in data && request.auth.uid in data.assignedTo);
     }
 
+    function tenantReadable(data) {
+      return isPlatformAdmin()
+        || !('companyId' in data)
+        || sameCompany(data.companyId);
+    }
+
+    function tenantWritable(data) {
+      return isPlatformAdmin()
+        || !('companyId' in data)
+        || sameCompany(data.companyId);
+    }
+
     function canReadOwned(data) {
-      return isManagerUp() || ownsResourceData(data) || isViewer();
+      return isPlatformAdmin()
+        || (tenantReadable(data) && (isManagerUp() || ownsResourceData(data) || isViewer()));
     }
 
     function canWriteOwned(data) {
-      return isManagerUp()
-        || (isWriter() && ownsResourceData(data));
+      return isPlatformAdmin()
+        || (tenantWritable(data)
+          && (isManagerUp() || (isWriter() && ownsResourceData(data))));
     }
 
     // =========================
-    // 🌐 PUBLIC PORTAL ACCESS
+    // PUBLIC PORTAL ACCESS
     // =========================
 
-    // Public Candidates (for share page)
     match /candidates/{id} {
-      allow read: if true; // public access
+      allow read: if true;
       allow create: if isWriter()
+        && tenantWritable(request.resource.data)
         && request.resource.data.ownerId == request.auth.uid;
       allow update, delete: if isActive() && canWriteOwned(resource.data);
     }
 
-    // Public Jobs
     match /jobs/{id} {
-      allow read: if true; // public access
-      allow create, update, delete: if isManagerUp();
+      allow read: if true;
+      allow create, update: if isManagerUp()
+        && tenantWritable(request.resource.data);
+      allow delete: if isManagerUp();
     }
 
-    // Public Companies
-    match /companies/{id} {
-      allow read: if true; // public access
-      allow create, update, delete: if isManagerUp();
+    // Public company reads are preserved for portal pages.
+    // Writes are restricted to this private owner panel or RMS managers.
+    match /companies/{companyId} {
+      allow read: if true;
+      allow create: if isPlatformAdmin()
+        || (signedIn()
+          && request.resource.data.ownerId == request.auth.uid
+          && request.resource.data.status == 'active')
+        || isManagerUp();
+      allow update: if isPlatformAdmin()
+        || (sameCompany(companyId) && ownerOnly())
+        || isManagerUp();
+      allow delete: if isPlatformAdmin();
     }
 
-    // Public Portal Settings (only this doc)
     match /settings/publicPortal {
       allow read: if true;
       allow write: if isManagerUp();
     }
 
     // =========================
-    // 👥 USERS
+    // USERS AND ACCESS CONTROL
     // =========================
     match /users/{uid} {
-      allow read: if request.auth.uid == uid || isManagerUp();
-      allow create: if isAdmin() || (request.auth.uid == uid && request.auth.token.email == 'hrd@brawnlabs.in');
-      allow update, delete: if isAdmin();
+      allow read: if isPlatformAdmin()
+        || request.auth.uid == uid
+        || isManagerUp()
+        || (hasUserProfile() && sameCompany(resource.data.companyId));
+
+      allow create: if isPlatformAdmin()
+        || isAdmin()
+        || (request.auth.uid == uid && request.auth.token.email == 'hrd@brawnlabs.in');
+
+      allow update: if isPlatformAdmin()
+        || isAdmin()
+        || (hasUserProfile()
+          && sameCompany(resource.data.companyId)
+          && (request.auth.uid == uid || ownerOrAdmin())
+          && request.resource.data.companyId == resource.data.companyId);
+
+      allow delete: if isPlatformAdmin() || isAdmin();
+    }
+
+    match /platformAdmins/{adminId} {
+      allow read: if signedIn() && adminId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+
+    match /subscriptions/{subscriptionId} {
+      allow read: if isPlatformAdmin()
+        || (hasUserProfile()
+          && exists(/databases/$(database)/documents/companies/$(userDoc().data.companyId))
+          && get(/databases/$(database)/documents/companies/$(userDoc().data.companyId)).data.subscriptionId == subscriptionId);
+      allow create, update: if isPlatformAdmin();
+      allow delete: if false;
+    }
+
+    match /roles/{roleId} {
+      allow read: if isPlatformAdmin()
+        || (hasUserProfile() && sameCompany(resource.data.companyId));
+      allow create: if isPlatformAdmin()
+        || (ownerOrAdmin() && sameCompany(companyFromRequest()));
+      allow update: if isPlatformAdmin()
+        || (ownerOrAdmin()
+          && sameCompany(companyFromResource())
+          && request.resource.data.companyId == resource.data.companyId);
+      allow delete: if isPlatformAdmin()
+        || (ownerOnly() && sameCompany(companyFromResource()));
+    }
+
+    match /permissions/{permissionId} {
+      allow read: if isPlatformAdmin() || hasUserProfile();
+      allow write: if isPlatformAdmin();
+    }
+
+    match /activityLogs/{logId} {
+      allow read: if isPlatformAdmin()
+        || (hasUserProfile() && sameCompany(resource.data.companyId));
+      allow create: if isPlatformAdmin()
+        || (hasUserProfile() && sameCompany(companyFromRequest()));
+      allow update, delete: if false;
     }
 
     // =========================
-    // 📦 MASTER DATA
+    // MASTER DATA
     // =========================
     match /masters_departments/{id} {
       allow read: if isActive();
@@ -121,7 +238,7 @@ service cloud.firestore {
     }
 
     // =========================
-    // 📄 TEMPLATES
+    // TEMPLATES
     // =========================
     match /whatsappTemplates/{id} {
       allow read: if isActive();
@@ -134,7 +251,7 @@ service cloud.firestore {
     }
 
     // =========================
-    // ⚙️ SETTINGS (OTHER)
+    // SETTINGS
     // =========================
     match /settings/{docId} {
       allow read: if isActive();
@@ -142,18 +259,19 @@ service cloud.firestore {
     }
 
     // =========================
-    // 📞 REMOTE CALLS
+    // REMOTE CALLS
     // =========================
     match /remote_calls/{uid} {
       allow read, write: if isActive() && request.auth.uid == uid;
     }
 
     // =========================
-    // 🔄 PIPELINE COLLECTIONS
+    // PIPELINE COLLECTIONS
     // =========================
     match /interviews/{id} {
       allow read: if isActive() && canReadOwned(resource.data);
       allow create: if isWriter()
+        && tenantWritable(request.resource.data)
         && request.resource.data.ownerId == request.auth.uid;
       allow update, delete: if isActive() && canWriteOwned(resource.data);
     }
@@ -161,12 +279,13 @@ service cloud.firestore {
     match /offers/{id} {
       allow read: if isActive() && canReadOwned(resource.data);
       allow create: if isWriter()
+        && tenantWritable(request.resource.data)
         && request.resource.data.ownerId == request.auth.uid;
       allow update, delete: if isActive() && canWriteOwned(resource.data);
     }
 
     // =========================
-    // 🤝 COLLABORATION
+    // COLLABORATION
     // =========================
     match /presence/{uid} {
       allow read: if isActive();
@@ -185,15 +304,15 @@ service cloud.firestore {
     }
 
     // =========================
-    // 🤝 QR BRIDGE (AUTH TRANSFER)
+    // QR BRIDGE AUTH TRANSFER
     // =========================
     match /qr_bridges/{bridgeId} {
-      allow create: if request.auth != null;
-      allow read, update, delete: if true; 
+      allow create: if signedIn();
+      allow read, update, delete: if true;
     }
 
     // =========================
-    // 🚫 DEFAULT DENY
+    // DEFAULT DENY
     // =========================
     match /{document=**} {
       allow read, write: if false;
